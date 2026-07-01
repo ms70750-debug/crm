@@ -13,6 +13,7 @@ class LeadBase(BaseModel):
     origem: str = "Manual"
     produto_interesse: str = "INSS"
     status: str = "Novo lead"
+    prioridade: str = "Media"
     responsavel: str = "Equipe BBB"
     observacoes: str | None = None
     proximo_contato: str | None = None
@@ -30,6 +31,7 @@ class LeadUpdate(BaseModel):
     origem: str | None = None
     produto_interesse: str | None = None
     status: str | None = None
+    prioridade: str | None = None
     responsavel: str | None = None
     observacoes: str | None = None
     proximo_contato: str | None = None
@@ -38,3 +40,15 @@ class LeadUpdate(BaseModel):
 class LeadRead(LeadBase, ORMModel):
     id: int
     data_criacao: datetime
+
+
+class LeadTimelineEvent(BaseModel):
+    tipo: str
+    titulo: str
+    descricao: str
+    data: str | None = None
+
+
+class LeadDetail(LeadRead):
+    timeline: list[LeadTimelineEvent]
+    historico: list[LeadTimelineEvent]

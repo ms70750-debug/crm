@@ -5,6 +5,7 @@ import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { FGTS } from "./pages/FGTS";
 import { INSS } from "./pages/INSS";
+import { LeadDetail } from "./pages/LeadDetail";
 import { Leads } from "./pages/Leads";
 import { Proposals } from "./pages/Proposals";
 import { Tasks } from "./pages/Tasks";
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leads" element={<Leads />} />
+        <Route path="/leads/:id" element={<LeadDetail />} />
         <Route path="/clientes" element={<Clients />} />
         <Route path="/consulta-inss" element={<INSS />} />
         <Route path="/consulta-fgts" element={<FGTS />} />

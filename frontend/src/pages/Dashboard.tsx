@@ -1,21 +1,16 @@
-import { CalendarClock, CheckCircle2, FileClock, ListTodo, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, FileClock, ListTodo, TrendingUp, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { api, formatMoney } from "../lib/api";
-import { Lead } from "../types";
+import type { DashboardSummary } from "../types";
 import { useAsync } from "../hooks/useAsync";
-
-type Summary = {
-  cards: Record<string, number>;
-  propostas_por_status: { status: string; total: number }[];
-  proximos_contatos: Lead[];
-};
 
 const cards = [
   ["total_leads", "Total de leads", Users],
   ["leads_novos", "Leads novos", TrendingUp],
+  ["leads_atrasados", "Leads atrasados", AlertTriangle],
   ["propostas_em_andamento", "Propostas em andamento", FileClock],
   ["propostas_aprovadas", "Propostas aprovadas", CheckCircle2],
   ["valor_total_aprovado", "Valor aprovado", TrendingUp],
@@ -23,7 +18,7 @@ const cards = [
 ] as const;
 
 export function Dashboard() {
-  const { data, loading, error } = useAsync<Summary>(() => api.get("/dashboard/resumo"));
+  const { data, loading, error } = useAsync<DashboardSummary>(() => api.get("/dashboard/resumo"));
   return (
     <>
       <PageHeader title="Dashboard" subtitle="Resumo executivo da operacao, proximos contatos e esteira comercial." />
@@ -41,7 +36,7 @@ export function Dashboard() {
           </Panel>
         ))}
       </div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_420px]">
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
         <Panel>
           <h3 className="mb-4 font-semibold">Propostas por status</h3>
           <div className="h-72">
@@ -52,6 +47,34 @@ export function Dashboard() {
                 <YAxis stroke="#94a3b8" />
                 <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
                 <Bar dataKey="total" fill="#c7ff45" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+        <Panel>
+          <h3 className="mb-4 font-semibold">Leads por status</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.leads_por_status ?? []}>
+                <CartesianGrid stroke="#263036" />
+                <XAxis dataKey="status" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
+                <Bar dataKey="total" fill="#4ade80" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+        <Panel>
+          <h3 className="mb-4 font-semibold">Leads por origem</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.leads_por_origem ?? []}>
+                <CartesianGrid stroke="#263036" />
+                <XAxis dataKey="origem" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
+                <Bar dataKey="total" fill="#38bdf8" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

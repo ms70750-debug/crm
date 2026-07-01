@@ -7,10 +7,23 @@ export type Lead = {
   origem: string;
   produto_interesse: string;
   status: string;
+  prioridade: string;
   responsavel: string;
   observacoes?: string;
   data_criacao: string;
   proximo_contato?: string;
+};
+
+export type LeadTimelineEvent = {
+  tipo: string;
+  titulo: string;
+  descricao: string;
+  data?: string;
+};
+
+export type LeadDetail = Lead & {
+  timeline: LeadTimelineEvent[];
+  historico: LeadTimelineEvent[];
 };
 
 export type Client = {
@@ -37,6 +50,14 @@ export type Proposal = {
   status: string;
   data_criacao: string;
   observacoes?: string;
+};
+
+export type DashboardSummary = {
+  cards: Record<string, number>;
+  propostas_por_status: { status: string; total: number }[];
+  leads_por_status: { status: string; total: number }[];
+  leads_por_origem: { origem: string; total: number }[];
+  proximos_contatos: Lead[];
 };
 
 export type Task = {

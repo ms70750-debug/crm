@@ -17,6 +17,7 @@ class Lead(Base):
     origem: Mapped[str] = mapped_column(String(80), default="Manual")
     produto_interesse: Mapped[str] = mapped_column(String(80), default="INSS")
     status: Mapped[str] = mapped_column(String(40), default="Novo lead", index=True)
+    prioridade: Mapped[str] = mapped_column(String(20), default="Media", index=True)
     responsavel: Mapped[str] = mapped_column(String(80), default="Equipe BBB")
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
     data_criacao: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
