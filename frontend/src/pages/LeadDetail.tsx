@@ -42,12 +42,16 @@ export function LeadDetail() {
           <Panel>
             <div className="grid gap-4">
               <div>
-                <p className="text-xs text-slate-400">CPF</p>
-                <strong>{lead.cpf}</strong>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Telefone</p>
-                <strong>{lead.telefone}</strong>
+                <h3 className="mb-3 font-semibold">Dados operacionais</h3>
+                <div className="grid gap-3">
+                  <Info label="CPF" value={lead.cpf} />
+                  <Info label="Telefone" value={lead.telefone} />
+                  <Info label="E-mail" value={lead.email || "-"} />
+                  <Info label="Convenio" value={lead.convenio || lead.produto_interesse} />
+                  <Info label="Beneficio" value={lead.beneficio || "-"} />
+                  <Info label="Matricula" value={lead.matricula || "-"} />
+                  <Info label="Banco pagamento" value={lead.banco_pagamento || "-"} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Info label="Produto" value={lead.produto_interesse} />
@@ -63,7 +67,10 @@ export function LeadDetail() {
                 <p className="text-xs text-slate-400">Proximo contato</p>
                 <strong>{lead.proximo_contato || "-"}</strong>
               </div>
-              <p className="rounded-md border border-line bg-white/5 p-3 text-sm text-slate-300">{lead.observacoes || "Sem observacoes."}</p>
+              <div>
+                <p className="mb-1 text-xs text-slate-400">Observacoes operacionais</p>
+                <p className="rounded-md border border-line bg-white/5 p-3 text-sm text-slate-300">{lead.observacoes || "Sem observacoes."}</p>
+              </div>
               <div className="grid gap-2">
                 <button className="btn" onClick={convertLead}><UserCheck size={16} /> Converter em cliente</button>
                 <button className="btn-secondary" onClick={createProposal}><FilePlus2 size={16} /> Gerar proposta</button>

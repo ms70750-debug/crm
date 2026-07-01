@@ -104,6 +104,10 @@ def is_partner(user: User) -> bool:
     return normalize_role(user.role) == "parceiro"
 
 
+def can_view_sensitive_data(user: User) -> bool:
+    return normalize_role(user.role) in {"admin", "supervisor", "operador"}
+
+
 def check_rate_limit(key: str, limit: int = 10, window_seconds: int = 60) -> None:
     now = time.time()
     bucket = _rate_buckets[key]

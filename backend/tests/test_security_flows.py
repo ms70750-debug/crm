@@ -52,6 +52,25 @@ def test_auth_me_and_route_protection() -> None:
 
 
 def test_partner_permissions_are_limited() -> None:
+    admin = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
+    suffix = str(time_ns())[-9:]
+    raw_cpf = f"41{suffix}"
+    created = client.post(
+        "/leads",
+        headers=admin_headers,
+        json={
+            "nome": f"Lead Parceiro {suffix}",
+            "cpf": raw_cpf,
+            "telefone": f"1196{suffix}",
+            "email": f"parceiro{suffix}@demo.local",
+            "origem": "Parceiro",
+            "produto_interesse": "INSS",
+            "responsavel": "Parceiro Demo",
+        },
+    )
+    assert created.status_code == 201
+
     login = _login("parceiro@bbbconsig.demo", "Parceiro@2026")
     headers = {"Authorization": f"Bearer {login['access_token']}"}
 
@@ -61,12 +80,37 @@ def test_partner_permissions_are_limited() -> None:
     leads = client.get("/leads", headers=headers)
     assert leads.status_code == 200
     assert all(item["responsavel"] == "Parceiro Demo" for item in leads.json())
+    partner_lead = next(item for item in leads.json() if item["nome"] == f"Lead Parceiro {suffix}")
+    assert partner_lead["cpf"].startswith("***.***.")
+    assert raw_cpf not in partner_lead["cpf"]
 
     clients = client.get("/clientes", headers=headers)
     assert clients.status_code == 403
 
     admin_users = client.get("/auth/users", headers=headers)
     assert admin_users.status_code == 403
+
+
+def test_internal_profiles_can_view_operational_sensitive_data() -> None:
+    credentials = [
+        ("admin@bbbconsig.demo", "BbbConsig@2026"),
+        ("supervisor@bbbconsig.demo", "Supervisor@2026"),
+        ("operador@bbbconsig.demo", "Operador@2026"),
+    ]
+    for email, password in credentials:
+        login = _login(email, password)
+        headers = {"Authorization": f"Bearer {login['access_token']}"}
+        leads = client.get("/leads", headers=headers)
+        clients = client.get("/clientes", headers=headers)
+        detail = client.get("/leads/1/detalhe", headers=headers)
+
+        assert leads.status_code == 200
+        assert clients.status_code == 200
+        assert detail.status_code == 200
+        assert leads.json()[0]["cpf"] != "***.***.***-**"
+        assert "*" not in leads.json()[0]["cpf"]
+        assert "*" not in detail.json()["telefone"]
+        assert "*" not in clients.json()[0]["cpf"]
 
 
 def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
@@ -89,8 +133,8 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     )
     assert created.status_code == 201
     body = created.json()
-    assert body["cpf"].startswith("***.***.")
-    assert phone not in body["telefone"]
+    assert body["cpf"] == cpf
+    assert body["telefone"] == phone
 
     blocked = client.post(
         "/whatsapp/simular-envio",

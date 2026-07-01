@@ -69,10 +69,11 @@ export function Clients() {
         </Panel>
         <Panel>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px]">
-              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">LGPD</th></tr></thead>
+            <h3 className="mb-4 font-semibold">Dados do cliente</h3>
+            <table className="w-full min-w-[1040px]">
+              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Contato</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">Observacoes</th><th className="table-cell">LGPD</th></tr></thead>
               <tbody>{(data ?? []).map((client) => (
-                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">{client.cpf} - {client.telefone}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button></td></tr>
+                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">CPF {client.cpf}</div></td><td className="table-cell"><div>{client.telefone}</div><div className="text-xs text-slate-500">{client.email || "-"}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><span className="line-clamp-2 text-xs text-slate-400">{client.observacoes ?? "-"}</span></td><td className="table-cell"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button></td></tr>
               ))}</tbody>
             </table>
           </div>

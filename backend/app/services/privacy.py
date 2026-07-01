@@ -27,15 +27,27 @@ def mask_email(value: str | None) -> str:
     return f"{first}***@{domain}"
 
 
-def public_person_payload(item) -> dict:
+def person_payload(item, reveal_sensitive: bool = False) -> dict:
     data = {
         "id": item.id,
         "nome": item.nome,
-        "cpf": mask_cpf(item.cpf),
-        "telefone": mask_phone(item.telefone),
-        "email": mask_email(item.email),
+        "cpf": item.cpf if reveal_sensitive else mask_cpf(item.cpf),
+        "telefone": item.telefone if reveal_sensitive else mask_phone(item.telefone),
+        "email": item.email if reveal_sensitive else mask_email(item.email),
     }
-    for field in ["origem", "produto_interesse", "status", "prioridade", "responsavel", "proximo_contato", "convenio", "beneficio", "banco_pagamento", "observacoes"]:
+    for field in [
+        "origem",
+        "produto_interesse",
+        "status",
+        "prioridade",
+        "responsavel",
+        "proximo_contato",
+        "convenio",
+        "beneficio",
+        "banco_pagamento",
+        "observacoes",
+        "data_nascimento",
+    ]:
         if hasattr(item, field):
             data[field] = getattr(item, field)
     for field in ["data_criacao", "deleted_at"]:
@@ -43,3 +55,7 @@ def public_person_payload(item) -> dict:
             value = getattr(item, field)
             data[field] = value.isoformat() if value else None
     return data
+
+
+def public_person_payload(item) -> dict:
+    return person_payload(item, reveal_sensitive=False)

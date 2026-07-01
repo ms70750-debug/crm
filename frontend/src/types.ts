@@ -4,6 +4,11 @@ export type Lead = {
   cpf: string;
   telefone: string;
   email?: string;
+  data_nascimento?: string;
+  beneficio?: string;
+  matricula?: string;
+  convenio?: string;
+  banco_pagamento?: string;
   origem: string;
   produto_interesse: string;
   status: string;
@@ -52,6 +57,7 @@ export type Client = {
   email?: string;
   data_nascimento?: string;
   beneficio?: string;
+  matricula?: string;
   convenio: string;
   banco_pagamento?: string;
   observacoes?: string;

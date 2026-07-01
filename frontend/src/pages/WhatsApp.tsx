@@ -51,7 +51,7 @@ export function WhatsApp() {
             <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value)}><option value="lead">Lead</option><option value="cliente">Cliente</option></select>
             <select className="input" value={id} onChange={(e) => setId(e.target.value)}>
               <option value="">Selecione</option>
-              {recipients.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              {recipients.map((r) => <option key={r.id} value={r.id}>{r.nome} - {r.cpf} - {r.telefone}</option>)}
             </select>
             <select className="input" value={modelo} onChange={(e) => setModelo(e.target.value)}>
               <option value="primeiro_contato">Primeiro contato</option>

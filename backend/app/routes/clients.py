@@ -8,8 +8,8 @@ from app.database.session import get_db
 from app.models import Client, Proposal
 from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
-from app.services.privacy import public_person_payload
-from app.services.security import log_audit, require_roles
+from app.services.privacy import person_payload
+from app.services.security import can_view_sensitive_data, log_audit, require_roles
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -20,7 +20,7 @@ def list_clients(q: str | None = None, db: Session = Depends(get_db), user=Depen
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Client.nome.ilike(like), Client.cpf.ilike(like), Client.telefone.ilike(like)))
-    return [public_person_payload(client) for client in db.scalars(stmt).all()]
+    return [person_payload(client, can_view_sensitive_data(user)) for client in db.scalars(stmt).all()]
 
 
 @router.post("", status_code=201)
@@ -28,20 +28,20 @@ def create_client(payload: ClientCreate, db: Session = Depends(get_db), user=Dep
     client = create_item(db, Client, payload)
     log_audit(db, "client_created", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump())
     db.commit()
-    return public_person_payload(client)
+    return person_payload(client, can_view_sensitive_data(user))
 
 
 @router.get("/{client_id}")
 def get_client(client_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     client = get_item(db, Client, client_id)
-    return public_person_payload(client)
+    return person_payload(client, can_view_sensitive_data(user))
 
 
 @router.get("/{client_id}/historico")
 def get_client_history(client_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     client = get_item(db, Client, client_id)
     proposals = db.scalars(select(Proposal).where(Proposal.cliente_id == client.id).order_by(Proposal.id.desc())).all()
-    return {"cliente": public_person_payload(client), "eventos": [{"tipo": "proposta", "status": p.status, "valor": p.valor_liberado} for p in proposals]}
+    return {"cliente": person_payload(client, can_view_sensitive_data(user)), "eventos": [{"tipo": "proposta", "status": p.status, "valor": p.valor_liberado} for p in proposals]}
 
 
 @router.put("/{client_id}")
@@ -49,7 +49,7 @@ def update_client(client_id: int, payload: ClientUpdate, db: Session = Depends(g
     client = update_item(db, Client, client_id, payload)
     log_audit(db, "client_updated", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump(exclude_unset=True))
     db.commit()
-    return public_person_payload(client)
+    return person_payload(client, can_view_sensitive_data(user))
 
 
 @router.delete("/{client_id}")

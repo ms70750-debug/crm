@@ -21,7 +21,10 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
 
   await page.goto("/whatsapp");
   await page.locator("select").first().selectOption("cliente");
-  await page.locator("select").nth(1).selectOption({ label: name });
+  const recipient = page.locator("select").nth(1);
+  await expect(recipient.locator("option", { hasText: name })).toHaveCount(1);
+  const recipientValue = await recipient.locator("option", { hasText: name }).getAttribute("value");
+  await recipient.selectOption(recipientValue ?? "");
   await page.getByRole("button", { name: "Gerar previa" }).click();
   await expect(page.locator("textarea")).toContainText(name);
   await page.getByRole("button", { name: "Registrar simulacao" }).click();

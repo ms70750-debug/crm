@@ -6,8 +6,8 @@ from app.database.session import get_db
 from app.models import Client, Lead, Proposal, Task, User, WhatsAppMessage
 from app.schemas.lead import LeadCreate, LeadDetail, LeadRead, LeadTimelineEvent, LeadUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
-from app.services.privacy import public_person_payload
-from app.services.security import current_user, is_partner, require_roles
+from app.services.privacy import person_payload
+from app.services.security import can_view_sensitive_data, current_user, is_partner, require_roles
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -101,7 +101,7 @@ def list_leads(
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Lead.nome.ilike(like), Lead.cpf.ilike(like), Lead.telefone.ilike(like)))
-    return [public_person_payload(lead) for lead in db.scalars(stmt).all()]
+    return [person_payload(lead, can_view_sensitive_data(user)) for lead in db.scalars(stmt).all()]
 
 
 @router.post("", response_model=LeadRead, status_code=201)
@@ -114,7 +114,7 @@ def get_lead(lead_id: int, db: Session = Depends(get_db), user: User = Depends(c
     lead = get_item(db, Lead, lead_id)
     if is_partner(user) and lead.responsavel != user.nome:
         raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
-    return public_person_payload(lead)
+    return person_payload(lead, can_view_sensitive_data(user))
 
 
 @router.get("/{lead_id}/detalhe", response_model=LeadDetail)
@@ -124,7 +124,7 @@ def get_lead_detail(lead_id: int, db: Session = Depends(get_db), user: User = De
         raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
     timeline, historico = _lead_events(db, lead)
     base = LeadRead.model_validate(lead).model_dump()
-    base.update(public_person_payload(lead))
+    base.update(person_payload(lead, can_view_sensitive_data(user)))
     return LeadDetail(**base, timeline=timeline, historico=historico)
 
 
@@ -196,7 +196,7 @@ def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db), user=
 
 
 def _client_payload(client: Client) -> dict:
-    payload = public_person_payload(client)
+    payload = person_payload(client, True)
     payload["convenio"] = client.convenio
     return payload
 

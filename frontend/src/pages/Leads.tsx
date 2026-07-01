@@ -88,11 +88,12 @@ export function Leads() {
             </select>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px]">
-              <thead className="text-slate-400"><tr><th className="table-cell">Nome</th><th className="table-cell">Origem</th><th className="table-cell">Produto</th><th className="table-cell">Status</th><th className="table-cell">Prioridade</th><th className="table-cell">Responsavel</th><th className="table-cell">Proximo contato</th><th className="table-cell">Acoes</th></tr></thead>
+            <table className="w-full min-w-[1120px]">
+              <thead className="text-slate-400"><tr><th className="table-cell">Lead</th><th className="table-cell">Contato</th><th className="table-cell">Origem</th><th className="table-cell">Produto</th><th className="table-cell">Status</th><th className="table-cell">Prioridade</th><th className="table-cell">Responsavel</th><th className="table-cell">Proximo contato</th><th className="table-cell">Acoes</th></tr></thead>
               <tbody>{(data ?? []).map((lead) => (
                 <tr key={lead.id}>
-                  <td className="table-cell"><strong>{lead.nome}</strong><div className="text-xs text-slate-500">{lead.cpf} - {lead.telefone}</div></td>
+                  <td className="table-cell"><strong>{lead.nome}</strong><div className="text-xs text-slate-500">CPF {lead.cpf}</div>{lead.observacoes && <div className="mt-1 max-w-72 truncate text-xs text-slate-500">{lead.observacoes}</div>}</td>
+                  <td className="table-cell"><div>{lead.telefone}</div><div className="text-xs text-slate-500">{lead.email || "-"}</div></td>
                   <td className="table-cell">{lead.origem}</td>
                   <td className="table-cell">{lead.produto_interesse}</td>
                   <td className="table-cell"><StatusBadge value={lead.status} /></td>
