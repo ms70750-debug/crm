@@ -15,16 +15,32 @@ export function WhatsApp() {
   const [id, setId] = useState("");
   const [modelo, setModelo] = useState("primeiro_contato");
   const [mensagem, setMensagem] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const recipients = useMemo(() => tipo === "lead" ? leads.data ?? [] : clients.data ?? [], [tipo, leads.data, clients.data]);
 
   async function preview() {
-    const data = await api.post<{ mensagem: string }>("/whatsapp/preview", { destinatario_tipo: tipo, destinatario_id: Number(id), modelo });
-    setMensagem(data.mensagem);
+    setError("");
+    setSuccess("");
+    try {
+      const data = await api.post<{ mensagem: string }>("/whatsapp/preview", { destinatario_tipo: tipo, destinatario_id: Number(id), modelo });
+      setMensagem(data.mensagem);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel gerar previa");
+    }
   }
+
   async function register() {
-    await api.post("/whatsapp/simular-envio", { destinatario_tipo: tipo, destinatario_id: Number(id), modelo, mensagem });
-    setMensagem("");
-    history.reload();
+    setError("");
+    setSuccess("");
+    try {
+      await api.post("/whatsapp/simular-envio", { destinatario_tipo: tipo, destinatario_id: Number(id), modelo, mensagem });
+      setMensagem("");
+      setSuccess("Simulacao registrada. Nenhuma mensagem real foi enviada.");
+      history.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel registrar simulacao");
+    }
   }
   return (
     <>
@@ -44,6 +60,8 @@ export function WhatsApp() {
             </select>
             <button className="btn-secondary" onClick={preview} disabled={!id}>Gerar previa</button>
             <textarea className="input min-h-40" value={mensagem} onChange={(e) => setMensagem(e.target.value)} />
+            {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+            {success && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{success}</div>}
             <button className="btn" onClick={register} disabled={!mensagem}>Registrar simulacao</button>
           </div>
         </Panel>

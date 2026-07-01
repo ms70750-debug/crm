@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CrudShell, Panel } from "../components/CrudShell";
@@ -13,11 +14,38 @@ type FormData = z.infer<typeof schema>;
 export function Clients() {
   const { data, reload } = useAsync<Client[]>(() => api.get("/clientes"));
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { convenio: "INSS" } });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
   async function submit(values: FormData) {
-    await api.post("/clientes", values);
-    form.reset({ convenio: "INSS" });
-    reload();
+    setError("");
+    setMessage("");
+    try {
+      await api.post("/clientes", values);
+      form.reset({ convenio: "INSS" });
+      setMessage("Cliente ficticio cadastrado.");
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel criar o cliente");
+    }
   }
+
+  async function registerConsent(client: Client) {
+    setError("");
+    setMessage("");
+    try {
+      await api.post("/consents", {
+        customer_id: client.id,
+        channel: "whatsapp",
+        source: "CRM local",
+        notes: "Opt-in ficticio registrado para teste de simulacao.",
+      });
+      setMessage(`Opt-in de WhatsApp registrado para ${client.nome}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel registrar opt-in");
+    }
+  }
+
   return (
     <>
       <PageHeader title="Clientes" subtitle="Cadastro, dados de beneficio e historico operacional simples." />
@@ -34,15 +62,17 @@ export function Clients() {
             <select className="input" {...form.register("convenio")}><option>INSS</option><option>FGTS</option><option>SIAPE</option></select>
             <input className="input" placeholder="Banco de pagamento" {...form.register("banco_pagamento")} />
             <textarea className="input min-h-24" placeholder="Observacoes" {...form.register("observacoes")} />
+            {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+            {message && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{message}</div>}
             <button className="btn" type="submit">Criar cliente</button>
           </form>
         </Panel>
         <Panel>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
-              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th></tr></thead>
+              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">LGPD</th></tr></thead>
               <tbody>{(data ?? []).map((client) => (
-                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">{client.cpf} - {client.telefone}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td></tr>
+                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">{client.cpf} - {client.telefone}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button></td></tr>
               ))}</tbody>
             </table>
           </div>

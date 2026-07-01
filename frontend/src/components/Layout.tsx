@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
-import { BarChart3, BookOpen, Bot, ClipboardList, LayoutDashboard, MessageCircle, Search, Settings, Users, WalletCards } from "lucide-react";
+import { BarChart3, BookOpen, Bot, ClipboardList, LayoutDashboard, LockKeyhole, MessageCircle, Search, Settings, Users, WalletCards } from "lucide-react";
+import { clearAuthToken, getAuthToken } from "../lib/api";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -13,9 +14,12 @@ const nav = [
   { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/treinamentos", label: "Treinamentos", icon: BookOpen },
   { to: "/admin", label: "Administracao", icon: Settings },
+  { to: "/login", label: "Login local", icon: LockKeyhole },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
+  const hasToken = Boolean(getAuthToken());
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="panel sticky top-0 z-20 flex h-auto flex-col rounded-none border-l-0 border-t-0 lg:h-screen">
@@ -55,7 +59,18 @@ export function Layout({ children }: { children: ReactNode }) {
               <p className="text-xs uppercase tracking-[0.22em] text-lime">Operacao consignado</p>
               <h1 className="text-xl font-semibold">BBB Consig CRM</h1>
             </div>
-            <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>
+              <button
+                className="btn-secondary py-1 text-xs"
+                onClick={() => {
+                  clearAuthToken();
+                  window.location.assign("/login");
+                }}
+              >
+                {hasToken ? "Sair" : "Sem sessao"}
+              </button>
+            </div>
           </div>
         </header>
         <div className="mx-auto max-w-7xl p-5">{children}</div>

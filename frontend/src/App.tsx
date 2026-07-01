@@ -7,6 +7,7 @@ import { FGTS } from "./pages/FGTS";
 import { INSS } from "./pages/INSS";
 import { LeadDetail } from "./pages/LeadDetail";
 import { Leads } from "./pages/Leads";
+import { Login } from "./pages/Login";
 import { Proposals } from "./pages/Proposals";
 import { Tasks } from "./pages/Tasks";
 import { Trainings } from "./pages/Trainings";
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/leads/:id" element={<LeadDetail />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/clientes" element={<Clients />} />
         <Route path="/consulta-inss" element={<INSS />} />
         <Route path="/consulta-fgts" element={<FGTS />} />

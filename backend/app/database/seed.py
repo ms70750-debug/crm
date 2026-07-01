@@ -1,10 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Client, Lead, Proposal, Task
+from app.models import Client, Lead, Proposal, Task, User
+from app.services.security import hash_password
 
 
 def seed_database(db: Session) -> None:
+    if not db.scalar(select(User).limit(1)):
+        db.add(User(nome="Admin Demo", email="admin@bbbconsig.demo", password_hash=hash_password("BbbConsig@2026"), role="admin"))
+        db.commit()
+
     if db.scalar(select(Lead).limit(1)):
         return
 

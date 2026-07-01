@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models import Lead, Proposal, Task
+from app.services.privacy import public_person_payload
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -49,5 +50,5 @@ def get_summary(db: Session = Depends(get_db)):
         "propostas_por_status": [{"status": status, "total": total} for status, total in por_status],
         "leads_por_status": [{"status": status, "total": total} for status, total in leads_por_status],
         "leads_por_origem": [{"origem": origem, "total": total} for origem, total in leads_por_origem],
-        "proximos_contatos": proximos,
+        "proximos_contatos": [public_person_payload(lead) for lead in proximos],
     }

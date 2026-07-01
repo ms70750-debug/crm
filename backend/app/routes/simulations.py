@@ -1,28 +1,17 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.database.session import get_db
+from app.services.simulations import simulate_product
 
 router = APIRouter(prefix="/consultas", tags=["consultas"])
 
 
 @router.get("/inss/{cpf}")
-def simulate_inss(cpf: str):
-    return {
-        "cpf": cpf,
-        "modo": "simulation",
-        "beneficio": "1234567890",
-        "convenio": "INSS",
-        "margem_disponivel": 418.72,
-        "banco_pagamento": "Banco simulado",
-        "elegivel": True,
-    }
+def simulate_inss(cpf: str, db: Session = Depends(get_db)):
+    return simulate_product(db, "INSS", cpf)
 
 
 @router.get("/fgts/{cpf}")
-def simulate_fgts(cpf: str):
-    return {
-        "cpf": cpf,
-        "modo": "simulation",
-        "saldo_estimado": 7420.35,
-        "valor_liberado": 3820.0,
-        "parcelas_antecipaveis": 10,
-        "elegivel": True,
-    }
+def simulate_fgts(cpf: str, db: Session = Depends(get_db)):
+    return simulate_product(db, "FGTS", cpf)

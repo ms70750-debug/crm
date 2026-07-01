@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.models import Client, Lead, Proposal, Task, WhatsAppMessage
 from app.schemas.lead import LeadCreate, LeadDetail, LeadRead, LeadTimelineEvent, LeadUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
+from app.services.privacy import public_person_payload
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -78,7 +79,7 @@ def _lead_events(db: Session, lead: Lead) -> tuple[list[LeadTimelineEvent], list
     return events, history
 
 
-@router.get("", response_model=list[LeadRead])
+@router.get("")
 def list_leads(
     status: str | None = None,
     origem: str | None = None,
@@ -96,7 +97,7 @@ def list_leads(
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(Lead.nome.ilike(like), Lead.cpf.ilike(like), Lead.telefone.ilike(like)))
-    return db.scalars(stmt).all()
+    return [public_person_payload(lead) for lead in db.scalars(stmt).all()]
 
 
 @router.post("", response_model=LeadRead, status_code=201)
@@ -104,9 +105,9 @@ def create_lead(payload: LeadCreate, db: Session = Depends(get_db)):
     return create_item(db, Lead, payload)
 
 
-@router.get("/{lead_id}", response_model=LeadRead)
+@router.get("/{lead_id}")
 def get_lead(lead_id: int, db: Session = Depends(get_db)):
-    return get_item(db, Lead, lead_id)
+    return public_person_payload(get_item(db, Lead, lead_id))
 
 
 @router.get("/{lead_id}/detalhe", response_model=LeadDetail)
@@ -114,6 +115,7 @@ def get_lead_detail(lead_id: int, db: Session = Depends(get_db)):
     lead = get_item(db, Lead, lead_id)
     timeline, historico = _lead_events(db, lead)
     base = LeadRead.model_validate(lead).model_dump()
+    base.update(public_person_payload(lead))
     return LeadDetail(**base, timeline=timeline, historico=historico)
 
 
@@ -158,8 +160,8 @@ def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db)):
     lead = get_item(db, Lead, lead_id)
     client = db.scalar(select(Client).where(Client.cpf == lead.cpf))
     if not client:
-        converted = convert_lead_to_client(lead_id, db)
-        client = converted["cliente"]
+        convert_lead_to_client(lead_id, db)
+        client = db.scalar(select(Client).where(Client.cpf == lead.cpf))
     if not client:
         raise HTTPException(status_code=400, detail="Nao foi possivel vincular cliente ao lead")
 
@@ -181,14 +183,9 @@ def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db)):
 
 
 def _client_payload(client: Client) -> dict:
-    return {
-        "id": client.id,
-        "nome": client.nome,
-        "cpf": client.cpf,
-        "telefone": client.telefone,
-        "email": client.email,
-        "convenio": client.convenio,
-    }
+    payload = public_person_payload(client)
+    payload["convenio"] = client.convenio
+    return payload
 
 
 def _proposal_payload(proposal: Proposal) -> dict:

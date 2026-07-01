@@ -1,4 +1,6 @@
-from sqlalchemy import Integer, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
@@ -17,3 +19,4 @@ class Client(Base):
     convenio: Mapped[str] = mapped_column(String(80), default="INSS")
     banco_pagamento: Mapped[str | None] = mapped_column(String(80), nullable=True)
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

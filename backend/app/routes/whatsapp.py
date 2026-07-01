@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models import Client, Lead, WhatsAppMessage
+from app.models import Client, Consent, Lead, WhatsAppMessage
 from app.schemas.whatsapp import WhatsAppMessageRead, WhatsAppPreview, WhatsAppPreviewRequest, WhatsAppSendRequest
+from app.services.security import log_audit
 
 router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
@@ -41,6 +42,16 @@ def preview_message(payload: WhatsAppPreviewRequest, db: Session = Depends(get_d
 @router.post("/simular-envio", response_model=WhatsAppMessageRead, status_code=201)
 def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db)):
     recipient = _find_recipient(db, payload.destinatario_tipo, payload.destinatario_id)
+    client = recipient if payload.destinatario_tipo == "cliente" else db.scalar(select(Client).where(Client.cpf == recipient.cpf))
+    if not client:
+        raise HTTPException(status_code=400, detail="Converta o lead em cliente antes de registrar WhatsApp simulado.")
+    consent = db.scalar(
+        select(Consent)
+        .where(Consent.customer_id == client.id, Consent.channel == "whatsapp", Consent.granted.is_(True), Consent.revoked_at.is_(None))
+        .order_by(Consent.id.desc())
+    )
+    if not consent:
+        raise HTTPException(status_code=403, detail="Opt-in de WhatsApp obrigatorio antes de registrar mensagem simulada.")
     message = WhatsAppMessage(
         destinatario_tipo=payload.destinatario_tipo,
         destinatario_id=payload.destinatario_id,
@@ -49,6 +60,19 @@ def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db)):
         mensagem=payload.mensagem,
     )
     db.add(message)
+    db.flush()
+    log_audit(
+        db,
+        action="whatsapp_simulation_created",
+        entity_type="whatsapp_message",
+        entity_id=message.id,
+        metadata={
+            "destinatario_tipo": payload.destinatario_tipo,
+            "destinatario_id": payload.destinatario_id,
+            "modelo": payload.modelo,
+            "status": message.status,
+        },
+    )
     db.commit()
     db.refresh(message)
     return message
