@@ -14,10 +14,11 @@ type FormData = z.infer<typeof schema>;
 export function Proposals() {
   const proposals = useAsync<Proposal[]>(() => api.get("/propostas"));
   const clients = useAsync<Client[]>(() => api.get("/clientes"));
-  const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { produto: "INSS", banco: "Banco simulado", prazo: 84, status: "Em andamento" } });
+  const defaultValues = { produto: "INSS", banco: "Banco simulado", valor_liberado: 0, parcela: 0, prazo: 84, status: "Em andamento" };
+  const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues });
   async function submit(values: FormData) {
     await api.post("/propostas", values);
-    form.reset({ produto: "INSS", banco: "Banco simulado", prazo: 84, status: "Em andamento" });
+    form.reset(defaultValues);
     proposals.reload();
   }
   return (

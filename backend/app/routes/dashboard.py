@@ -17,7 +17,12 @@ def get_summary(db: Session = Depends(get_db)):
     valor_aprovado = db.scalar(select(func.sum(Proposal.valor_liberado)).where(Proposal.status == "Aprovado")) or 0
     tarefas_pendentes = db.scalar(select(func.count()).select_from(Task).where(Task.status != "Concluida")) or 0
     por_status = db.execute(select(Proposal.status, func.count()).group_by(Proposal.status)).all()
-    proximos = db.scalars(select(Lead).where(Lead.proximo_contato.is_not(None)).order_by(Lead.proximo_contato).limit(5)).all()
+    proximos = db.scalars(
+        select(Lead)
+        .where(Lead.proximo_contato.is_not(None), Lead.proximo_contato != "")
+        .order_by(Lead.proximo_contato)
+        .limit(5)
+    ).all()
     return {
         "cards": {
             "total_leads": total_leads,
