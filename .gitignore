@@ -1,0 +1,15 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+*.db
+*.log
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.vite/
+referencias/
+backend/app.db

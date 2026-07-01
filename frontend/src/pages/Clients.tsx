@@ -1,0 +1,53 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { CrudShell, Panel } from "../components/CrudShell";
+import { PageHeader } from "../components/PageHeader";
+import { useAsync } from "../hooks/useAsync";
+import { api } from "../lib/api";
+import { Client } from "../types";
+
+const schema = z.object({ nome: z.string().min(3), cpf: z.string().min(11), telefone: z.string().min(10), email: z.string().optional(), data_nascimento: z.string().optional(), beneficio: z.string().optional(), convenio: z.string(), banco_pagamento: z.string().optional(), observacoes: z.string().optional() });
+type FormData = z.infer<typeof schema>;
+
+export function Clients() {
+  const { data, reload } = useAsync<Client[]>(() => api.get("/clientes"));
+  const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { convenio: "INSS" } });
+  async function submit(values: FormData) {
+    await api.post("/clientes", values);
+    form.reset({ convenio: "INSS" });
+    reload();
+  }
+  return (
+    <>
+      <PageHeader title="Clientes" subtitle="Cadastro, dados de beneficio e historico operacional simples." />
+      <CrudShell>
+        <Panel>
+          <h3 className="mb-4 font-semibold">Novo cliente</h3>
+          <form className="grid gap-3" onSubmit={form.handleSubmit(submit)}>
+            <input className="input" placeholder="Nome" {...form.register("nome")} />
+            <input className="input" placeholder="CPF" {...form.register("cpf")} />
+            <input className="input" placeholder="Telefone" {...form.register("telefone")} />
+            <input className="input" placeholder="E-mail" {...form.register("email")} />
+            <input className="input" type="date" {...form.register("data_nascimento")} />
+            <input className="input" placeholder="Beneficio" {...form.register("beneficio")} />
+            <select className="input" {...form.register("convenio")}><option>INSS</option><option>FGTS</option><option>SIAPE</option></select>
+            <input className="input" placeholder="Banco de pagamento" {...form.register("banco_pagamento")} />
+            <textarea className="input min-h-24" placeholder="Observacoes" {...form.register("observacoes")} />
+            <button className="btn" type="submit">Criar cliente</button>
+          </form>
+        </Panel>
+        <Panel>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
+              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th></tr></thead>
+              <tbody>{(data ?? []).map((client) => (
+                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">{client.cpf} - {client.telefone}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </Panel>
+      </CrudShell>
+    </>
+  );
+}
