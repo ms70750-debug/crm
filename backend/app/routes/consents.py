@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models import Consent
 from app.schemas.security import ConsentCreate, ConsentRead
-from app.services.security import current_user, log_audit
+from app.services.security import log_audit, require_roles
 
 router = APIRouter(prefix="/consents", tags=["consents"])
 
 
 @router.get("", response_model=list[ConsentRead])
-def list_consents(customer_id: int | None = None, db: Session = Depends(get_db)):
+def list_consents(customer_id: int | None = None, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     stmt = select(Consent).order_by(Consent.id.desc())
     if customer_id:
         stmt = stmt.where(Consent.customer_id == customer_id)
@@ -21,7 +21,7 @@ def list_consents(customer_id: int | None = None, db: Session = Depends(get_db))
 
 
 @router.post("", response_model=ConsentRead, status_code=201)
-def create_consent(payload: ConsentCreate, request: Request, db: Session = Depends(get_db), user=Depends(current_user)):
+def create_consent(payload: ConsentCreate, request: Request, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     consent = Consent(
         customer_id=payload.customer_id,
         channel=payload.channel,
@@ -39,7 +39,7 @@ def create_consent(payload: ConsentCreate, request: Request, db: Session = Depen
 
 
 @router.post("/{consent_id}/revoke", response_model=ConsentRead)
-def revoke_consent(consent_id: int, db: Session = Depends(get_db), user=Depends(current_user)):
+def revoke_consent(consent_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     consent = db.get(Consent, consent_id)
     if not consent:
         from fastapi import HTTPException

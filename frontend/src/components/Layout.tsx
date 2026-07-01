@@ -1,24 +1,25 @@
 import { NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
-import { BarChart3, BookOpen, Bot, ClipboardList, LayoutDashboard, LockKeyhole, MessageCircle, Search, Settings, Users, WalletCards } from "lucide-react";
-import { clearAuthToken, getAuthToken } from "../lib/api";
+import { BarChart3, BookOpen, Bot, ClipboardList, LayoutDashboard, LogOut, MessageCircle, Search, Settings, Users, WalletCards } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
+import type { Perfil } from "../types";
 
 const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/leads", label: "Leads", icon: Users },
-  { to: "/clientes", label: "Clientes", icon: WalletCards },
-  { to: "/consulta-inss", label: "Consulta INSS", icon: Search },
-  { to: "/consulta-fgts", label: "Consulta FGTS", icon: Search },
-  { to: "/propostas", label: "Propostas", icon: BarChart3 },
-  { to: "/tarefas", label: "Tarefas", icon: ClipboardList },
-  { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
-  { to: "/treinamentos", label: "Treinamentos", icon: BookOpen },
-  { to: "/admin", label: "Administracao", icon: Settings },
-  { to: "/login", label: "Login local", icon: LockKeyhole },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "supervisor", "operador", "parceiro"] },
+  { to: "/leads", label: "Leads", icon: Users, roles: ["admin", "supervisor", "operador", "parceiro"] },
+  { to: "/clientes", label: "Clientes", icon: WalletCards, roles: ["admin", "supervisor", "operador"] },
+  { to: "/consulta-inss", label: "Consulta INSS", icon: Search, roles: ["admin", "supervisor", "operador"] },
+  { to: "/consulta-fgts", label: "Consulta FGTS", icon: Search, roles: ["admin", "supervisor", "operador"] },
+  { to: "/propostas", label: "Propostas", icon: BarChart3, roles: ["admin", "supervisor", "operador", "parceiro"] },
+  { to: "/tarefas", label: "Tarefas", icon: ClipboardList, roles: ["admin", "supervisor", "operador"] },
+  { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, roles: ["admin", "supervisor", "operador"] },
+  { to: "/treinamentos", label: "Treinamentos", icon: BookOpen, roles: ["admin", "supervisor", "operador", "parceiro"] },
+  { to: "/admin", label: "Administracao", icon: Settings, roles: ["admin", "supervisor"] },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
-  const hasToken = Boolean(getAuthToken());
+  const { logout, user } = useAuth();
+  const visibleNav = nav.filter((item) => user && item.roles.includes(user.role));
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
@@ -33,7 +34,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="grid gap-1 p-3">
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -61,14 +62,15 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>
+              {user && <div className="badge">{user.nome} - {roleLabel(user.role)}</div>}
               <button
                 className="btn-secondary py-1 text-xs"
                 onClick={() => {
-                  clearAuthToken();
+                  logout();
                   window.location.assign("/login");
                 }}
               >
-                {hasToken ? "Sair" : "Sem sessao"}
+                <LogOut size={14} /> Sair
               </button>
             </div>
           </div>
@@ -77,4 +79,13 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
     </div>
   );
+}
+
+function roleLabel(role: Perfil) {
+  return {
+    admin: "Administrador",
+    supervisor: "Supervisor",
+    operador: "Operador",
+    parceiro: "Parceiro",
+  }[role];
 }

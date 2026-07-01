@@ -6,7 +6,7 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
 
   await page.goto("/login");
   await page.getByRole("button", { name: /entrar/i }).click();
-  await expect(page.getByText("Sessao local ativa.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto("/clientes");
   await page.getByPlaceholder("Nome").fill(name);

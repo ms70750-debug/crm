@@ -3,10 +3,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models import Client, Lead, Proposal, Task, WhatsAppMessage
+from app.models import Client, Lead, Proposal, Task, User, WhatsAppMessage
 from app.schemas.lead import LeadCreate, LeadDetail, LeadRead, LeadTimelineEvent, LeadUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
 from app.services.privacy import public_person_payload
+from app.services.security import current_user, is_partner, require_roles
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -86,8 +87,11 @@ def list_leads(
     produto_interesse: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ):
     stmt = select(Lead).order_by(Lead.id.desc())
+    if is_partner(user):
+        stmt = stmt.where(Lead.responsavel == user.nome)
     if status:
         stmt = stmt.where(Lead.status == status)
     if origem:
@@ -101,18 +105,23 @@ def list_leads(
 
 
 @router.post("", response_model=LeadRead, status_code=201)
-def create_lead(payload: LeadCreate, db: Session = Depends(get_db)):
+def create_lead(payload: LeadCreate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     return create_item(db, Lead, payload)
 
 
 @router.get("/{lead_id}")
-def get_lead(lead_id: int, db: Session = Depends(get_db)):
-    return public_person_payload(get_item(db, Lead, lead_id))
+def get_lead(lead_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    lead = get_item(db, Lead, lead_id)
+    if is_partner(user) and lead.responsavel != user.nome:
+        raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
+    return public_person_payload(lead)
 
 
 @router.get("/{lead_id}/detalhe", response_model=LeadDetail)
-def get_lead_detail(lead_id: int, db: Session = Depends(get_db)):
+def get_lead_detail(lead_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     lead = get_item(db, Lead, lead_id)
+    if is_partner(user) and lead.responsavel != user.nome:
+        raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
     timeline, historico = _lead_events(db, lead)
     base = LeadRead.model_validate(lead).model_dump()
     base.update(public_person_payload(lead))
@@ -120,21 +129,25 @@ def get_lead_detail(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{lead_id}/timeline", response_model=list[LeadTimelineEvent])
-def get_lead_timeline(lead_id: int, db: Session = Depends(get_db)):
+def get_lead_timeline(lead_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     lead = get_item(db, Lead, lead_id)
+    if is_partner(user) and lead.responsavel != user.nome:
+        raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
     timeline, _ = _lead_events(db, lead)
     return timeline
 
 
 @router.get("/{lead_id}/historico", response_model=list[LeadTimelineEvent])
-def get_lead_history(lead_id: int, db: Session = Depends(get_db)):
+def get_lead_history(lead_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     lead = get_item(db, Lead, lead_id)
+    if is_partner(user) and lead.responsavel != user.nome:
+        raise HTTPException(status_code=403, detail="Lead nao atribuido ao parceiro")
     _, historico = _lead_events(db, lead)
     return historico
 
 
 @router.post("/{lead_id}/converter-cliente")
-def convert_lead_to_client(lead_id: int, db: Session = Depends(get_db)):
+def convert_lead_to_client(lead_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     lead = get_item(db, Lead, lead_id)
     existing = db.scalar(select(Client).where(Client.cpf == lead.cpf))
     if existing:
@@ -156,7 +169,7 @@ def convert_lead_to_client(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{lead_id}/gerar-proposta")
-def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db)):
+def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     lead = get_item(db, Lead, lead_id)
     client = db.scalar(select(Client).where(Client.cpf == lead.cpf))
     if not client:
@@ -202,15 +215,15 @@ def _proposal_payload(proposal: Proposal) -> dict:
 
 
 @router.put("/{lead_id}", response_model=LeadRead)
-def update_lead(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db)):
+def update_lead(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     return update_item(db, Lead, lead_id, payload)
 
 
 @router.patch("/{lead_id}/status", response_model=LeadRead)
-def update_lead_status(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db)):
+def update_lead_status(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     return update_item(db, Lead, lead_id, payload)
 
 
 @router.delete("/{lead_id}")
-def delete_lead(lead_id: int, db: Session = Depends(get_db)):
+def delete_lead(lead_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor"))):
     return delete_item(db, Lead, lead_id)

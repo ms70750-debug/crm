@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models import Client, Consent, Lead, WhatsAppMessage
 from app.schemas.whatsapp import WhatsAppMessageRead, WhatsAppPreview, WhatsAppPreviewRequest, WhatsAppSendRequest
-from app.services.security import log_audit
+from app.services.security import log_audit, require_roles
 
 router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
@@ -27,12 +27,12 @@ def _find_recipient(db: Session, tipo: str, item_id: int):
 
 
 @router.get("/modelos")
-def list_templates():
+def list_templates(user=Depends(require_roles("admin", "supervisor", "operador"))):
     return [{"id": key, "nome": key.replace("_", " ").title()} for key in TEMPLATES]
 
 
 @router.post("/preview", response_model=WhatsAppPreview)
-def preview_message(payload: WhatsAppPreviewRequest, db: Session = Depends(get_db)):
+def preview_message(payload: WhatsAppPreviewRequest, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     recipient = _find_recipient(db, payload.destinatario_tipo, payload.destinatario_id)
     template = TEMPLATES.get(payload.modelo, TEMPLATES["primeiro_contato"])
     produto = getattr(recipient, "produto_interesse", getattr(recipient, "convenio", "consignado"))
@@ -40,7 +40,7 @@ def preview_message(payload: WhatsAppPreviewRequest, db: Session = Depends(get_d
 
 
 @router.post("/simular-envio", response_model=WhatsAppMessageRead, status_code=201)
-def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db)):
+def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     recipient = _find_recipient(db, payload.destinatario_tipo, payload.destinatario_id)
     client = recipient if payload.destinatario_tipo == "cliente" else db.scalar(select(Client).where(Client.cpf == recipient.cpf))
     if not client:
@@ -79,5 +79,5 @@ def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/historico", response_model=list[WhatsAppMessageRead])
-def list_history(db: Session = Depends(get_db)):
+def list_history(db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     return db.scalars(select(WhatsAppMessage).order_by(WhatsAppMessage.id.desc())).all()

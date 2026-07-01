@@ -1,4 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import type { ReactNode } from "react";
+import { AuthProvider } from "./auth/AuthContext";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { Admin } from "./pages/Admin";
 import { Clients } from "./pages/Clients";
@@ -15,22 +18,30 @@ import { WhatsApp } from "./pages/WhatsApp";
 
 export default function App() {
   return (
-    <Layout>
+    <AuthProvider>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/leads" element={<Leads />} />
-        <Route path="/leads/:id" element={<LeadDetail />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/clientes" element={<Clients />} />
-        <Route path="/consulta-inss" element={<INSS />} />
-        <Route path="/consulta-fgts" element={<FGTS />} />
-        <Route path="/propostas" element={<Proposals />} />
-        <Route path="/tarefas" element={<Tasks />} />
-        <Route path="/whatsapp" element={<WhatsApp />} />
-        <Route path="/treinamentos" element={<Trainings />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
+        <Route path="/leads" element={<ProtectedPage><Leads /></ProtectedPage>} />
+        <Route path="/leads/:id" element={<ProtectedPage><LeadDetail /></ProtectedPage>} />
+        <Route path="/clientes" element={<ProtectedPage roles={["admin", "supervisor", "operador"]}><Clients /></ProtectedPage>} />
+        <Route path="/consulta-inss" element={<ProtectedPage roles={["admin", "supervisor", "operador"]}><INSS /></ProtectedPage>} />
+        <Route path="/consulta-fgts" element={<ProtectedPage roles={["admin", "supervisor", "operador"]}><FGTS /></ProtectedPage>} />
+        <Route path="/propostas" element={<ProtectedPage><Proposals /></ProtectedPage>} />
+        <Route path="/tarefas" element={<ProtectedPage roles={["admin", "supervisor", "operador"]}><Tasks /></ProtectedPage>} />
+        <Route path="/whatsapp" element={<ProtectedPage roles={["admin", "supervisor", "operador"]}><WhatsApp /></ProtectedPage>} />
+        <Route path="/treinamentos" element={<ProtectedPage><Trainings /></ProtectedPage>} />
+        <Route path="/admin" element={<ProtectedPage roles={["admin", "supervisor"]}><Admin /></ProtectedPage>} />
       </Routes>
-    </Layout>
+    </AuthProvider>
+  );
+}
+
+function ProtectedPage({ children, roles }: { children: ReactNode; roles?: Array<"admin" | "supervisor" | "operador" | "parceiro"> }) {
+  return (
+    <ProtectedRoute roles={roles}>
+      <Layout>{children}</Layout>
+    </ProtectedRoute>
   );
 }

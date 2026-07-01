@@ -10,11 +10,20 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class UserRead(ORMModel):
+    id: int
+    nome: str
+    email: str
+    role: str
+    ativo: bool
+    created_at: datetime
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_at: datetime
-    user: dict
+    user: UserRead
 
 
 class ConsentCreate(BaseModel):

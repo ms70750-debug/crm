@@ -14,6 +14,24 @@ export type Lead = {
   proximo_contato?: string;
 };
 
+export type Perfil = "admin" | "supervisor" | "operador" | "parceiro";
+
+export type User = {
+  id: number;
+  nome: string;
+  email: string;
+  role: Perfil;
+  ativo: boolean;
+  created_at: string;
+};
+
+export type LoginResponse = {
+  access_token: string;
+  token_type: string;
+  expires_at: string;
+  user: User;
+};
+
 export type LeadTimelineEvent = {
   tipo: string;
   titulo: string;

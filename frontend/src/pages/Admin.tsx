@@ -1,14 +1,31 @@
 import { Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
+import { useAsync } from "../hooks/useAsync";
+import { api } from "../lib/api";
+import type { User } from "../types";
 
 export function Admin() {
+  const users = useAsync<User[]>(() => api.get("/auth/users"));
+
   return (
     <>
       <PageHeader title="Administracao" subtitle="Usuarios ficticios, perfis e configuracoes gerais em modo seguro." />
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
           <h3 className="mb-4 font-semibold">Usuarios ficticios</h3>
-          {["Ana - Gestora", "Bruno - Consultor", "Marina - Operacao"].map((user) => <div className="mb-3 rounded-md border border-line bg-white/5 p-3" key={user}>{user}</div>)}
+          <div className="grid gap-3">
+            {(users.data ?? []).map((user) => (
+              <div className="rounded-md border border-line bg-white/5 p-3" key={user.id}>
+                <strong>{user.nome}</strong>
+                <div className="text-sm text-slate-400">{user.email}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="badge">{roleLabel(user.role)}</span>
+                  <span className="badge text-lime">{user.ativo ? "Ativo" : "Inativo"}</span>
+                </div>
+              </div>
+            ))}
+            {!users.data && <div className="text-sm text-slate-400">Carregando usuarios...</div>}
+          </div>
         </Panel>
         <Panel>
           <h3 className="mb-4 font-semibold">Evolution API</h3>
@@ -29,4 +46,13 @@ export function Admin() {
       </div>
     </>
   );
+}
+
+function roleLabel(role: User["role"]) {
+  return {
+    admin: "Administrador",
+    supervisor: "Supervisor",
+    operador: "Operador/Vendedor",
+    parceiro: "Parceiro",
+  }[role];
 }

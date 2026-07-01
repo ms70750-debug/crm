@@ -19,6 +19,13 @@ from app.services.privacy import mask_cpf, mask_email, mask_phone
 SECRET = os.environ.get("BBB_AUTH_SECRET", "bbb-consig-crm-demo-secret")
 TOKEN_TTL_SECONDS = 60 * 60 * 8
 _rate_buckets: dict[str, deque[float]] = defaultdict(deque)
+ROLES = ("admin", "supervisor", "operador", "parceiro")
+ROLE_LABELS = {
+    "admin": "Administrador",
+    "supervisor": "Supervisor",
+    "operador": "Operador/Vendedor",
+    "parceiro": "Parceiro",
+}
 
 
 def hash_password(password: str, salt: str | None = None) -> str:
@@ -36,7 +43,7 @@ def verify_password(password: str, stored: str) -> bool:
 
 
 def create_token(user: User) -> str:
-    payload = {"sub": user.id, "email": user.email, "role": user.role, "exp": int(time.time()) + TOKEN_TTL_SECONDS}
+    payload = {"sub": user.id, "email": user.email, "role": normalize_role(user.role), "exp": int(time.time()) + TOKEN_TTL_SECONDS}
     raw = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode()
     signature = hmac.new(SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()
     return f"{raw}.{signature}"
@@ -64,6 +71,37 @@ def current_user(authorization: str | None = Header(default=None), db: Session =
     if not user or not user.ativo:
         raise HTTPException(status_code=401, detail="Usuario invalido")
     return user
+
+
+def normalize_role(role: str | None) -> str:
+    value = (role or "operador").strip().lower()
+    return value if value in ROLES else "operador"
+
+
+def user_payload(user: User) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "nome": user.nome,
+        "email": user.email,
+        "role": normalize_role(user.role),
+        "ativo": user.ativo,
+        "created_at": user.created_at,
+    }
+
+
+def require_roles(*roles: str):
+    allowed = {normalize_role(role) for role in roles}
+
+    def dependency(user: User = Depends(current_user)) -> User:
+        if normalize_role(user.role) not in allowed:
+            raise HTTPException(status_code=403, detail="Perfil sem permissao para esta acao")
+        return user
+
+    return dependency
+
+
+def is_partner(user: User) -> bool:
+    return normalize_role(user.role) == "parceiro"
 
 
 def check_rate_limit(key: str, limit: int = 10, window_seconds: int = 60) -> None:

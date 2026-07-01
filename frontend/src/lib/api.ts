@@ -31,6 +31,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // Mantem a mensagem padrao quando a API nao retorna JSON.
     }
+    if (res.status === 401) {
+      clearAuthToken();
+    }
     throw new Error(detail);
   }
   return res.json();

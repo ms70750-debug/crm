@@ -19,10 +19,54 @@ def _token() -> str:
     return response.json()["access_token"]
 
 
+def _login(email: str, password: str) -> dict:
+    init_db()
+    response = client.post("/auth/login", json={"email": email, "password": password})
+    assert response.status_code == 200
+    return response.json()
+
+
 def test_login_rejects_invalid_password() -> None:
     init_db()
     response = client.post("/auth/login", json={"email": "admin@bbbconsig.demo", "password": "senha-errada"})
     assert response.status_code == 401
+
+
+def test_auth_me_and_route_protection() -> None:
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    assert "password" not in str(login).lower()
+    assert "hash" not in str(login).lower()
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    me = client.get("/auth/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["role"] == "admin"
+    assert "password_hash" not in me.text
+
+    blocked = client.get("/dashboard/resumo")
+    assert blocked.status_code == 401
+
+    dashboard = client.get("/dashboard/resumo", headers=headers)
+    assert dashboard.status_code == 200
+    assert "cards" in dashboard.json()
+
+
+def test_partner_permissions_are_limited() -> None:
+    login = _login("parceiro@bbbconsig.demo", "Parceiro@2026")
+    headers = {"Authorization": f"Bearer {login['access_token']}"}
+
+    dashboard = client.get("/dashboard/resumo", headers=headers)
+    assert dashboard.status_code == 200
+
+    leads = client.get("/leads", headers=headers)
+    assert leads.status_code == 200
+    assert all(item["responsavel"] == "Parceiro Demo" for item in leads.json())
+
+    clients = client.get("/clientes", headers=headers)
+    assert clients.status_code == 403
+
+    admin_users = client.get("/auth/users", headers=headers)
+    assert admin_users.status_code == 403
 
 
 def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
@@ -50,6 +94,7 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
 
     blocked = client.post(
         "/whatsapp/simular-envio",
+        headers=headers,
         json={"destinatario_tipo": "cliente", "destinatario_id": body["id"], "modelo": "primeiro_contato", "mensagem": "Mensagem ficticia."},
     )
     assert blocked.status_code == 403
@@ -60,12 +105,13 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
 
     sent = client.post(
         "/whatsapp/simular-envio",
+        headers=headers,
         json={"destinatario_tipo": "cliente", "destinatario_id": body["id"], "modelo": "primeiro_contato", "mensagem": "Mensagem ficticia."},
     )
     assert sent.status_code == 201
     assert sent.json()["status"] == "Registrada em simulacao"
 
-    simulation = client.get(f"/consultas/inss/{cpf}")
+    simulation = client.get(f"/consultas/inss/{cpf}", headers=headers)
     assert simulation.status_code == 200
     assert "snapshot" in simulation.json()
     assert "regra_aplicada" in simulation.json()
@@ -73,13 +119,13 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     deleted = client.delete(f"/clientes/{body['id']}", headers=headers)
     assert deleted.status_code == 200
 
-    listed = client.get("/clientes")
+    listed = client.get("/clientes", headers=headers)
     assert all(item["id"] != body["id"] for item in listed.json())
 
     with SessionLocal() as db:
-      stored = db.get(Client, body["id"])
-      assert stored is not None
-      assert stored.deleted_at is not None
-      audit = db.scalar(select(AuditLog).where(AuditLog.action == "whatsapp_simulation_created").order_by(AuditLog.id.desc()))
-      assert audit is not None
-      assert cpf not in (audit.metadata_json or "")
+        stored = db.get(Client, body["id"])
+        assert stored is not None
+        assert stored.deleted_at is not None
+        audit = db.scalar(select(AuditLog).where(AuditLog.action == "whatsapp_simulation_created").order_by(AuditLog.id.desc()))
+        assert audit is not None
+        assert cpf not in (audit.metadata_json or "")

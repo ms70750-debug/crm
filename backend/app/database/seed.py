@@ -4,11 +4,24 @@ from sqlalchemy.orm import Session
 from app.models import Client, Lead, Proposal, Task, User
 from app.services.security import hash_password
 
+DEMO_USERS = [
+    ("Admin Demo", "admin@bbbconsig.demo", "BbbConsig@2026", "admin"),
+    ("Supervisora Demo", "supervisor@bbbconsig.demo", "Supervisor@2026", "supervisor"),
+    ("Operador Demo", "operador@bbbconsig.demo", "Operador@2026", "operador"),
+    ("Parceiro Demo", "parceiro@bbbconsig.demo", "Parceiro@2026", "parceiro"),
+]
+
 
 def seed_database(db: Session) -> None:
-    if not db.scalar(select(User).limit(1)):
-        db.add(User(nome="Admin Demo", email="admin@bbbconsig.demo", password_hash=hash_password("BbbConsig@2026"), role="admin"))
-        db.commit()
+    for nome, email, password, role in DEMO_USERS:
+        user = db.scalar(select(User).where(User.email == email))
+        if user:
+            user.nome = nome
+            user.role = role
+            user.ativo = True
+        else:
+            db.add(User(nome=nome, email=email, password_hash=hash_password(password), role=role))
+    db.commit()
 
     if db.scalar(select(Lead).limit(1)):
         return
