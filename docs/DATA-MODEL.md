@@ -6,7 +6,11 @@ SQLite local em `backend/app.db`, com migrations em `backend/migrations`, perman
 ## Producao real
 Producao real com dados de clientes exige PostgreSQL gerenciado via `DATABASE_URL` configurada somente no painel seguro do provedor. Nunca commitar URL real de banco e nunca colar `DATABASE_URL` real no chat.
 
-As migrations SQL em `backend/migrations` sao legado seguro para SQLite local. Em PostgreSQL, o schema inicial deve ser criado pelos modelos SQLAlchemy e as migrations legadas sao registradas em `schema_migrations` sem executar SQL especifico de SQLite.
+As migrations seguem estrategia separada por banco:
+- `backend/migrations/*.sql` e `backend/migrations/sqlite/*.sql`: legado SQLite/local/MVP controlado.
+- `backend/migrations/postgres/*.sql`: migrations PostgreSQL formais para producao real futura.
+
+`Base.metadata.create_all` pode ser usado como bootstrap local/controlado, mas nao e a estrategia final de producao real. Em PostgreSQL com `APP_ENV=production`, schema e migrations devem ser aplicados formalmente depois de banco gerenciado, backup/restore e aprovacao explicita.
 
 Uso com dados reais continua bloqueado ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
 

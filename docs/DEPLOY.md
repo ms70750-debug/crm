@@ -101,6 +101,18 @@ Rollback:
 - Nao migrar dados reais sem backup e restore testados.
 - Nao inserir dados reais antes de concluir todos os controles de seguranca e LGPD.
 
+## Migrations PostgreSQL
+
+As migrations de banco ficam separadas por estrategia:
+- Migrations legadas na raiz de `backend/migrations/` e migrations em `backend/migrations/sqlite/` sao usadas pelo SQLite local/MVP controlado.
+- Migrations em `backend/migrations/postgres/` sao reservadas para PostgreSQL gerenciado.
+
+Migrations PostgreSQL devem usar tipos compativeis com PostgreSQL, como `TIMESTAMPTZ` para data/hora com fuso quando aplicavel. Nao usar `DATETIME` em migration PostgreSQL.
+
+`Base.metadata.create_all` nao e estrategia final de producao real. Ele permanece apenas como bootstrap local/controlado. Em `APP_ENV=production` com PostgreSQL, schema e migrations devem ser aplicados de forma formal, apos banco gerenciado criado, backup/restore definido e aprovacao explicita.
+
+Nao executar migration em banco real nesta fase. O projeto continua limitado a dados ficticios ou anonimizados.
+
 ## CORS
 
 O Render esta configurado para aceitar:

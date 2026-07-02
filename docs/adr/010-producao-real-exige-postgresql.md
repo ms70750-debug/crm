@@ -23,5 +23,7 @@ SQLite permanece permitido apenas para desenvolvimento, testes locais e MVP cont
 - SQLite permanece somente para local/teste controlado.
 - `DATABASE_URL` real deve existir apenas no painel seguro do provedor.
 - A migracao deve revisar tipos, indices, migrations, backup, restore, LGPD e performance.
+- Migrations PostgreSQL devem ficar separadas das migrations SQLite e usar SQL compativel com PostgreSQL.
+- `Base.metadata.create_all` nao e estrategia final de producao real; e apenas bootstrap local/controlado.
 - A proxima etapa obrigatoria depois de PostgreSQL e definir criptografia/protecao de dados pessoais em repouso.
 - Uso com dados reais continua bloqueado ate concluir criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD.

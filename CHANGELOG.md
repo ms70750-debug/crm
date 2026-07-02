@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-02 - Correcao da estrategia de migrations PostgreSQL antes do merge
+
+### Corrigido
+- Separadas migrations SQLite e PostgreSQL para preparacao de producao real futura.
+- Criada migration PostgreSQL com `TIMESTAMPTZ` e sem `DATETIME`.
+- Documentado que `Base.metadata.create_all` nao e estrategia final de producao real.
+- Mantido bloqueio de dados reais e `REAL_DATA_MODE=false`.
+
 ## 2026-07-02 - Preparacao PostgreSQL para producao real
 
 ### Alterado

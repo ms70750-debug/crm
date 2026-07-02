@@ -29,6 +29,12 @@ O projeto aceita `DATABASE_URL`. Para desenvolvimento e MVP controlado, SQLite c
 
 Nunca commitar `.env` e nunca colar a `DATABASE_URL` real no chat.
 
+`DATABASE_URL` define qual estrategia de banco sera usada:
+- `sqlite:///...`: desenvolvimento, testes locais e MVP controlado.
+- `postgresql://...`, `postgres://...` ou `postgresql+psycopg://...`: PostgreSQL gerenciado futuro.
+
+Mesmo com PostgreSQL configurado, `REAL_DATA_MODE=true` continua bloqueado ate concluir criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
+
 ## Dados Sensiveis
 
 CPF, telefone, e-mail, beneficio, matricula e observacoes operacionais podem aparecer para perfis autorizados. Use apenas ambiente seguro e dados ficticios enquanto a operacao online nao estiver homologada.
