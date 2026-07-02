@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.routes import auth, clients, consents, dashboard, leads, proposals, simulations, tasks, whatsapp
 from app.services.security import check_rate_limit
@@ -45,6 +46,7 @@ async def security_headers_and_limits(request: Request, call_next):
 
 @app.on_event("startup")
 def on_startup() -> None:
+    validate_environment()
     init_db()
 
 

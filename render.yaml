@@ -9,10 +9,12 @@ services:
     healthCheckPath: /healthz
     autoDeploy: false
     envVars:
+      - key: APP_ENV
+        value: "production"
       - key: BBB_AUTH_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: "https://SEU-FRONTEND.vercel.app"
+        value: "http://localhost:5173"
       - key: DATABASE_URL
         value: "sqlite:///./app.db"
       - key: EVOLUTION_API_MODE

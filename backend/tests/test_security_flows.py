@@ -1,8 +1,10 @@
 from time import time_ns
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.main import app
@@ -10,6 +12,17 @@ from app.models import AuditLog, Client
 
 
 client = TestClient(app)
+
+
+def test_production_environment_rejects_insecure_required_vars(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "bbb-consig-crm-demo-secret")
+    monkeypatch.setenv("CORS_ORIGINS", "https://SEU-FRONTEND.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./app.db")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+
+    with pytest.raises(RuntimeError):
+        validate_environment()
 
 
 def _token() -> str:
