@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-02 - Deploy controlado online validado
+
+### Alterado
+- Backend Render publicado.
+- Frontend Vercel publicado.
+- Health check validado.
+- Login demo validado.
+- CORS ajustado para URL real da Vercel.
+- Uso com dados reais continua proibido.
+
 ## 2026-07-02 - Fix deploy Render Python
 
 ### Corrigido

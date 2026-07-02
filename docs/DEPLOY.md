@@ -1,18 +1,27 @@
 # Deploy
 
 ## Status
-Preparado para deploy controlado/teste. Producao real com dados de clientes continua bloqueada.
+Deploy controlado/teste online validado. Producao real com dados de clientes continua bloqueada.
 
 ## Deploy controlado MVP - 2026-07-02
 
-Status atual: preparado para acao manual no provedor. Ainda nao ha URL publica documentada para backend ou frontend.
+Status atual: online e validado para homologacao com dados ficticios.
 
 | Item | Provedor | Status | URL |
 |---|---|---|---|
-| Backend | Render | Pendente criacao/validacao no painel | Pendente |
-| Frontend | Vercel | Pendente criacao/validacao no painel | Pendente |
+| Backend | Render | Publicado e health check validado | `https://crm-2340.onrender.com` |
+| Frontend | Vercel | Publicado e login demo validado | `https://crm-sepia-beta.vercel.app` |
 
 Este deploy e somente para homologacao com dados ficticios ou anonimizados.
+
+Health check publico: `https://crm-2340.onrender.com/healthz`
+
+Resposta esperada:
+```json
+{"status":"ok","service":"BBB Consig CRM API"}
+```
+
+Login demo: validado com sucesso no ambiente Vercel.
 
 ## Bloqueios atuais
 - Autenticacao atual e adequada apenas para MVP controlado.
@@ -69,9 +78,10 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 
 ## CORS
 
-O `render.yaml` mantem `CORS_ORIGINS=http://localhost:5173` como valor temporario para o primeiro deploy do backend.
+O Render esta configurado para aceitar:
+`http://localhost:5173,https://crm-sepia-beta.vercel.app`
 
-Depois que a Vercel gerar a URL real do frontend, alterar `CORS_ORIGINS` no Render para a URL da Vercel. Manter localhost apenas se tambem for necessario testar desenvolvimento local.
+Manter localhost apenas para desenvolvimento local. A URL real da Vercel deve permanecer no CORS enquanto o frontend publico estiver ativo.
 
 ## Versao do Python no Render
 
@@ -84,23 +94,22 @@ Se o deploy falhar durante `pip install -r requirements.txt` com erro em `pydant
 ## Smoke test controlado
 
 ### Backend
-1. Abrir `https://URL-DO-RENDER/healthz`.
+1. Abrir `https://crm-2340.onrender.com/healthz`.
 2. Confirmar resposta 200 com `status: ok`.
 3. Revisar logs do Render e confirmar que nenhum segredo foi impresso.
 
 ### Frontend
-1. Abrir `https://URL-DA-VERCEL/login`.
+1. Abrir `https://crm-sepia-beta.vercel.app/login`.
 2. Entrar com usuario demo.
 3. Validar dashboard, leads, clientes, propostas, tarefas e WhatsApp simulado.
 4. Confirmar que nenhuma informacao real foi necessaria.
 
-## Sequencia manual recomendada
-1. Criar backend no Render pelo Blueprint `render.yaml`.
-2. Configurar variaveis do backend no painel seguro.
-3. Testar `/healthz` publico.
-4. Criar frontend na Vercel com root directory `frontend`.
-5. Configurar `VITE_API_URL` com a URL publica do Render.
-6. Fazer deploy do frontend.
-7. Atualizar `CORS_ORIGINS` no Render com a URL real da Vercel.
-8. Redeploy do backend.
-9. Rodar smoke test com usuarios e dados ficticios.
+## Proximos passos antes de producao real
+
+Antes de qualquer uso com dados reais, implementar e validar:
+- PostgreSQL gerenciado.
+- Criptografia/protecao de dados pessoais em repouso.
+- Autenticacao segura para producao.
+- Backup e restore testados.
+- Monitoramento e alertas.
+- Revisao LGPD final.
