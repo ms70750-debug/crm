@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-02 - Deploy controlado MVP
+
+### Alterado
+- Documentada preparacao/validacao de deploy controlado para Render e Vercel.
+- Registrado status pendente de URLs publicas ate criacao manual nos provedores.
+- Documentado CORS temporario com localhost e ajuste necessario apos URL real da Vercel.
+- Smoke test controlado descrito para backend, frontend e fluxo ficticio.
+- Restricoes contra dados reais preservadas.
+
 ## 2026-07-02 - Hardening pre-producao Yntelli
 
 ### Alterado
