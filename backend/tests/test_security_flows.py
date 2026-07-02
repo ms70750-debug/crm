@@ -25,6 +25,53 @@ def test_production_environment_rejects_insecure_required_vars(monkeypatch: pyte
         validate_environment()
 
 
+def test_production_environment_rejects_missing_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+    monkeypatch.setenv("REAL_DATA_MODE", "false")
+
+    with pytest.raises(RuntimeError):
+        validate_environment()
+
+
+def test_production_sqlite_is_allowed_only_for_controlled_mvp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./app.db")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+    monkeypatch.setenv("REAL_DATA_MODE", "false")
+
+    validate_environment()
+
+
+def test_real_data_mode_rejects_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./app.db")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+    monkeypatch.setenv("REAL_DATA_MODE", "true")
+
+    with pytest.raises(RuntimeError):
+        validate_environment()
+
+
+def test_real_data_mode_with_postgresql_still_requires_future_controls(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://usuario:senha@host:5432/bbb")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+    monkeypatch.setenv("REAL_DATA_MODE", "true")
+
+    with pytest.raises(RuntimeError):
+        validate_environment()
+
+
 def _token() -> str:
     init_db()
     response = client.post("/auth/login", json={"email": "admin@bbbconsig.demo", "password": "BbbConsig@2026"})

@@ -11,7 +11,8 @@ Nunca versionar `.env` real. Use `.env.example` e configure valores no painel do
 | `BACKEND_PORT` | `8000` | Local | Render fornece `$PORT`. |
 | `BBB_AUTH_SECRET` | `troque-este-valor` | Sim | Deve ser forte e secreto em deploy. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Sim | Em deploy, usar somente dominios permitidos. |
-| `DATABASE_URL` | `sqlite:///./app.db` | Sim | SQLite local/controlado agora; PostgreSQL futuro. |
+| `DATABASE_URL` | vazio no exemplo | Sim em deploy | SQLite local e MVP controlado; PostgreSQL obrigatorio antes de producao real com dados de clientes. |
+| `REAL_DATA_MODE` | `false` | Sim em deploy | Manter `false` ate concluir PostgreSQL, criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD. |
 | `EVOLUTION_API_MODE` | `simulation` | Sim | Manter `simulation` nesta fase. |
 | `EVOLUTION_API_URL` | vazio | Nao | Nao configurar envio real agora. |
 | `EVOLUTION_API_TOKEN` | vazio | Nao | Nunca commitar tokens. |
@@ -22,9 +23,11 @@ Nunca versionar `.env` real. Use `.env.example` e configure valores no painel do
 |---|---|---|---|
 | `VITE_API_URL` | `http://localhost:8000` | Sim | Em Vercel, usar URL publica do backend. |
 
-## PostgreSQL Futuro
+## PostgreSQL
 
-O projeto aceita `DATABASE_URL`, mas a base oficial continua SQLite local nesta etapa. Antes de migrar para PostgreSQL, revisar tipos, migrations, backups, concorrencia, retencao de dados e politicas LGPD.
+O projeto aceita `DATABASE_URL`. Para desenvolvimento e MVP controlado, SQLite continua permitido. Para producao real com dados de clientes, `DATABASE_URL` deve apontar para PostgreSQL gerenciado e ficar somente no painel seguro do provedor.
+
+Nunca commitar `.env` e nunca colar a `DATABASE_URL` real no chat.
 
 ## Dados Sensiveis
 
@@ -37,3 +40,4 @@ Quando `APP_ENV=production`, o backend valida variaveis obrigatorias no startup 
 - `CORS_ORIGINS` estiver ausente ou com placeholder.
 - `DATABASE_URL` estiver ausente.
 - `EVOLUTION_API_MODE` nao estiver como `simulation`.
+- `REAL_DATA_MODE=true` estiver ativo sem PostgreSQL ou antes dos controles futuros obrigatorios.

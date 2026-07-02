@@ -22,3 +22,5 @@ class Lead(Base):
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
     data_criacao: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     proximo_contato: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)

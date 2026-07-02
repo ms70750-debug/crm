@@ -63,6 +63,7 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `BBB_AUTH_SECRET`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
+- `REAL_DATA_MODE`
 - `EVOLUTION_API_MODE`
 
 ### Frontend Vercel
@@ -75,6 +76,30 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `EVOLUTION_API_TOKEN`
 
 `EVOLUTION_API_URL` e `EVOLUTION_API_TOKEN` devem ficar vazios enquanto WhatsApp estiver em modo simulacao.
+
+## PostgreSQL para producao real
+
+Producao real com dados de clientes exige PostgreSQL gerenciado. SQLite permanece apenas para desenvolvimento, testes locais e MVP controlado.
+
+Para preparar PostgreSQL:
+1. Criar um banco PostgreSQL gerenciado no provedor seguro escolhido.
+2. Configurar a `DATABASE_URL` real somente no painel seguro do Render.
+3. Nunca colar `DATABASE_URL` real no chat.
+4. Nunca commitar `.env`.
+5. Manter `REAL_DATA_MODE=false` ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
+6. Apos configurar `DATABASE_URL`, redeployar o backend.
+
+Smoke test apos configurar PostgreSQL:
+- `GET /healthz`
+- Login demo.
+- Criacao de cliente ficticio.
+- Registro de opt-in ficticio.
+- Simulacao ficticia.
+
+Rollback:
+- Se o deploy com PostgreSQL falhar, pausar o uso online ou restaurar a `DATABASE_URL` anterior de teste controlado.
+- Nao migrar dados reais sem backup e restore testados.
+- Nao inserir dados reais antes de concluir todos os controles de seguranca e LGPD.
 
 ## CORS
 
