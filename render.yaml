@@ -19,5 +19,7 @@ services:
         value: "http://localhost:5173,https://crm-sepia-beta.vercel.app"
       - key: DATABASE_URL
         value: "sqlite:///./app.db"
+      - key: REAL_DATA_MODE
+        value: "false"
       - key: EVOLUTION_API_MODE
         value: "simulation"

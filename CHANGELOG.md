@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-02 - Correcao da estrategia de migrations PostgreSQL antes do merge
+
+### Corrigido
+- Separadas migrations SQLite e PostgreSQL para preparacao de producao real futura.
+- Criada migration PostgreSQL com `TIMESTAMPTZ` e sem `DATETIME`.
+- Documentado que `Base.metadata.create_all` nao e estrategia final de producao real.
+- Mantido bloqueio de dados reais e `REAL_DATA_MODE=false`.
+
+## 2026-07-02 - Preparacao PostgreSQL para producao real
+
+### Alterado
+- Suporte/documentacao para PostgreSQL em producao real.
+- SQLite mantido apenas para desenvolvimento, testes locais e MVP controlado.
+- Runtime checks reforcados para `DATABASE_URL` e `REAL_DATA_MODE`.
+- ADR de PostgreSQL atualizada para Accepted.
+- Uso com dados reais continua bloqueado ate criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
+
 ## 2026-07-02 - Deploy controlado online validado
 
 ### Alterado

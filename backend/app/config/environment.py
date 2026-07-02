@@ -6,10 +6,23 @@ logger = logging.getLogger("bbb-consig.environment")
 PRODUCTION_ENV_VALUES = {"production", "prod", "render"}
 DEMO_AUTH_SECRET = "bbb-consig-crm-demo-secret"
 PLACEHOLDER_AUTH_SECRET = "troque-este-valor-em-ambiente-seguro"
+PENDING_REAL_DATA_CONTROLS = "criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD"
 
 
 def is_production_environment() -> bool:
     return os.environ.get("APP_ENV", "local").strip().lower() in PRODUCTION_ENV_VALUES
+
+
+def is_postgresql_url(database_url: str) -> bool:
+    return database_url.startswith(("postgres://", "postgresql://", "postgresql+psycopg://", "postgresql+psycopg2://"))
+
+
+def is_sqlite_url(database_url: str) -> bool:
+    return database_url.startswith("sqlite")
+
+
+def real_data_mode_enabled() -> bool:
+    return os.environ.get("REAL_DATA_MODE", "false").strip().lower() in {"1", "true", "yes", "sim"}
 
 
 def validate_environment() -> None:
@@ -21,6 +34,7 @@ def validate_environment() -> None:
     cors_origins = os.environ.get("CORS_ORIGINS", "")
     database_url = os.environ.get("DATABASE_URL", "")
     evolution_mode = os.environ.get("EVOLUTION_API_MODE", "")
+    real_data_mode = real_data_mode_enabled()
 
     if not auth_secret or auth_secret in {DEMO_AUTH_SECRET, PLACEHOLDER_AUTH_SECRET}:
         errors.append("BBB_AUTH_SECRET ausente ou inseguro")
@@ -28,8 +42,14 @@ def validate_environment() -> None:
         errors.append("CORS_ORIGINS ausente ou com placeholder")
     if not database_url:
         errors.append("DATABASE_URL ausente")
+    elif real_data_mode and not is_postgresql_url(database_url):
+        errors.append("REAL_DATA_MODE exige DATABASE_URL PostgreSQL")
+    elif is_sqlite_url(database_url) and not real_data_mode:
+        logger.warning("SQLite permitido somente para MVP controlado com REAL_DATA_MODE=false.")
     if evolution_mode != "simulation":
         errors.append("EVOLUTION_API_MODE deve permanecer como simulation nesta fase")
+    if real_data_mode:
+        errors.append(f"REAL_DATA_MODE permanece bloqueado ate concluir {PENDING_REAL_DATA_CONTROLS}")
 
     if not errors:
         logger.info("Ambiente de producao controlada validado sem expor segredos.")

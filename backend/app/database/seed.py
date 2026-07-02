@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.models import Client, Lead, Proposal, Task, User
 from app.services.security import hash_password
 
+# Dados exclusivamente ficticios para demonstracao. Nao usar CPF, beneficio,
+# conta bancaria, contrato ou dados pessoais reais nestes seeds.
 DEMO_USERS = [
     ("Admin Demo", "admin@bbbconsig.demo", "BbbConsig@2026", "admin"),
     ("Supervisora Demo", "supervisor@bbbconsig.demo", "Supervisor@2026", "supervisor"),

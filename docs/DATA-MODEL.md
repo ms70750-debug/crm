@@ -1,7 +1,18 @@
 # Modelo de Dados - BBB Consig CRM
 
 ## Banco atual
-SQLite local em `backend/app.db`, com migrations em `backend/migrations`.
+SQLite local em `backend/app.db`, com migrations em `backend/migrations`, permanece restrito a desenvolvimento, testes locais e MVP controlado.
+
+## Producao real
+Producao real com dados de clientes exige PostgreSQL gerenciado via `DATABASE_URL` configurada somente no painel seguro do provedor. Nunca commitar URL real de banco e nunca colar `DATABASE_URL` real no chat.
+
+As migrations seguem estrategia separada por banco:
+- `backend/migrations/*.sql` e `backend/migrations/sqlite/*.sql`: legado SQLite/local/MVP controlado.
+- `backend/migrations/postgres/*.sql`: migrations PostgreSQL formais para producao real futura.
+
+`Base.metadata.create_all` pode ser usado como bootstrap local/controlado, mas nao e a estrategia final de producao real. Em PostgreSQL com `APP_ENV=production`, schema e migrations devem ser aplicados formalmente depois de banco gerenciado, backup/restore e aprovacao explicita.
+
+Uso com dados reais continua bloqueado ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
 
 ## Tabelas existentes
 - `leads`
@@ -15,6 +26,8 @@ SQLite local em `backend/app.db`, com migrations em `backend/migrations`.
 - `audit_logs`
 - `consents`
 - `simulations`
+
+Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como `data_criacao` e `criado_em` permanecem para compatibilidade do MVP.
 
 ## Campos sensiveis
 - CPF

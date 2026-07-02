@@ -1,13 +1,15 @@
 # ADR 010 - Producao real exige PostgreSQL
 
 ## Status
-Proposed
+Accepted
 
 ## Contexto
 SQLite atende o MVP local/controlado, mas nao e adequado para operacao real com multiplos usuarios, concorrencia, backups formais e dados pessoais.
 
-## Decisao proposta
-Antes de qualquer producao real com dados de clientes, migrar para PostgreSQL gerenciado.
+## Decisao
+Producao real com dados de clientes exige PostgreSQL gerenciado.
+
+SQLite permanece permitido apenas para desenvolvimento, testes locais e MVP controlado com dados ficticios ou anonimizados.
 
 ## Criterios de migracao
 - Uso de dados reais.
@@ -19,5 +21,9 @@ Antes de qualquer producao real com dados de clientes, migrar para PostgreSQL ge
 
 ## Consequencias
 - SQLite permanece somente para local/teste controlado.
-- `DATABASE_URL` ja existe como caminho futuro.
+- `DATABASE_URL` real deve existir apenas no painel seguro do provedor.
 - A migracao deve revisar tipos, indices, migrations, backup, restore, LGPD e performance.
+- Migrations PostgreSQL devem ficar separadas das migrations SQLite e usar SQL compativel com PostgreSQL.
+- `Base.metadata.create_all` nao e estrategia final de producao real; e apenas bootstrap local/controlado.
+- A proxima etapa obrigatoria depois de PostgreSQL e definir criptografia/protecao de dados pessoais em repouso.
+- Uso com dados reais continua bloqueado ate concluir criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
