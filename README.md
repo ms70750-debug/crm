@@ -58,6 +58,15 @@ npm run e2e
 ## Deploy controlado
 Esta versao esta preparada para deploy controlado/teste, sem dados reais e sem integracoes reais com WhatsApp, INSS, FGTS ou bancos.
 
+## Ambiente controlado online
+Ambiente publicado somente para homologacao com dados ficticios ou anonimizados:
+
+- Frontend Vercel: `https://crm-sepia-beta.vercel.app`
+- Backend Render: `https://crm-2340.onrender.com`
+- Health check: `https://crm-2340.onrender.com/healthz`
+
+O uso com dados reais continua proibido nesta fase.
+
 - Backend Render: veja `docs/DEPLOY-RENDER.md`.
 - Frontend Vercel: veja `docs/DEPLOY-VERCEL.md`.
 - Variaveis de ambiente: veja `docs/ENVIRONMENT.md`.

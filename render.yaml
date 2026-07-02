@@ -16,7 +16,7 @@ services:
       - key: BBB_AUTH_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: "http://localhost:5173"
+        value: "http://localhost:5173,https://crm-sepia-beta.vercel.app"
       - key: DATABASE_URL
         value: "sqlite:///./app.db"
       - key: EVOLUTION_API_MODE
