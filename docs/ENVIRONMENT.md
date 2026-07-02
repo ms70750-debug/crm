@@ -6,6 +6,7 @@ Nunca versionar `.env` real. Use `.env.example` e configure valores no painel do
 
 | Variavel | Exemplo local | Obrigatoria | Observacao |
 |---|---|---|---|
+| `APP_ENV` | `local` | Sim em deploy | Use `production` no Render para ativar validacao de ambiente. |
 | `BACKEND_HOST` | `0.0.0.0` | Local | Usada nos comandos locais. |
 | `BACKEND_PORT` | `8000` | Local | Render fornece `$PORT`. |
 | `BBB_AUTH_SECRET` | `troque-este-valor` | Sim | Deve ser forte e secreto em deploy. |
@@ -28,3 +29,11 @@ O projeto aceita `DATABASE_URL`, mas a base oficial continua SQLite local nesta 
 ## Dados Sensiveis
 
 CPF, telefone, e-mail, beneficio, matricula e observacoes operacionais podem aparecer para perfis autorizados. Use apenas ambiente seguro e dados ficticios enquanto a operacao online nao estiver homologada.
+
+## Validacao em runtime
+
+Quando `APP_ENV=production`, o backend valida variaveis obrigatorias no startup e registra erro claro sem imprimir valores sensiveis. A aplicacao nao deve iniciar se:
+- `BBB_AUTH_SECRET` estiver ausente ou com valor demo/placeholder.
+- `CORS_ORIGINS` estiver ausente ou com placeholder.
+- `DATABASE_URL` estiver ausente.
+- `EVOLUTION_API_MODE` nao estiver como `simulation`.

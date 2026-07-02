@@ -12,8 +12,9 @@ Este guia prepara um ambiente de teste controlado para a API FastAPI do BBB Cons
 O arquivo `render.yaml` fica na raiz do repositorio, como esperado pelo Render Blueprint. Ele define um Web Service Python com `rootDir: backend`, `buildCommand` e `startCommand`.
 
 ## Variaveis obrigatorias
+- `APP_ENV`: usar `production` para ativar validacao de ambiente.
 - `BBB_AUTH_SECRET`: segredo forte criado no painel do Render.
-- `CORS_ORIGINS`: dominio publico do frontend Vercel, exemplo `https://seu-app.vercel.app`.
+- `CORS_ORIGINS`: usar `http://localhost:5173` temporariamente antes da Vercel existir; depois trocar para o dominio publico do frontend Vercel, exemplo `https://seu-app.vercel.app`.
 - `DATABASE_URL`: manter `sqlite:///./app.db` apenas em teste controlado.
 - `EVOLUTION_API_MODE`: manter `simulation`.
 
@@ -23,10 +24,11 @@ SQLite e aceitavel somente para validacao local/controlada. Nao e recomendado pa
 ## Checklist rapido
 1. Confirmar que `.env`, `app.db`, backups e logs nao estao no Git.
 2. Criar `BBB_AUTH_SECRET` no painel do Render.
-3. Configurar `CORS_ORIGINS` com o dominio real da Vercel.
-4. Fazer deploy do backend.
-5. Abrir `https://SEU-BACKEND.onrender.com/healthz`.
-6. Testar login com usuarios demo apenas em base ficticia.
+3. Configurar `APP_ENV=production`.
+4. Configurar `CORS_ORIGINS` com localhost no primeiro deploy e com o dominio real da Vercel apos o frontend existir.
+5. Fazer deploy do backend.
+6. Abrir `https://SEU-BACKEND.onrender.com/healthz`.
+7. Testar login com usuarios demo apenas em base ficticia.
 
 ## Cuidados LGPD
 CPF, telefone, e-mail, beneficio e observacoes operacionais exigem ambiente seguro. Nao publique dados reais enquanto HTTPS, variaveis, acesso, backup, retencao de logs e banco definitivo nao estiverem validados.

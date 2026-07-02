@@ -45,9 +45,9 @@ Frontend chama a API REST em `http://localhost:8000`. A API acessa SQLite via SQ
 - `POST /whatsapp/simular-envio`
 
 ## Pontos de risco
-- Dados pessoais precisam ser mascarados e auditados.
-- SQLite nao e adequado para operacao SaaS multiusuario.
-- Autenticacao atual e minima/demo.
+- Dados pessoais completos aparecem somente para admin, supervisor e operador; parceiro, logs e relatorios gerais devem permanecer mascarados/limitados.
+- SQLite nao e adequado para producao real ou operacao SaaS multiusuario.
+- Autenticacao atual e adequada apenas para MVP controlado.
 - Integracoes externas devem ter timeout, retry, cache e auditoria antes de uso real.
 
 ## Headers e rate limit

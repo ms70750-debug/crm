@@ -2,6 +2,17 @@
 
 CRM para operacao de credito consignado com leads, clientes, propostas, tarefas, consultas simuladas INSS/FGTS, WhatsApp simulado, treinamentos e administracao.
 
+## Status do projeto
+Classificacao atual: **USO_PROPRIO - MVP CONTROLADO**.
+
+Este projeto ainda nao esta liberado para operacao real com dados pessoais de clientes. Uso atual permitido apenas para teste controlado com dados ficticios.
+
+- Publico esperado agora: dono da operacao e equipe interna restrita.
+- Capacidade alvo do MVP: ate 10 usuarios internos.
+- Dados permitidos: ficticios ou anonimizados.
+- Dados proibidos nesta fase: CPF real, conta bancaria real, beneficio real, margem real e contrato real.
+- Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso e autenticacao segura.
+
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.
 - Backend: Python, FastAPI, SQLite, SQLAlchemy, Pydantic e Uvicorn.
@@ -51,6 +62,7 @@ Esta versao esta preparada para deploy controlado/teste, sem dados reais e sem i
 - Frontend Vercel: veja `docs/DEPLOY-VERCEL.md`.
 - Variaveis de ambiente: veja `docs/ENVIRONMENT.md`.
 - Checklist pre-deploy: veja `docs/PRE-DEPLOY-CHECKLIST.md`.
+- Rotina de manutencao: veja `docs/MAINTENANCE.md`.
 
 Comando de start do backend em provedor:
 ```bash

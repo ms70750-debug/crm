@@ -15,6 +15,7 @@ Use antes de qualquer publicacao online.
 - [ ] `GET /healthz` responde `status: ok`.
 
 ## Ambiente
+- [ ] `APP_ENV=production` configurado no provedor para validar ambiente.
 - [ ] `BBB_AUTH_SECRET` criado no painel do provedor, sem valor real em arquivo.
 - [ ] `CORS_ORIGINS` limitado ao dominio do frontend.
 - [ ] `VITE_API_URL` aponta para o backend correto.
