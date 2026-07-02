@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-02 - Fix deploy Render Python
+
+### Corrigido
+- Fixada versao estavel do Python para backend no Render.
+- Documentado erro de Python 3.14/pydantic-core no deploy.
+- Preservado deploy controlado apenas com dados ficticios.
+
 ## 2026-07-02 - Deploy controlado MVP
 
 ### Alterado

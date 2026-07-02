@@ -50,6 +50,7 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 
 ### Backend Render
 - `APP_ENV`
+- `PYTHON_VERSION`
 - `BBB_AUTH_SECRET`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
@@ -71,6 +72,14 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 O `render.yaml` mantem `CORS_ORIGINS=http://localhost:5173` como valor temporario para o primeiro deploy do backend.
 
 Depois que a Vercel gerar a URL real do frontend, alterar `CORS_ORIGINS` no Render para a URL da Vercel. Manter localhost apenas se tambem for necessario testar desenvolvimento local.
+
+## Versao do Python no Render
+
+O backend deve rodar com Python `3.12.8` no Render. A versao esta fixada no `render.yaml` por `PYTHON_VERSION=3.12.8` e tambem registrada em `.python-version`.
+
+Nao permitir que o Render escolha automaticamente Python `3.14.x` neste MVP controlado. Essa versao pode nao ter wheels compativeis para dependencias atuais, especialmente `pydantic-core`, fazendo o build tentar compilar com Rust/maturin e falhar no ambiente do provedor.
+
+Se o deploy falhar durante `pip install -r requirements.txt` com erro em `pydantic-core`, confira primeiro a versao de Python usada nos logs do Render.
 
 ## Smoke test controlado
 
