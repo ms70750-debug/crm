@@ -134,6 +134,31 @@ Antes de apontar o Render para Supabase:
 
 O script de migrations PostgreSQL usa `backend/migrations/postgres/*.sql`, exige `DIRECT_URL`, nao imprime a URL completa e permanece bloqueado com `REAL_DATA_MODE=true`.
 
+## Dry-run Supabase via GitHub Actions
+
+O projeto possui o workflow manual `Supabase Migrations Dry Run` para validar quais migrations PostgreSQL seriam aplicadas usando um Repository Secret. Esse fluxo nao aplica migrations e nao libera dados reais.
+
+Para configurar:
+1. Abrir o repositorio no GitHub.
+2. Ir em `Settings`.
+3. Ir em `Secrets and variables` -> `Actions`.
+4. Criar um Repository secret:
+   - Name: `SUPABASE_DIRECT_URL`
+   - Value: `DIRECT_URL` do Supabase com a senha real.
+5. Nunca colar essa URL no chat.
+6. Ir em `Actions`.
+7. Selecionar `Supabase Migrations Dry Run`.
+8. Clicar em `Run workflow`.
+9. Conferir nos logs se o workflow listou as migrations e se nenhuma migration foi aplicada.
+
+Esse workflow:
+- usa `SUPABASE_DIRECT_URL` apenas como secret do GitHub Actions;
+- exporta o valor como `DIRECT_URL` para o script;
+- executa `python backend/scripts/apply_postgres_migrations.py` sem `--apply`;
+- mantem `REAL_DATA_MODE=false`;
+- nao imprime a URL completa;
+- nao cria opcao de aplicar migration real.
+
 ## CORS
 
 O Render esta configurado para aceitar:

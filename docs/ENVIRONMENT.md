@@ -44,6 +44,8 @@ Mesmo com PostgreSQL configurado, `REAL_DATA_MODE=true` continua bloqueado ate c
 
 `DIRECT_URL` nao e obrigatoria para o runtime da API. Ela e exigida apenas pelo script manual de migrations PostgreSQL.
 
+Para dry-run via GitHub Actions, configurar o Repository Secret `SUPABASE_DIRECT_URL`. O workflow manual exporta esse secret como `DIRECT_URL` somente durante a execucao do dry-run e nao deve imprimir o valor completo.
+
 ## Dados Sensiveis
 
 CPF, telefone, e-mail, beneficio, matricula e observacoes operacionais podem aparecer para perfis autorizados. Use apenas ambiente seguro e dados ficticios enquanto a operacao online nao estiver homologada.
