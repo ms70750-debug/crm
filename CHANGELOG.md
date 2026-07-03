@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-02 - Mascara reforcada da DIRECT_URL
+
+### Corrigido
+- Reforcada a mascara da DIRECT_URL para ocultar usuario e host completos.
+- Mantida protecao contra vazamento de senha e URL completa.
+- Mantido dry-run sem aplicacao de migrations.
+
+## 2026-07-02 - Tratamento seguro de DIRECT_URL invalida
+
+### Corrigido
+- Corrigida falha segura quando `DIRECT_URL` contem placeholder ou formato invalido.
+- Evitado traceback bruto com `urlsplit`.
+- Mantida protecao contra vazamento de segredo.
+
 ## 2026-07-02 - Workflow dry-run Supabase
 
 ### Alterado
