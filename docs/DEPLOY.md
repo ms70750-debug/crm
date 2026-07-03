@@ -159,6 +159,12 @@ Esse workflow:
 - nao imprime a URL completa;
 - nao cria opcao de aplicar migration real.
 
+### Erro Invalid IPv6 URL no dry-run
+
+Se o dry-run falhar com mensagem segura sobre `DIRECT_URL invalida`, normalmente a `DIRECT_URL` ainda contem `[YOUR-PASSWORD]` ou a senha possui caracteres reservados que quebram a URL.
+
+Corrija o Repository Secret `SUPABASE_DIRECT_URL` no GitHub. Substitua `[YOUR-PASSWORD]` pela senha real somente no secret, nunca no chat. Se a senha tiver caracteres como `@`, `:`, `/`, `#`, `?`, `[` ou `]`, use uma senha forte com letras e numeros sem caracteres reservados ou aplique URL encoding na senha.
+
 ## CORS
 
 O Render esta configurado para aceitar:

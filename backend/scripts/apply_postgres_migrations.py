@@ -14,10 +14,33 @@ from app.config.environment import is_postgresql_url, real_data_mode_enabled  # 
 from app.database.session import normalize_database_url  # noqa: E402
 
 MIGRATIONS_DIR = BACKEND_ROOT / "migrations" / "postgres"
+PLACEHOLDER_DIRECT_URL_MESSAGE = "DIRECT_URL ainda contem [YOUR-PASSWORD]. Substitua pela senha real no Secret do GitHub."
+INVALID_DIRECT_URL_MESSAGE = (
+    "DIRECT_URL invalida. Confira o Secret SUPABASE_DIRECT_URL no GitHub. "
+    "Use uma senha sem caracteres reservados ou URL-encode a senha."
+)
+
+
+def parse_direct_url_safely(database_url: str):
+    if "[YOUR-PASSWORD]" in database_url:
+        raise RuntimeError(PLACEHOLDER_DIRECT_URL_MESSAGE)
+    if "[" in database_url or "]" in database_url:
+        raise RuntimeError(INVALID_DIRECT_URL_MESSAGE)
+    try:
+        parsed = urlsplit(database_url)
+        _ = parsed.port
+    except ValueError as exc:
+        raise RuntimeError(INVALID_DIRECT_URL_MESSAGE) from exc
+    if not parsed.scheme or not parsed.netloc:
+        raise RuntimeError(INVALID_DIRECT_URL_MESSAGE)
+    return parsed
 
 
 def mask_database_url(database_url: str) -> str:
-    parsed = urlsplit(database_url)
+    try:
+        parsed = parse_direct_url_safely(database_url)
+    except RuntimeError:
+        return "<DIRECT_URL invalida ocultada>"
     if not parsed.netloc:
         return "<valor oculto>"
 
@@ -37,7 +60,8 @@ def get_direct_url() -> str:
     if not direct_url:
         raise RuntimeError("DIRECT_URL ausente. Configure somente no painel/ambiente seguro antes de rodar migrations PostgreSQL.")
     if not is_postgresql_url(direct_url):
-        raise RuntimeError("DIRECT_URL deve apontar para PostgreSQL/Supabase.")
+        raise RuntimeError(INVALID_DIRECT_URL_MESSAGE)
+    parse_direct_url_safely(direct_url)
     return normalize_database_url(direct_url)
 
 
@@ -93,4 +117,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except RuntimeError as exc:
+        print(f"ERRO SEGURO: {exc}", file=sys.stderr)
+        raise SystemExit(1)

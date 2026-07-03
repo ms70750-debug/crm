@@ -46,6 +46,8 @@ Mesmo com PostgreSQL configurado, `REAL_DATA_MODE=true` continua bloqueado ate c
 
 Para dry-run via GitHub Actions, configurar o Repository Secret `SUPABASE_DIRECT_URL`. O workflow manual exporta esse secret como `DIRECT_URL` somente durante a execucao do dry-run e nao deve imprimir o valor completo.
 
+Se o dry-run reportar `DIRECT_URL invalida` ou `Invalid IPv6 URL`, confira o secret `SUPABASE_DIRECT_URL`: geralmente `[YOUR-PASSWORD]` nao foi substituido ou a senha contem caracteres reservados. Nunca cole a URL no chat; prefira senha forte com letras e numeros sem caracteres reservados ou use URL encoding.
+
 ## Dados Sensiveis
 
 CPF, telefone, e-mail, beneficio, matricula e observacoes operacionais podem aparecer para perfis autorizados. Use apenas ambiente seguro e dados ficticios enquanto a operacao online nao estiver homologada.

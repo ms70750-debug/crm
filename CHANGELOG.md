@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-02 - Tratamento seguro de DIRECT_URL invalida
+
+### Corrigido
+- Corrigida falha segura quando `DIRECT_URL` contem placeholder ou formato invalido.
+- Evitado traceback bruto com `urlsplit`.
+- Mantida protecao contra vazamento de segredo.
+
 ## 2026-07-02 - Workflow dry-run Supabase
 
 ### Alterado
