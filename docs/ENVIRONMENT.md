@@ -11,7 +11,8 @@ Nunca versionar `.env` real. Use `.env.example` e configure valores no painel do
 | `BACKEND_PORT` | `8000` | Local | Render fornece `$PORT`. |
 | `BBB_AUTH_SECRET` | `troque-este-valor` | Sim | Deve ser forte e secreto em deploy. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Sim | Em deploy, usar somente dominios permitidos. |
-| `DATABASE_URL` | vazio no exemplo | Sim em deploy | SQLite local e MVP controlado; PostgreSQL obrigatorio antes de producao real com dados de clientes. |
+| `DATABASE_URL` | vazio no exemplo | Sim em deploy | Runtime da API. Em Supabase, usar a URL do pooler transaction-mode. SQLite local e MVP controlado continuam permitidos. |
+| `DIRECT_URL` | vazio no exemplo | Nao para runtime | Uso exclusivo de migrations/admin. Em Supabase, usar a URL do pooler session-mode. |
 | `REAL_DATA_MODE` | `false` | Sim em deploy | Manter `false` ate concluir PostgreSQL, criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD. |
 | `EVOLUTION_API_MODE` | `simulation` | Sim | Manter `simulation` nesta fase. |
 | `EVOLUTION_API_URL` | vazio | Nao | Nao configurar envio real agora. |
@@ -29,11 +30,19 @@ O projeto aceita `DATABASE_URL`. Para desenvolvimento e MVP controlado, SQLite c
 
 Nunca commitar `.env` e nunca colar a `DATABASE_URL` real no chat.
 
+Para Supabase:
+- `DATABASE_URL`: usar no runtime da API, normalmente a conexao do shared transaction-mode pooler.
+- `DIRECT_URL`: usar apenas para migrations/admin, normalmente a conexao do shared session-mode pooler.
+- Substituir `[YOUR-PASSWORD]` somente no painel seguro do provedor ou variavel de ambiente local privada.
+- Nunca colar senha, `DATABASE_URL` ou `DIRECT_URL` reais no chat.
+
 `DATABASE_URL` define qual estrategia de banco sera usada:
 - `sqlite:///...`: desenvolvimento, testes locais e MVP controlado.
 - `postgresql://...`, `postgres://...` ou `postgresql+psycopg://...`: PostgreSQL gerenciado futuro.
 
 Mesmo com PostgreSQL configurado, `REAL_DATA_MODE=true` continua bloqueado ate concluir criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
+
+`DIRECT_URL` nao e obrigatoria para o runtime da API. Ela e exigida apenas pelo script manual de migrations PostgreSQL.
 
 ## Dados Sensiveis
 

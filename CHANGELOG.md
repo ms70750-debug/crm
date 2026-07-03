@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-02 - Preparacao Supabase PostgreSQL
+
+### Alterado
+- Documentada configuracao Supabase PostgreSQL.
+- Diferenciado `DATABASE_URL` para runtime e `DIRECT_URL` para migrations/admin.
+- Preparado script seguro para dry-run/aplicacao manual de migrations PostgreSQL.
+- Mantido bloqueio de dados reais e `REAL_DATA_MODE=false`.
+
 ## 2026-07-02 - Correcao da estrategia de migrations PostgreSQL antes do merge
 
 ### Corrigido
