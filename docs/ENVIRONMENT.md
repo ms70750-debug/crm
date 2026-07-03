@@ -46,6 +46,8 @@ Mesmo com PostgreSQL configurado, `REAL_DATA_MODE=true` continua bloqueado ate c
 
 Para dry-run via GitHub Actions, configurar o Repository Secret `SUPABASE_DIRECT_URL`. O workflow manual exporta esse secret como `DIRECT_URL` somente durante a execucao do dry-run e nao deve imprimir usuario, host, senha ou URL completa. Os logs devem mostrar apenas que a `DIRECT_URL` foi configurada e ocultada.
 
+Para aplicar migrations via GitHub Actions, usar o workflow manual `Supabase Migrations Apply` somente depois de um dry-run com sucesso. O workflow exige o input `confirmacao` com o valor exato `APLICAR_MIGRATIONS_SUPABASE`, mantem `REAL_DATA_MODE=false` e executa o script com `--apply`. Esse fluxo altera a estrutura do banco, mas nao libera dados reais.
+
 Se o dry-run reportar `DIRECT_URL invalida` ou `Invalid IPv6 URL`, confira o secret `SUPABASE_DIRECT_URL`: geralmente `[YOUR-PASSWORD]` nao foi substituido ou a senha contem caracteres reservados. Nunca cole a URL no chat; prefira senha forte com letras e numeros sem caracteres reservados ou use URL encoding.
 
 ## Dados Sensiveis

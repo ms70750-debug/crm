@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-03 - Workflow controlado para aplicar migrations Supabase
+
+### Adicionado
+- Criado workflow manual separado para aplicacao das migrations PostgreSQL.
+- Exigida confirmacao `APLICAR_MIGRATIONS_SUPABASE`.
+- Mantido `REAL_DATA_MODE=false`.
+- Mantida proibicao de dados reais.
+
 ## 2026-07-02 - Mascara reforcada da DIRECT_URL
 
 ### Corrigido
