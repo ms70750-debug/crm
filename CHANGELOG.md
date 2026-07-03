@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-02 - Workflow dry-run Supabase
+
+### Alterado
+- Criado workflow manual de dry-run das migrations Supabase via GitHub Actions.
+- Usado secret `SUPABASE_DIRECT_URL` sem expor senha.
+- Mantida proibicao de dados reais.
+- Nenhuma migration e aplicada por esse workflow.
+
 ## 2026-07-02 - Preparacao Supabase PostgreSQL
 
 ### Alterado
