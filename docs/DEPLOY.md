@@ -113,6 +113,27 @@ Migrations PostgreSQL devem usar tipos compativeis com PostgreSQL, como `TIMESTA
 
 Nao executar migration em banco real nesta fase. O projeto continua limitado a dados ficticios ou anonimizados.
 
+## Supabase PostgreSQL
+
+Supabase foi escolhido como provedor PostgreSQL gerenciado para a etapa futura de producao real. Esta preparacao nao libera dados reais.
+
+Na tela Connect/ORM do Supabase:
+- `DATABASE_URL`: usar no Render para runtime da API. Preferir a conexao via shared transaction-mode pooler.
+- `DIRECT_URL`: usar apenas para migrations/admin. Preferir a conexao via shared session-mode pooler.
+
+As URLs podem vir com `[YOUR-PASSWORD]`. Substituir pela senha real somente no painel seguro do provedor ou em variavel local privada. Nunca colar senha no chat e nunca commitar `.env`.
+
+Antes de apontar o Render para Supabase:
+1. Criar o projeto Supabase.
+2. Configurar `DIRECT_URL` apenas no ambiente seguro usado para migrations.
+3. Rodar dry-run local: `python backend/scripts/apply_postgres_migrations.py`.
+4. Aplicar migrations somente com aprovacao explicita: `python backend/scripts/apply_postgres_migrations.py --apply`.
+5. Configurar `DATABASE_URL` no Render para runtime da API.
+6. Manter `REAL_DATA_MODE=false`.
+7. Testar `GET /healthz` e login demo com dados ficticios.
+
+O script de migrations PostgreSQL usa `backend/migrations/postgres/*.sql`, exige `DIRECT_URL`, nao imprime a URL completa e permanece bloqueado com `REAL_DATA_MODE=true`.
+
 ## CORS
 
 O Render esta configurado para aceitar:
