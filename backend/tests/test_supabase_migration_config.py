@@ -31,13 +31,19 @@ def test_direct_url_is_required_for_postgres_migration_script(monkeypatch: pytes
         apply_postgres_migrations.get_direct_url()
 
 
-def test_migration_script_masks_direct_url_password() -> None:
+def test_migration_script_masks_direct_url_without_user_host_password_or_path() -> None:
+    direct_url = "postgresql://postgres:senha-super-secreta@aws-0-us-east-1.pooler.supabase.com:5432/postgres"
     masked_url = apply_postgres_migrations.mask_database_url(
-        "postgresql://postgres:senha-super-secreta@aws-0-us-east-1.pooler.supabase.com:5432/postgres"
+        direct_url
     )
 
+    assert masked_url == "postgresql://[DIRECT_URL_OCULTA]"
+    assert "postgresql://" in masked_url
+    assert direct_url not in masked_url
+    assert "postgres" not in masked_url.removeprefix("postgresql://")
     assert "senha-super-secreta" not in masked_url
-    assert "***" in masked_url
+    assert "aws-0-us-east-1.pooler.supabase.com" not in masked_url
+    assert "5432" not in masked_url
 
 
 def test_direct_url_placeholder_fails_with_safe_message(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,10 +109,11 @@ def test_direct_url_invalid_scheme_fails_without_url_or_password(monkeypatch: py
     assert "senha-super-secreta" not in message
 
 
-def test_migration_script_dry_run_does_not_print_password(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_migration_script_dry_run_masks_valid_url(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    direct_url = "postgresql://postgres:senha-super-secreta@aws-0-us-east-1.pooler.supabase.com:5432/postgres"
     monkeypatch.setenv(
         "DIRECT_URL",
-        "postgresql://postgres:senha-super-secreta@aws-0-us-east-1.pooler.supabase.com:5432/postgres",
+        direct_url,
     )
     monkeypatch.setenv("REAL_DATA_MODE", "false")
 
@@ -114,7 +121,12 @@ def test_migration_script_dry_run_does_not_print_password(monkeypatch: pytest.Mo
     output = capsys.readouterr().out
 
     assert "DRY-RUN aplicaria" in output
+    assert "postgresql://[DIRECT_URL_OCULTA]" in output
+    assert direct_url not in output
+    assert "postgres:senha-super-secreta" not in output
     assert "senha-super-secreta" not in output
+    assert "aws-0-us-east-1.pooler.supabase.com" not in output
+    assert "5432/postgres" not in output
 
 
 def test_migration_script_blocks_real_data_mode(monkeypatch: pytest.MonkeyPatch) -> None:

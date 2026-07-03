@@ -132,7 +132,7 @@ Antes de apontar o Render para Supabase:
 6. Manter `REAL_DATA_MODE=false`.
 7. Testar `GET /healthz` e login demo com dados ficticios.
 
-O script de migrations PostgreSQL usa `backend/migrations/postgres/*.sql`, exige `DIRECT_URL`, nao imprime a URL completa e permanece bloqueado com `REAL_DATA_MODE=true`.
+O script de migrations PostgreSQL usa `backend/migrations/postgres/*.sql`, exige `DIRECT_URL`, mascara a URL nos logs sem exibir usuario, host, senha ou path completo, e permanece bloqueado com `REAL_DATA_MODE=true`.
 
 ## Dry-run Supabase via GitHub Actions
 
@@ -156,7 +156,7 @@ Esse workflow:
 - exporta o valor como `DIRECT_URL` para o script;
 - executa `python backend/scripts/apply_postgres_migrations.py` sem `--apply`;
 - mantem `REAL_DATA_MODE=false`;
-- nao imprime a URL completa;
+- nao imprime usuario, host, senha ou URL completa;
 - nao cria opcao de aplicar migration real.
 
 ### Erro Invalid IPv6 URL no dry-run

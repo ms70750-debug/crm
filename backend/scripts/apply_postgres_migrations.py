@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 from sqlalchemy import create_engine, text
 
@@ -41,14 +41,11 @@ def mask_database_url(database_url: str) -> str:
         parsed = parse_direct_url_safely(database_url)
     except RuntimeError:
         return "<DIRECT_URL invalida ocultada>"
-    if not parsed.netloc:
+    if not parsed.scheme:
         return "<valor oculto>"
 
-    host = parsed.hostname or "host"
-    port = f":{parsed.port}" if parsed.port else ""
-    user = parsed.username or "usuario"
-    masked_netloc = f"{user}:***@{host}{port}"
-    return urlunsplit((parsed.scheme, masked_netloc, parsed.path, "", ""))
+    display_scheme = parsed.scheme.split("+", 1)[0]
+    return f"{display_scheme}://[DIRECT_URL_OCULTA]"
 
 
 def load_postgres_migrations() -> list[Path]:
