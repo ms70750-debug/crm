@@ -18,7 +18,7 @@ Este plano prepara a conexao futura do CRM BBB CONSIG com o projeto Supabase ja 
 | Runtime backend | Usa `DATABASE_URL` em `backend/app/database/session.py` | SQLite segue padrao local/controlado |
 | Readiness | `backend/app/services/readiness.py` bloqueia `APP_MODE=production` sem controles obrigatorios | Inclui `DATABASE_URL`, chave de dados, auth secret, migrations, backup, consentimento, logs, HTTPS e testes |
 | Script de migrations | `backend/scripts/apply_postgres_migrations.py` | Usa `DIRECT_URL`, mascara logs, bloqueia `REAL_DATA_MODE=true` |
-| GitHub Actions | `Supabase Migrations Dry Run` e `Supabase Migrations Apply` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
+| GitHub Actions | `Supabase Migrations Dry Run`, `Supabase Migrations Apply` e `Supabase Migration Single Apply` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
 | Migrations PostgreSQL | `backend/migrations/postgres/*.sql` | Aditivas, com `IF NOT EXISTS`, sem `DROP` |
 | Migrations SQLite/legadas | `backend/migrations/*.sql` e `backend/migrations/sqlite/*.sql` | Usadas para MVP local/controlado |
 | Render | `render.yaml` ainda usa SQLite controlado | Nao alterar nesta tarefa |
@@ -161,16 +161,39 @@ Nao ha migrations down formais. O rollback seguro para a primeira conexao deve s
 - teste de backup/restore do Supabase em projeto sem dados reais
 - validacao manual de que logs nao imprimem connection strings
 
-### Comando Ou Workflow Recomendado
+### Apply Unitario Recomendado
 
-Nao rodar apply nesta etapa.
+O caminho recomendado para aplicacao controlada no Supabase vazio e o workflow `Supabase Migration Single Apply`, que aplica somente uma migration por execucao manual. Ele exige:
 
-Para etapa futura, depois de credenciais seguras e backup:
+- `migration`: uma das quatro migrations PostgreSQL aprovadas;
+- `expected_previous_migration`: a migration imediatamente anterior esperada, ou `NONE` para a bootstrap;
+- `confirmation`: valor exato `APLICAR-MIGRATION`.
+
+O workflow faz validacao estatica, bloqueia operacoes destrutivas conhecidas, executa teste transacional quando tecnicamente possivel, aplica apenas o arquivo selecionado, registra `version`, `checksum` e `applied_at` em `schema_migrations`, bloqueia reaplicacao e impede checksum divergente.
+
+Sequencia manual:
 
 1. Rodar `Supabase Migrations Dry Run` no GitHub Actions.
 2. Conferir que os logs listam migrations sem exibir URL, usuario, host, senha ou path completo.
 3. Confirmar que `2026_07_01_000_postgres_bootstrap_schema.sql` aparece como primeira migration.
-4. Somente apos nova aprovacao, rodar `Supabase Migrations Apply` com confirmacao manual.
+4. Ir em GitHub > Actions > `Supabase Migration Single Apply`.
+5. Clicar em `Run workflow`.
+6. Usar branch `main`.
+7. Escolher a migration.
+8. Informar a migration anterior esperada.
+9. Digitar `APLICAR-MIGRATION`.
+10. Executar e validar o resultado antes da proxima migration.
+
+Ordem esperada:
+
+| Etapa | Migration | `expected_previous_migration` |
+|---|---|---|
+| 1 | `2026_07_01_000_postgres_bootstrap_schema.sql` | `NONE` |
+| 2 | `2026_07_02_postgres_preparacao.sql` | `2026_07_01_000_postgres_bootstrap_schema.sql` |
+| 3 | `2026_07_12_auth_sessions.sql` | `2026_07_02_postgres_preparacao.sql` |
+| 4 | `2026_07_12_real_data_readiness.sql` | `2026_07_12_auth_sessions.sql` |
+
+O workflow antigo `Supabase Migrations Apply` permanece documentado como legado e nao deve ser usado para a aplicacao controlada uma-a-uma.
 
 ## Conexao GitHub/Supabase
 
@@ -232,6 +255,9 @@ GitHub:
 3. Criar ou atualizar apenas o Repository Secret `SUPABASE_DIRECT_URL`, quando houver aprovacao para dry-run.
 4. Ir em Actions > Supabase Migrations Dry Run.
 5. Rodar o workflow manual e conferir logs sem revelar segredo.
+6. Ir em Actions > Supabase Migration Single Apply.
+7. Rodar uma migration por vez, com `expected_previous_migration` correto e confirmacao `APLICAR-MIGRATION`.
+8. Validar o resultado antes da proxima migration.
 
 Render:
 1. Nao alterar `DATABASE_URL` nesta etapa.
@@ -260,6 +286,7 @@ Vercel:
 - Restore testado ou procedimento de restore formalmente aceito.
 - Schema base PostgreSQL aprovado e validado se o banco estiver vazio.
 - Dry-run do GitHub Actions com sucesso.
+- Workflow `Supabase Migration Single Apply` revisado e aprovado.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.
 - Nova autorizacao explicita do dono para aplicar migrations.

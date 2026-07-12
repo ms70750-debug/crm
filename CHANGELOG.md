@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Workflow unitario de apply Supabase
+
+### Adicionado
+- Criado workflow manual `Supabase Migration Single Apply` para aplicar somente uma migration PostgreSQL por execucao.
+- Criado script `backend/scripts/apply_single_postgres_migration.py` com confirmacao explicita, controle de ordem, checksum, bloqueio de reaplicacao e teste transacional antes do apply.
+- Adicionados testes para migration invalida, confirmacao invalida, ordem incorreta, reaplicacao, checksum divergente e erro com rollback transacional.
+
+### Mantido
+- Nenhuma migration real aplicada, nenhum Supabase real acessado, nenhum segredo exposto e nenhuma publicacao realizada.
+
 ## 2026-07-12 - Bootstrap PostgreSQL para Supabase vazio
 
 ### Adicionado
