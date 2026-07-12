@@ -146,7 +146,8 @@ def public_schema_has_access(conn: Connection) -> bool:
             """
         )
     ).scalar_one()
-    return "=" in acl
+    entries = acl.strip("{}").split(",") if acl else []
+    return any(entry.startswith("=") for entry in entries)
 
 
 def sequence_grants(conn: Connection, role: str) -> int:
