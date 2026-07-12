@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-12 - Correcao documental do PR 9
+
+### Corrigido
+- Atualizado o relatorio de recuperacao para registrar o PR no 9 aberto.
+- Atualizado o hash final revisado para `0f037840a576c5ac4f7e0350d3d89469ef6661e5`.
+- Mantida a classificacao como MVP controlado para uso interno com dados ficticios.
+
 ## 2026-07-12 - Recuperacao segura pos-auditoria funcional
 
 ### Corrigido

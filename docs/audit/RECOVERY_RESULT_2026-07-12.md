@@ -3,7 +3,7 @@
 Base: `docs/audit/INVESTIGATION_FUNCTIONAL_2026-07-12.md`
 Branch: `fix/seguranca-pos-auditoria-2026-07-12`
 Hash inicial: `59fafcf3b29d6689974d5eb7a6d0d172cda710be`
-Hash antes deste relatorio: `7e943612fd7639fd2c8426d87805296b82881d65`
+Hash final revisado: `0f037840a576c5ac4f7e0350d3d89469ef6661e5`
 
 ## Validacao Final
 
@@ -72,7 +72,7 @@ Nao houve migracao de banco, nao houve publicacao, nao houve uso de dados reais 
 
 ## Classificacao Final
 
-MVP CONTROLADO PARA USO INTERNO.
+MVP CONTROLADO PARA USO INTERNO COM DADOS FICTICIOS.
 
 ## Recomendacao
 
@@ -83,7 +83,7 @@ RECUPERACAO CONCLUIDA EM VERSAO PARALELA
 * A versao principal nao foi alterada.
 * Nenhuma publicacao foi realizada.
 * Nenhum dado real foi utilizado.
-* Pedido de aprovacao aberto: pendente de abertura no GitHub.
+* Pedido de aprovacao aberto: https://github.com/ms70750-debug/crm/pull/9
 * Relatorio salvo em: docs/audit/RECOVERY_RESULT_2026-07-12.md
 
 PROXIMO PASSO DO ALUNO:
