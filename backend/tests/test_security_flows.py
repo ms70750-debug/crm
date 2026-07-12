@@ -92,6 +92,30 @@ def test_login_rejects_invalid_password() -> None:
     assert response.status_code == 401
 
 
+def test_login_rate_limit_blocks_repeated_attempts() -> None:
+    init_db()
+    suffix = str(time_ns())[-9:]
+    email = f"rate-limit-{suffix}@demo.local"
+    responses = [
+        client.post("/auth/login", json={"email": email, "password": "senha-errada"})
+        for _ in range(11)
+    ]
+    assert responses[-1].status_code == 429
+
+
+def test_demo_login_is_limited_to_demo_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    init_db()
+    monkeypatch.setenv("APP_MODE", "demo")
+    allowed = client.post("/auth/demo-login", json={"role": "admin"})
+    assert allowed.status_code == 200
+
+    client.cookies.clear()
+    monkeypatch.setenv("APP_MODE", "internal")
+    blocked = client.post("/auth/demo-login", json={"role": "admin"})
+    assert blocked.status_code == 403
+    monkeypatch.setenv("APP_MODE", "demo")
+
+
 def test_auth_me_and_route_protection() -> None:
     login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
     assert "password" not in str(login).lower()
@@ -119,6 +143,52 @@ def test_auth_me_and_route_protection() -> None:
     logout = client.post("/auth/logout")
     assert logout.status_code == 200
     assert client.get("/dashboard/resumo").status_code == 401
+
+
+def test_demo_mode_blocks_valid_cpf_and_allows_fictitious_cpf(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_MODE", "demo")
+    token = _token()
+    headers = {"Authorization": f"Bearer {token}"}
+    suffix = str(time_ns())[-9:]
+
+    blocked = client.post(
+        "/clientes",
+        headers=headers,
+        json={
+            "nome": f"CPF Real Bloqueado {suffix}",
+            "cpf": "529.982.247-25",
+            "telefone": f"1198{suffix}",
+            "email": f"blocked{suffix}@demo.local",
+            "convenio": "INSS",
+        },
+    )
+    assert blocked.status_code == 400
+    assert "Ambiente de demonstracao" in blocked.text
+
+    allowed = client.post(
+        "/clientes",
+        headers=headers,
+        json={
+            "nome": f"CPF Ficticio Permitido {suffix}",
+            "cpf": f"39{suffix}",
+            "telefone": f"1197{suffix}",
+            "email": f"allowed{suffix}@demo.local",
+            "convenio": "INSS",
+        },
+    )
+    assert allowed.status_code == 201
+
+    simulation_blocked = client.get("/consultas/inss/52998224725", headers=headers)
+    assert simulation_blocked.status_code == 400
+
+
+def test_whatsapp_status_is_simulated() -> None:
+    token = _token()
+    response = client.get("/whatsapp/status", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "simulation"
+    assert body["real_send_enabled"] is False
 
 
 def test_partner_permissions_are_limited() -> None:
