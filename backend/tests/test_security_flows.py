@@ -9,6 +9,7 @@ from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.main import app
 from app.models import AuditLog, Client
+from app.services.privacy import is_valid_cpf
 
 
 client = TestClient(app)
@@ -84,6 +85,15 @@ def _login(email: str, password: str) -> dict:
     response = client.post("/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
     return response.json()
+
+
+def _fictitious_cpf(prefix: str = "39") -> str:
+    base = f"{prefix}{str(time_ns())[-9:]}"[:11]
+    for digit in "0123456789":
+        candidate = f"{base[:-1]}{digit}"
+        if not is_valid_cpf(candidate):
+            return candidate
+    return "00000000000"
 
 
 def test_login_rejects_invalid_password() -> None:
@@ -170,7 +180,7 @@ def test_demo_mode_blocks_valid_cpf_and_allows_fictitious_cpf(monkeypatch: pytes
         headers=headers,
         json={
             "nome": f"CPF Ficticio Permitido {suffix}",
-            "cpf": f"39{suffix}",
+            "cpf": _fictitious_cpf(),
             "telefone": f"1197{suffix}",
             "email": f"allowed{suffix}@demo.local",
             "convenio": "INSS",
@@ -256,7 +266,7 @@ def test_internal_profiles_can_view_operational_sensitive_data() -> None:
 def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     token = _token()
     suffix = str(time_ns())[-9:]
-    cpf = f"39{suffix}"
+    cpf = _fictitious_cpf()
     phone = f"1198{suffix}00"
     headers = {"Authorization": f"Bearer {token}"}
 

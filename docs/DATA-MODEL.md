@@ -33,14 +33,24 @@ Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como 
 - CPF
 - Telefone
 - Email
+- RG, se vier a ser criado em etapa futura
+- Endereco, se vier a ser criado em etapa futura
+- Agencia e conta, se vierem a ser criadas em etapa futura
 - Beneficio
 - Banco de pagamento
 - Observacoes quando contiverem dados pessoais
+- Dados financeiros de proposta: valor liberado, parcela, prazo e banco
 
 ## Campos que precisam de protecao
 - `leads.cpf`, `leads.telefone`, `leads.email`
 - `clientes.cpf`, `clientes.telefone`, `clientes.email`, `clientes.beneficio`, `clientes.banco_pagamento`
+- `propostas.banco`, `propostas.valor_liberado`, `propostas.parcela`, `propostas.prazo`
 - payloads de simulacao e metadados de auditoria
+
+## Protecao em modo demo
+Com `APP_MODE=demo`, o backend bloqueia CPF matematicamente valido em cadastros e simulacoes. O objetivo e reduzir risco de insercao acidental de dado real enquanto o sistema permanece em MVP controlado.
+
+Essa validacao nao substitui criptografia em repouso. Ela tambem nao e regra definitiva de producao: uma liberacao futura exigira ADR, chave segura, rotacao, backup/restore e revisao LGPD.
 
 ## Audit log obrigatorio
 - Login
@@ -51,6 +61,10 @@ Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como 
 
 ## Soft delete
 Tabelas com dados pessoais devem usar `deleted_at` antes de remocao definitiva.
+
+Status atual:
+- `clientes`: possui `deleted_at` e exclusao logica.
+- `leads`, `propostas`, `tarefas`, `whatsapp_messages`, `consents`, `simulations`: ainda nao possuem soft delete padronizado. A expansao exige migration versionada e plano de compatibilidade.
 
 ## ERD
 ```mermaid

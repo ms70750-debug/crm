@@ -35,3 +35,15 @@ Taxas, margens e convenios sao ficticios. Nao usar para proposta real sem valida
 
 ## BR-012 Proibicao de dados reais nesta fase
 Nao inserir CPF real, conta bancaria real, beneficio real, margem real ou contrato real enquanto o projeto estiver em MVP controlado.
+
+## BR-013 Modo demonstracao obrigatorio
+Enquanto `APP_MODE=demo`, o sistema deve exibir aviso visivel e bloquear CPFs matematicamente validos em cadastros e simulacoes. CPFs ficticios/invalidos continuam permitidos para teste.
+
+## BR-014 Login de demonstracao
+Usuarios de demonstracao podem ser usados somente em `APP_MODE=demo`. A interface nao deve exibir senhas demo. O login demo por perfil serve apenas para validacao controlada.
+
+## BR-015 Comunicacao simulada e opt-out
+WhatsApp permanece simulado. O registro de mensagem exige opt-in ativo e deve permitir opt-out/revogacao de consentimento sem enviar comunicacao real.
+
+## BR-016 Producao real e SaaS bloqueados
+Dados reais, integracoes reais, multi-tenancy e operacao SaaS dependem de decisao comercial explicita, ADRs, isolamento, revisao LGPD, auditoria e aprovacao antes de qualquer uso.

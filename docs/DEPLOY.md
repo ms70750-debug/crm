@@ -29,6 +29,7 @@ Login demo: validado com sucesso no ambiente Vercel.
 - SQLite local nao e banco de producao.
 - Integracoes externas estao bloqueadas por design.
 - Dados reais de clientes nao estao liberados.
+- `APP_MODE` deve permanecer `demo`.
 
 ## Pre-requisitos antes de publicar
 - Revisao de seguranca.
@@ -59,6 +60,7 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 
 ### Backend Render
 - `APP_ENV`
+- `APP_MODE`
 - `PYTHON_VERSION`
 - `BBB_AUTH_SECRET`
 - `CORS_ORIGINS`
@@ -76,6 +78,8 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `EVOLUTION_API_TOKEN`
 
 `EVOLUTION_API_URL` e `EVOLUTION_API_TOKEN` devem ficar vazios enquanto WhatsApp estiver em modo simulacao.
+
+`APP_MODE=demo` mantem o aviso de demonstracao, bloqueia CPF matematicamente valido em cadastros/simulacoes e impede que usuarios demo sejam tratados como operacao real.
 
 ## PostgreSQL para producao real
 
@@ -206,6 +210,7 @@ Se o deploy falhar durante `pip install -r requirements.txt` com erro em `pydant
 1. Abrir `https://crm-2340.onrender.com/healthz`.
 2. Confirmar resposta 200 com `status: ok`.
 3. Revisar logs do Render e confirmar que nenhum segredo foi impresso.
+4. Se o primeiro acesso demorar ou expirar, repetir uma vez antes de classificar como fora do ar. O comportamento pode indicar cold start/latencia do plano, sem autorizar mudanca de infraestrutura.
 
 ### Frontend
 1. Abrir `https://crm-sepia-beta.vercel.app/login`.

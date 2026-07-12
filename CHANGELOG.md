@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-07-12 - Recuperacao segura pos-auditoria funcional
+
+### Corrigido
+- Adicionado `APP_MODE=demo` para manter o CRM em demonstracao controlada.
+- Bloqueado CPF matematicamente valido em cadastros e simulacoes enquanto o modo demo estiver ativo.
+- Reforcada sessao com cookie HttpOnly, SameSite adequado e Secure em producao.
+- Criado logout auditado e login demo por perfil sem expor senha na tela.
+- Mantida Evolution API em modo 100% simulado com status visivel.
+- Adicionadas acoes seguras de status/exclusao em leads, propostas e tarefas conforme permissao.
+- Adicionado opt-out de WhatsApp para consentimento.
+
+### Testes
+- Backend passou de 32 para 36 testes aprovados.
+- E2E atualizado para validar login demo, aviso de ambiente, opt-in/opt-out, WhatsApp simulado, INSS simulado e Admin.
+- Build frontend segue aprovado, com alerta conhecido de bundle acima de 500 kB.
+
+### Bloqueios preservados
+- Nao houve migracao para PostgreSQL.
+- Nao houve publicacao em Render/Vercel.
+- Nao houve liberacao para dados reais ou SaaS.
+- Criptografia em repouso e multi-tenancy seguem bloqueados por ADR e decisao comercial.
+
 ## 2026-07-03 - Workflow controlado para aplicar migrations Supabase
 
 ### Adicionado
