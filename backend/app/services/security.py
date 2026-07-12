@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import time
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
@@ -13,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models import AuditLog, User
+from app.models import AuditLog, AuthSession, User
 from app.config.environment import is_production_environment
 from app.services.privacy import mask_cpf, mask_email, mask_phone
 
@@ -44,10 +45,24 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(hash_password(password, salt), stored)
 
 
-def create_token(user: User) -> str:
-    payload = {"sub": user.id, "email": user.email, "role": normalize_role(user.role), "exp": int(time.time()) + TOKEN_TTL_SECONDS}
+def _session_id_hash(session_id: str) -> str:
+    return hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+
+
+def create_session_token(db: Session, user: User) -> str:
+    session_id = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(seconds=TOKEN_TTL_SECONDS)
+    payload = {
+        "sub": user.id,
+        "email": user.email,
+        "role": normalize_role(user.role),
+        "sid": session_id,
+        "exp": int(expires_at.timestamp()),
+    }
     raw = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode()
     signature = hmac.new(SECRET.encode(), raw.encode(), hashlib.sha256).hexdigest()
+    db.add(AuthSession(session_id_hash=_session_id_hash(session_id), user_id=user.id, expires_at=expires_at))
+    db.flush()
     return f"{raw}.{signature}"
 
 
@@ -65,7 +80,34 @@ def parse_token(token: str) -> dict[str, Any]:
     return payload
 
 
+def _active_session_from_payload(db: Session, payload: dict[str, Any]) -> AuthSession:
+    session_id = str(payload.get("sid") or "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Sessao invalida")
+    session = db.scalar(select(AuthSession).where(AuthSession.session_id_hash == _session_id_hash(session_id)))
+    if not session:
+        raise HTTPException(status_code=401, detail="Sessao invalida")
+    if session.revoked_at is not None:
+        raise HTTPException(status_code=401, detail="Sessao revogada")
+    if session.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Sessao expirada")
+    if int(payload.get("sub", 0)) != session.user_id:
+        raise HTTPException(status_code=401, detail="Sessao invalida")
+    return session
+
+
+def revoke_session_from_payload(db: Session, payload: dict[str, Any], reason: str = "logout") -> None:
+    session_id = str(payload.get("sid") or "")
+    if not session_id:
+        return
+    session = db.scalar(select(AuthSession).where(AuthSession.session_id_hash == _session_id_hash(session_id)))
+    if session and session.revoked_at is None:
+        session.revoked_at = datetime.utcnow()
+        session.revocation_reason = reason
+
+
 def current_user(
+    request: Request,
     authorization: str | None = Header(default=None),
     session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
     db: Session = Depends(get_db),
@@ -76,6 +118,9 @@ def current_user(
     if not token:
         raise HTTPException(status_code=401, detail="Autenticacao obrigatoria")
     payload = parse_token(token)
+    session = _active_session_from_payload(db, payload)
+    request.state.auth_payload = payload
+    request.state.auth_session_id_hash = session.session_id_hash
     user = db.get(User, int(payload["sub"]))
     if not user or not user.ativo:
         raise HTTPException(status_code=401, detail="Usuario invalido")

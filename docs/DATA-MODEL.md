@@ -24,6 +24,7 @@ A nova fundacao tecnica deve preservar o modo demo e preparar campos adicionais 
 - `cpf_encrypted`, `telefone_encrypted`, `email_encrypted` e `bank_data_encrypted` para protecao por envelope criptografado versionado com Fernet.
 - `purpose`, `status`, `revoked_by` e `metadata_json` em consentimentos.
 - `backup_audit_logs` para registrar testes e rotinas de backup/restauracao sem guardar segredo.
+- `auth_sessions` para registrar sessoes autenticadas com hash do identificador, expiracao e revogacao server-side.
 
 Esses campos nao liberam dados reais automaticamente. Eles apenas criam compatibilidade para um piloto interno futuro.
 
@@ -36,9 +37,12 @@ Esses campos nao liberam dados reais automaticamente. Eles apenas criam compatib
 
 ## Tabelas de seguranca/LGPD
 - `users`
+- `auth_sessions`
 - `audit_logs`
 - `consents`
 - `simulations`
+
+`auth_sessions` armazena somente hash do `sid`, usuario, `created_at`, `expires_at`, `revoked_at` e motivo de revogacao. O token completo nao deve ser persistido em banco ou logs.
 
 Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como `data_criacao` e `criado_em` permanecem para compatibilidade do MVP.
 

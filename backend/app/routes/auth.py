@@ -10,11 +10,12 @@ from app.schemas.security import DemoLoginRequest, LoginRequest, LoginResponse, 
 from app.services.security import (
     SESSION_COOKIE_NAME,
     check_rate_limit,
-    create_token,
+    create_session_token,
     current_user,
     demo_token_expiration,
     log_audit,
     require_roles,
+    revoke_session_from_payload,
     session_cookie_options,
     user_payload,
     verify_password,
@@ -39,8 +40,9 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
     db.commit()
     if not ok or not user:
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
-    token = create_token(user)
+    token = create_session_token(db, user)
     response.set_cookie(value=token, **session_cookie_options())
+    db.commit()
     return {
         "access_token": token,
         "expires_at": demo_token_expiration(),
@@ -63,8 +65,9 @@ def demo_login(payload: DemoLoginRequest, request: Request, response: Response, 
         raise HTTPException(status_code=404, detail="Usuario de demonstracao nao encontrado")
     log_audit(db, "demo_login_success", "user", user.id, actor=email, actor_user_id=user.id, metadata={"role": role, "ip": client_ip})
     db.commit()
-    token = create_token(user)
+    token = create_session_token(db, user)
     response.set_cookie(value=token, **session_cookie_options())
+    db.commit()
     return {
         "access_token": token,
         "expires_at": demo_token_expiration(),
@@ -78,7 +81,8 @@ def me(user: User = Depends(current_user)):
 
 
 @router.post("/logout")
-def logout(response: Response, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    revoke_session_from_payload(db, getattr(request.state, "auth_payload", {}), reason="logout")
     log_audit(db, "logout", "user", user.id, actor=user.email, actor_user_id=user.id)
     db.commit()
     response.delete_cookie(SESSION_COOKIE_NAME, path="/")

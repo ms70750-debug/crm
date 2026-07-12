@@ -170,6 +170,31 @@ def test_real_data_migration_applies_to_temp_sqlite_and_reverts_from_snapshot(tm
     assert "cpf_hash" not in reverted_columns
 
 
+def test_auth_session_migration_applies_to_temp_sqlite_and_reverts_from_snapshot(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[2]
+    sqlite_migration = root / "backend" / "migrations" / "sqlite" / "2026_07_12_auth_sessions.sql"
+    postgres_migration = root / "backend" / "migrations" / "postgres" / "2026_07_12_auth_sessions.sql"
+    assert sqlite_migration.exists()
+    assert postgres_migration.exists()
+    assert "auth_sessions" in sqlite_migration.read_text(encoding="utf-8")
+    assert "IF NOT EXISTS" in postgres_migration.read_text(encoding="utf-8")
+
+    db_path = tmp_path / "auth-session-migration-demo.sqlite"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY)")
+    snapshot = tmp_path / "before-auth-session-migration.sqlite"
+    snapshot.write_bytes(db_path.read_bytes())
+
+    _apply_sql_file(db_path, sqlite_migration)
+    with sqlite3.connect(db_path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(auth_sessions)").fetchall()}
+        assert {"session_id_hash", "user_id", "expires_at", "revoked_at", "revocation_reason"}.issubset(columns)
+
+    db_path.write_bytes(snapshot.read_bytes())
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_sessions'").fetchone() is None
+
+
 def test_fictitious_backup_and_restore(tmp_path: Path) -> None:
     source = tmp_path / "demo.sqlite"
     with sqlite3.connect(source) as conn:
