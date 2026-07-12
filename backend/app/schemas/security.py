@@ -33,12 +33,14 @@ class LoginResponse(BaseModel):
 class ConsentCreate(BaseModel):
     customer_id: int
     channel: str = "whatsapp"
+    purpose: str = "comunicacao"
     granted: bool = True
     source: str = "demo"
 
 
 class ConsentRead(ConsentCreate, ORMModel):
     id: int
+    status: str = "active"
     ip_address: str | None = None
     created_at: datetime
     revoked_at: datetime | None = None

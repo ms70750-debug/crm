@@ -17,5 +17,8 @@ class WhatsAppMessage(Base):
     mensagem: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(40), default="Registrada em simulacao")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deletion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)

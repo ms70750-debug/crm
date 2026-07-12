@@ -40,10 +40,17 @@ class Consent(Base):
     customer_id: Mapped[int] = mapped_column(Integer, index=True)
     channel: Mapped[str] = mapped_column(String(40), index=True)
     granted: Mapped[bool] = mapped_column(Boolean, default=True)
+    purpose: Mapped[str] = mapped_column(String(120), default="comunicacao")
+    status: Mapped[str] = mapped_column(String(40), default="active")
     source: Mapped[str] = mapped_column(String(120), default="demo")
     ip_address: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deletion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
 
@@ -58,5 +65,21 @@ class Simulation(Base):
     input_json: Mapped[str] = mapped_column(Text)
     result_json: Mapped[str] = mapped_column(Text)
     payload_hash: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deletion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+
+
+class BackupAuditLog(Base):
+    __tablename__ = "backup_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    operation: Mapped[str] = mapped_column(String(40))
+    target: Mapped[str] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(40))
+    checksum: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)

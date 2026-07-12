@@ -19,5 +19,8 @@ class Proposal(Base):
     status: Mapped[str] = mapped_column(String(40), default="Em andamento", index=True)
     data_criacao: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deletion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
