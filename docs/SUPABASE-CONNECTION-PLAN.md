@@ -18,7 +18,7 @@ Este plano prepara a conexao futura do CRM BBB CONSIG com o projeto Supabase ja 
 | Runtime backend | Usa `DATABASE_URL` em `backend/app/database/session.py` | SQLite segue padrao local/controlado |
 | Readiness | `backend/app/services/readiness.py` bloqueia `APP_MODE=production` sem controles obrigatorios | Inclui `DATABASE_URL`, chave de dados, auth secret, migrations, backup, consentimento, logs, HTTPS e testes |
 | Script de migrations | `backend/scripts/apply_postgres_migrations.py` | Usa `DIRECT_URL`, mascara logs, bloqueia `REAL_DATA_MODE=true` |
-| GitHub Actions | `Supabase Migrations Dry Run`, `Supabase Migrations Apply` e `Supabase Migration Single Apply` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
+| GitHub Actions | `Supabase Migrations Dry Run`, `Supabase Migrations Apply`, `Supabase Migration Single Apply` e `Supabase Readonly Audit` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
 | Migrations PostgreSQL | `backend/migrations/postgres/*.sql` | Aditivas, com `IF NOT EXISTS`, sem `DROP` |
 | Migrations SQLite/legadas | `backend/migrations/*.sql` e `backend/migrations/sqlite/*.sql` | Usadas para MVP local/controlado |
 | Render | `render.yaml` ainda usa SQLite controlado | Nao alterar nesta tarefa |
@@ -195,6 +195,22 @@ Ordem esperada:
 
 O workflow antigo `Supabase Migrations Apply` permanece documentado como legado e nao deve ser usado para a aplicacao controlada uma-a-uma.
 
+### Auditoria Readonly
+
+Apos aplicar as migrations manualmente, a validacao do banco real deve usar o workflow `Supabase Readonly Audit`. Ele roda somente por `workflow_dispatch`, usa `SUPABASE_DIRECT_URL` apenas como secret do GitHub Actions, inicia transacao `BEGIN READ ONLY`, executa somente consultas `SELECT`, finaliza com `ROLLBACK` e publica um relatorio seguro no job summary e no artifact `supabase-readonly-audit`.
+
+O workflow bloqueia comandos de escrita como `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `REVOKE`, `COPY`, `CALL` e `DO`. O relatorio nao deve exibir URL, host, usuario, senha, CPF, email, telefone, dados bancarios, token ou hash completo de sessao.
+
+Passos manuais:
+
+1. Ir em GitHub > Actions.
+2. Abrir `Supabase Readonly Audit`.
+3. Clicar em `Run workflow`.
+4. Usar branch `main`.
+5. Aguardar o job concluir.
+6. Abrir o job summary ou baixar o artifact `supabase-readonly-audit`.
+7. Conferir divergencias, bloqueadores e decisao antes de qualquer proxima etapa.
+
 ## Conexao GitHub/Supabase
 
 Classificacao: B) GitHub Actions e suficiente.
@@ -258,6 +274,7 @@ GitHub:
 6. Ir em Actions > Supabase Migration Single Apply.
 7. Rodar uma migration por vez, com `expected_previous_migration` correto e confirmacao `APLICAR-MIGRATION`.
 8. Validar o resultado antes da proxima migration.
+9. Apos as quatro migrations, rodar `Supabase Readonly Audit` e revisar o artifact seguro.
 
 Render:
 1. Nao alterar `DATABASE_URL` nesta etapa.
@@ -287,6 +304,7 @@ Vercel:
 - Schema base PostgreSQL aprovado e validado se o banco estiver vazio.
 - Dry-run do GitHub Actions com sucesso.
 - Workflow `Supabase Migration Single Apply` revisado e aprovado.
+- Workflow `Supabase Readonly Audit` revisado e aprovado para auditoria pos-migration.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.
 - Nova autorizacao explicita do dono para aplicar migrations.

@@ -5,6 +5,7 @@ WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 DRY_RUN_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migrations-dry-run.yml"
 APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migrations-apply.yml"
 SINGLE_APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migration-single-apply.yml"
+READONLY_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-readonly-audit.yml"
 
 
 def test_supabase_dry_run_workflow_exists_and_is_manual() -> None:
@@ -117,3 +118,31 @@ def test_supabase_single_apply_workflow_runs_transaction_test_before_apply() -> 
     apply_index = content.rindex("Apply selected migration only")
     assert transaction_test_index < apply_index
     assert content.count("apply_single_postgres_migration.py") == 2
+
+
+def test_supabase_readonly_audit_workflow_is_manual_readonly_and_safe() -> None:
+    content = READONLY_AUDIT_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: Supabase Readonly Audit" in content
+    assert "workflow_dispatch:" in content
+    assert "\npush:" not in content
+    assert "pull_request:" not in content
+    assert "schedule:" not in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 10" in content
+    assert "concurrency:" in content
+    assert "SUPABASE_DIRECT_URL" in content
+    assert "::add-mask::${DIRECT_URL}" in content
+    assert "upload-artifact" in content
+    assert "supabase-readonly-audit" in content
+
+
+def test_supabase_readonly_audit_workflow_does_not_expose_connection_string() -> None:
+    content = READONLY_AUDIT_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "printenv" not in content
+    assert "env |" not in content
+    assert "echo ${DIRECT_URL}" not in content
+    assert "echo $DIRECT_URL" not in content
+    assert "postgresql://" not in content
+    assert "postgres://" not in content
