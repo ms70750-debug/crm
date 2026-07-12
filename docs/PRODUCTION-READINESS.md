@@ -91,3 +91,15 @@ O apply real dessa migration continua dependendo de revisao, backup, dry-run, ap
 O workflow `PostgreSQL Backend Only Validation` valida essa decisao em PostgreSQL 16 descartavel no GitHub Actions. Ele aplica a cadeia de cinco migrations em banco vazio, simula os grants diretos existentes de `anon` e `authenticated`, aplica a migration backend-only, confirma bloqueio de acesso direto, testa CRUD minimo via role `backend_app`, valida default privileges, executa rollback manual em banco temporario e verifica que dados ficticios foram preservados.
 
 Essa validacao nao acessa Supabase real, nao usa `SUPABASE_DIRECT_URL`, nao aplica migration real e nao libera dados reais.
+
+## Backup externo criptografado
+
+Status: ADR 014 PROPOSTO PARA APROVACAO.
+
+O projeto possui uma fundacao para backup externo criptografado, ainda sem execucao real obrigatoria:
+
+- `Supabase Encrypted Backup`: workflow manual para gerar `pg_dump` custom, criptografar antes do artifact, calcular checksums e publicar artifact com retencao curta.
+- `PostgreSQL Backup Restore Test`: workflow manual para baixar artifact criptografado, validar checksum, descriptografar em area temporaria e restaurar em PostgreSQL 16 temporario.
+- Scripts locais: `backend/scripts/create_encrypted_postgres_backup.py` e `backend/scripts/verify_encrypted_backup_restore.py`.
+
+Dados reais continuam proibidos. Backup agendado, armazenamento externo real, chave real e primeiro backup real dependem de aprovacao explicita.

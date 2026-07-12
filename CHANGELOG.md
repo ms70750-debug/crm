@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-12 - Backup externo criptografado
+
+### Adicionado
+- Proposta a ADR 014 para backup externo criptografado com `pg_dump`, criptografia autenticada, checksum SHA-256 e restore testavel.
+- Criados scripts `create_encrypted_postgres_backup.py` e `verify_encrypted_backup_restore.py` para backup criptografado e validacao de restore em PostgreSQL temporario.
+- Criados workflows manuais `Supabase Encrypted Backup` e `PostgreSQL Backup Restore Test`, sem agendamento e sem upload externo real.
+- Adicionados testes de criptografia, checksum, manifesto seguro, chave ausente/incorreta, artifact seguro, restore ficticio e workflows.
+
+### Mantido
+- Nenhum backup real foi criado, nenhum dado real foi usado, nenhuma credencial real foi configurada e nenhuma publicacao foi realizada.
+
 ## 2026-07-12 - Permissoes backend-only Supabase
 
 ### Adicionado

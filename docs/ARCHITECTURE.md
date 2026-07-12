@@ -42,6 +42,17 @@ Frontend chama a API REST em `http://localhost:8000`. A API acessa SQLite via SQ
 
 Em PostgreSQL/Supabase futuro, o fluxo permanece: frontend -> backend -> banco. A API publica do Supabase nao deve ser caminho de dados do CRM.
 
+## Backup e restauracao
+
+A fundacao de backup externo segue arquitetura operacional separada da aplicacao:
+
+- GitHub Actions manual executa `pg_dump` usando secret seguro.
+- O dump aberto existe apenas em diretorio temporario do job.
+- O arquivo e criptografado antes de virar artifact.
+- Manifesto e checksums nao contem credenciais nem conteudo de cliente.
+- Restore e testado somente em PostgreSQL temporario.
+- Armazenamento externo real ainda nao esta ativado.
+
 ## Modo demo obrigatorio
 O sistema deve permanecer com `APP_MODE=demo` nesta fase. Nesse modo:
 - a interface exibe aviso visivel para nao inserir dados reais;
