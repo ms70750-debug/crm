@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Diagnostico seguro de pg_dump
+
+### Corrigido
+- Ajustado backup criptografado para passar a conexao ao `pg_dump` por ambiente seguro em vez de argumento visivel.
+- Adicionadas categorias seguras para falhas de `pg_dump`, sem stderr bruto e sem expor URL, host, usuario ou senha.
+- Alinhado workflow `Supabase Encrypted Backup` para instalar cliente PostgreSQL compativel e registrar somente versoes principais e compatibilidade.
+
+### Mantido
+- Nenhum backup real foi criado, nenhum workflow real de backup/restore foi executado e o Supabase real nao foi alterado.
+
 ## 2026-07-12 - Backup externo criptografado
 
 ### Aprovado
