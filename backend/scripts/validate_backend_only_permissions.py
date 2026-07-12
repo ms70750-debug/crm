@@ -101,6 +101,7 @@ def ensure_control_and_roles(conn: Connection) -> None:
 
 
 def seed_initial_supabase_like_grants(conn: Connection) -> None:
+    conn.execute(text("GRANT USAGE, CREATE ON SCHEMA public TO postgres"))
     conn.execute(text("GRANT USAGE ON SCHEMA public TO anon, authenticated, backend_app"))
     conn.execute(text("GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public TO anon, authenticated"))
     conn.execute(text("GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated"))
@@ -308,6 +309,8 @@ def column_snapshot(conn: Connection) -> dict[str, set[str]]:
 
 
 def validate_pre_security_state(conn: Connection) -> None:
+    if "CREATE" not in schema_privileges(conn, "postgres"):
+        raise RuntimeError("postgres nao manteve CREATE administrativo no schema public.")
     for role in DIRECT_ROLES:
         grants = table_privileges(conn, role, "clientes")
         if not {"SELECT", "INSERT", "UPDATE", "DELETE"}.issubset(grants):

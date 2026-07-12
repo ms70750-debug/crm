@@ -100,6 +100,7 @@ def test_backend_only_validation_script_checks_core_behaviour() -> None:
     for role in ("anon", "authenticated", "service_role", "backend_app"):
         assert role in content
     assert "permission_validation_temp" in content
+    assert "GRANT USAGE, CREATE ON SCHEMA public TO postgres" in content
     assert "expect_access_denied" in content
     assert "validate_rollback" in content
     assert "assert_counts_not_decreased" in content
