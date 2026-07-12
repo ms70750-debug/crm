@@ -5,6 +5,8 @@ CRM para operacao de credito consignado com leads, clientes, propostas, tarefas,
 ## Status do projeto
 STATUS ATUAL: MVP CONTROLADO - USO SOMENTE COM DADOS FICTICIOS.
 
+NAO AUTORIZADO PARA DADOS REAIS ATE APROVACAO FINAL.
+
 Classificacao atual: **USO_PROPRIO - MVP CONTROLADO**.
 
 Este projeto ainda nao esta liberado para operacao real com dados pessoais de clientes. Uso atual permitido apenas para teste controlado com dados ficticios.
@@ -15,7 +17,8 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - Dados proibidos nesta fase: CPF real, conta bancaria real, beneficio real, margem real e contrato real.
 - Modo esperado: `APP_MODE=demo`.
 - No modo demo, CPFs matematicamente validos sao bloqueados em cadastros e simulacoes para reduzir risco de uso indevido.
-- Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso e autenticacao segura.
+- Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso, autenticacao segura e auditoria final.
+- A branch de readiness prepara fundacao tecnica para revisao futura, mas nao ativa banco real, chaves reais, WhatsApp real ou publicacao.
 
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.

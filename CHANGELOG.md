@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-12 - Preparacao segura para dados reais
+
+### Adicionado
+- Propostos ADRs 009 a 013 para PostgreSQL, criptografia, autenticacao, backup/restauracao e retencao LGPD.
+- Criada fundacao de readiness para bloquear `APP_MODE=production` sem controles obrigatorios.
+- Adicionada camada isolada de protecao de dados com envelope versionado, autenticacao e hash separado de CPF.
+- Criadas migrations aditivas para soft delete, campos protegidos, consentimento ampliado e auditoria de backup.
+- Adicionados testes de criptografia, readiness, soft delete/restauracao, consentimento, migration temporaria e backup/restore ficticio.
+
+### Bloqueios preservados
+- `APP_MODE=demo` continua sendo o padrao seguro.
+- Dados reais continuam proibidos ate auditoria final e aprovacao explicita.
+- Nenhuma credencial real, conexao PostgreSQL real, publicacao ou merge foi realizado nesta preparacao.
+
 ## 2026-07-12 - Correcao documental do PR 9
 
 ### Corrigido
