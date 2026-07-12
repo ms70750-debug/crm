@@ -92,10 +92,18 @@ def test_supabase_single_apply_workflow_has_closed_migration_options() -> None:
         "2026_07_02_postgres_preparacao.sql",
         "2026_07_12_auth_sessions.sql",
         "2026_07_12_real_data_readiness.sql",
+        "2026_07_12_backend_only_permissions.sql",
     ):
         assert migration in content
     assert "APLICAR-MIGRATION" in content
     assert "expected_previous_migration" in content
+
+
+def test_supabase_single_apply_workflow_allows_backend_only_previous_readiness() -> None:
+    content = SINGLE_APPLY_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "2026_07_12_backend_only_permissions.sql" in content
+    assert "2026_07_12_real_data_readiness.sql" in content
 
 
 def test_supabase_single_apply_workflow_uses_secret_without_printing_it() -> None:
