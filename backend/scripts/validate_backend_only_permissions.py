@@ -209,8 +209,10 @@ def expect_access_denied(conn: Connection, role: str, statement: str) -> None:
         conn.execute(text(statement))
     except Exception:
         nested.rollback()
+        conn.execute(text("RESET ROLE"))
         return
     nested.rollback()
+    conn.execute(text("RESET ROLE"))
     raise RuntimeError(f"{role} executou acesso direto indevido: {statement}")
 
 
@@ -221,8 +223,10 @@ def execute_as_role(conn: Connection, role: str, statement: str, params: dict | 
         conn.execute(text(statement), params or {})
     except Exception:
         nested.rollback()
+        conn.execute(text("RESET ROLE"))
         raise
     nested.commit()
+    conn.execute(text("RESET ROLE"))
 
 
 def seed_fictitious_data(conn: Connection) -> None:
