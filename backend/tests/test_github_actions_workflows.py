@@ -8,6 +8,8 @@ SINGLE_APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migration-single-apply.ym
 READONLY_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-readonly-audit.yml"
 PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.yml"
 POSTGRES_BACKEND_ONLY_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backend-only-validation.yml"
+ENCRYPTED_BACKUP_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-encrypted-backup.yml"
+BACKUP_RESTORE_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backup-restore-test.yml"
 
 
 def test_supabase_dry_run_workflow_exists_and_is_manual() -> None:
@@ -207,5 +209,44 @@ def test_postgres_backend_only_validation_workflow_does_not_use_supabase_secret(
     assert "SUPABASE_DIRECT_URL" not in content
     assert "DIRECT_URL" not in content
     assert "secrets." not in content
+    assert "printenv" not in content
+    assert "env |" not in content
+
+
+def test_supabase_encrypted_backup_workflow_is_manual_and_safe() -> None:
+    content = ENCRYPTED_BACKUP_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: Supabase Encrypted Backup" in content
+    assert "workflow_dispatch:" in content
+    assert "schedule:" not in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 15" in content
+    assert "CRIAR-BACKUP-CRIPTOGRAFADO" in content
+    assert "DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
+    assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
+    assert "::add-mask::$DIRECT_URL" in content
+    assert "::add-mask::$BACKUP_ENCRYPTION_KEY" in content
+    assert "actions/upload-artifact@v4" in content
+    assert "retention-days: 1" in content
+    assert "*.dump.enc" in content
+    assert "*.manifest.json" in content
+    assert "*.sha256" in content
+
+
+def test_backup_restore_workflow_uses_temporary_postgres_and_no_supabase() -> None:
+    content = BACKUP_RESTORE_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: PostgreSQL Backup Restore Test" in content
+    assert "workflow_dispatch:" in content
+    assert "artifact_run_id" in content
+    assert "TESTAR-RESTAURACAO" in content
+    assert "postgres:16" in content
+    assert "POSTGRES_RESTORE_URL" in content
+    assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
+    assert "actions/download-artifact@v4" in content
+    assert "verify_encrypted_backup_restore.py" in content
+    assert "SUPABASE_DIRECT_URL" not in content
+    assert "DIRECT_URL:" not in content
+    assert "actions/upload-artifact" not in content
     assert "printenv" not in content
     assert "env |" not in content
