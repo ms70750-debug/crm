@@ -136,6 +136,19 @@ def schema_privileges(conn: Connection, role: str) -> set[str]:
     return privileges
 
 
+def public_schema_has_access(conn: Connection) -> bool:
+    acl = conn.execute(
+        text(
+            """
+            SELECT COALESCE(nspacl::text, '')
+            FROM pg_namespace
+            WHERE nspname = 'public'
+            """
+        )
+    ).scalar_one()
+    return "=" in acl
+
+
 def sequence_grants(conn: Connection, role: str) -> int:
     return int(
         conn.execute(
@@ -173,7 +186,7 @@ def assert_public_has_no_access(conn: Connection) -> None:
         grants = table_privileges(conn, "PUBLIC", table_name) | table_privileges(conn, "public", table_name)
         if grants:
             raise RuntimeError(f"PUBLIC possui grants indevidos em {table_name}: {sorted(grants)}")
-    if schema_privileges(conn, "PUBLIC") or schema_privileges(conn, "public"):
+    if public_schema_has_access(conn):
         raise RuntimeError("PUBLIC possui privilegios indevidos no schema public.")
 
 
