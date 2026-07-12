@@ -30,12 +30,14 @@ ALLOWED_MIGRATIONS = (
     "2026_07_02_postgres_preparacao.sql",
     "2026_07_12_auth_sessions.sql",
     "2026_07_12_real_data_readiness.sql",
+    "2026_07_12_backend_only_permissions.sql",
 )
 EXPECTED_PREVIOUS = {
     "2026_07_01_000_postgres_bootstrap_schema.sql": NONE_PREVIOUS,
     "2026_07_02_postgres_preparacao.sql": "2026_07_01_000_postgres_bootstrap_schema.sql",
     "2026_07_12_auth_sessions.sql": "2026_07_02_postgres_preparacao.sql",
     "2026_07_12_real_data_readiness.sql": "2026_07_12_auth_sessions.sql",
+    "2026_07_12_backend_only_permissions.sql": "2026_07_12_real_data_readiness.sql",
 }
 EXPECTED_TABLES_AFTER_APPLY = {
     "2026_07_01_000_postgres_bootstrap_schema.sql": {
@@ -62,6 +64,20 @@ EXPECTED_TABLES_AFTER_APPLY = {
     },
     "2026_07_12_auth_sessions.sql": {"auth_sessions"},
     "2026_07_12_real_data_readiness.sql": {"backup_audit_logs"},
+    "2026_07_12_backend_only_permissions.sql": {
+        "leads",
+        "clientes",
+        "propostas",
+        "tarefas",
+        "whatsapp_messages",
+        "users",
+        "audit_logs",
+        "consents",
+        "simulations",
+        "auth_sessions",
+        "backup_audit_logs",
+        "schema_migrations",
+    },
 }
 SECRET_PATTERN = re.compile(
     r"(postgres(?:ql)?://[^\s`'\"]+|SUPABASE_SERVICE_ROLE_KEY|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})",
@@ -100,9 +116,19 @@ def validate_static_sql(path: Path) -> None:
     if SECRET_PATTERN.search(content):
         raise RuntimeError("Possivel segredo embutido bloqueado na migration selecionada.")
 
-    allowed_prefixes = ("CREATE TABLE", "CREATE INDEX", "CREATE UNIQUE INDEX", "ALTER TABLE")
+    allowed_prefixes = (
+        "CREATE TABLE",
+        "CREATE INDEX",
+        "CREATE UNIQUE INDEX",
+        "ALTER TABLE",
+        "ALTER DEFAULT PRIVILEGES",
+        "REVOKE",
+    )
     for statement in split_sql_statements(content):
-        normalized = re.sub(r"\s+", " ", statement.strip()).upper()
+        without_comments = "\n".join(
+            line for line in statement.splitlines() if not line.strip().startswith("--")
+        )
+        normalized = re.sub(r"\s+", " ", without_comments.strip()).upper()
         if not normalized.startswith(allowed_prefixes):
             raise RuntimeError("Comando SQL fora do escopo permitido para migrations controladas.")
 

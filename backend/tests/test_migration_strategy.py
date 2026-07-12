@@ -37,9 +37,21 @@ def test_sqlite_preparation_migration_remains_separated() -> None:
 
 
 def test_postgres_bootstrap_migration_is_first_for_empty_schema() -> None:
-    postgres_migrations = sorted((MIGRATIONS_ROOT / "postgres").glob("*.sql"))
+    from scripts.apply_postgres_migrations import load_postgres_migrations
+
+    postgres_migrations = load_postgres_migrations()
 
     assert postgres_migrations[0].name == "2026_07_01_000_postgres_bootstrap_schema.sql"
+
+
+def test_postgres_backend_only_permissions_runs_after_readiness() -> None:
+    from scripts.apply_postgres_migrations import load_postgres_migrations
+
+    names = [path.name for path in load_postgres_migrations()]
+
+    assert names.index("2026_07_12_real_data_readiness.sql") < names.index(
+        "2026_07_12_backend_only_permissions.sql"
+    )
 
 
 def test_postgres_bootstrap_creates_base_tables_used_by_later_migrations() -> None:

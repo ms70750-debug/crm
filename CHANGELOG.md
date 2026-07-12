@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-12 - Permissoes backend-only Supabase
+
+### Adicionado
+- Documentada a decisao `BACKEND-ONLY` para o Supabase: frontend sem CRUD direto, backend como unico caminho autorizado e `service_role` proibido no frontend.
+- Criada migration PostgreSQL `2026_07_12_backend_only_permissions.sql` para revogar grants diretos de `PUBLIC`, `anon` e `authenticated` nas 12 tabelas do CRM.
+- Criado rollback manual documentado para restaurar somente grants explicitamente controlados, mediante aprovacao futura.
+- Criado workflow `PostgreSQL Backend Only Validation` com PostgreSQL 16 descartavel para validar cadeia de 5 migrations, bloqueio de grants, usuario `backend_app`, rollback e preservacao de dados ficticios.
+
+### Mantido
+- Nenhuma permissao real foi alterada nesta tarefa.
+- Nenhuma migration foi aplicada no Supabase real, nenhum dado real foi usado e nenhuma publicacao foi realizada.
+
 ## 2026-07-12 - Auditoria de permissoes Supabase
 
 ### Adicionado

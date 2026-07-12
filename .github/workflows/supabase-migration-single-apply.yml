@@ -12,6 +12,7 @@ on:
           - 2026_07_02_postgres_preparacao.sql
           - 2026_07_12_auth_sessions.sql
           - 2026_07_12_real_data_readiness.sql
+          - 2026_07_12_backend_only_permissions.sql
       expected_previous_migration:
         description: "Migration anterior esperada ja aplicada."
         required: true
@@ -21,6 +22,7 @@ on:
           - 2026_07_01_000_postgres_bootstrap_schema.sql
           - 2026_07_02_postgres_preparacao.sql
           - 2026_07_12_auth_sessions.sql
+          - 2026_07_12_real_data_readiness.sql
       confirmation:
         description: "Digite APLICAR-MIGRATION para confirmar."
         required: true

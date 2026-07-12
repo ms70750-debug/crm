@@ -219,6 +219,24 @@ Ele relata por tabela: owner, RLS ativo/forcado, policies, grants para `public`,
 
 Para este projeto de USO PROPRIO, como o frontend nao acessa Supabase diretamente, a estrategia recomendada e `A) BACKEND-ONLY`: revogar em etapa futura aprovada os acessos diretos de `public`, `anon` e `authenticated`, mantendo o backend como unico caminho autorizado. RLS pode ser defesa adicional, mas `B) RLS OBRIGATORIO` so deve ser preferido se houver acesso direto do frontend ao Supabase.
 
+### Correcao Backend-Only
+
+A migration `2026_07_12_backend_only_permissions.sql` deve ser aplicada somente apos revisao e aprovacao. Ela remove o acesso direto de `PUBLIC`, `anon` e `authenticated` as tabelas e sequences do CRM, mantendo a arquitetura frontend -> backend -> PostgreSQL.
+
+Ordem atual de apply unitario:
+
+1. `2026_07_01_000_postgres_bootstrap_schema.sql`
+2. `2026_07_02_postgres_preparacao.sql`
+3. `2026_07_12_auth_sessions.sql`
+4. `2026_07_12_real_data_readiness.sql`
+5. `2026_07_12_backend_only_permissions.sql`
+
+Para a quinta migration, o workflow unitario deve exigir `expected_previous_migration = 2026_07_12_real_data_readiness.sql`.
+
+Rollback manual documentado: `backend/migrations/postgres/rollback/2026_07_12_backend_only_permissions_down.sql`. Ele nao deve ser executado automaticamente e requer aprovacao explicita.
+
+Validacao temporaria: o workflow `PostgreSQL Backend Only Validation` usa PostgreSQL 16 descartavel, credenciais somente de teste, roles temporarias `anon`, `authenticated`, `service_role` e `backend_app`, e valida grants, acesso direto bloqueado, CRUD pelo backend, default privileges, rollback e preservacao de dados ficticios. Ele nao usa `SUPABASE_DIRECT_URL` e nao acessa Supabase real.
+
 ## Conexao GitHub/Supabase
 
 Classificacao: B) GitHub Actions e suficiente.
@@ -284,6 +302,7 @@ GitHub:
 8. Validar o resultado antes da proxima migration.
 9. Apos as quatro migrations, rodar `Supabase Readonly Audit` e revisar o artifact seguro.
 10. Rodar `Supabase Permissions Audit` para decidir entre BACKEND-ONLY e RLS OBRIGATORIO antes de qualquer liberacao real.
+11. Se aprovado, aplicar `2026_07_12_backend_only_permissions.sql` pelo workflow unitario, uma migration por vez.
 
 Render:
 1. Nao alterar `DATABASE_URL` nesta etapa.
@@ -315,6 +334,7 @@ Vercel:
 - Workflow `Supabase Migration Single Apply` revisado e aprovado.
 - Workflow `Supabase Readonly Audit` revisado e aprovado para auditoria pos-migration.
 - Workflow `Supabase Permissions Audit` revisado e aprovado para analise de grants/RLS.
+- Migration `2026_07_12_backend_only_permissions.sql` revisada para correcao backend-only.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.
 - Nova autorizacao explicita do dono para aplicar migrations.

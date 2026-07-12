@@ -21,6 +21,16 @@ BBB Consig CRM e um CRM local/demo para operacao de credito consignado. Ele orga
 - Dados atuais sao ficticios.
 - PostgreSQL gerenciado fica preparado apenas por migrations e configuracao futura; nenhuma conexao real e necessaria no modo demo.
 
+## Arquitetura Supabase BACKEND-ONLY
+Para USO PROPRIO, o Supabase deve operar em arquitetura `BACKEND-ONLY`.
+
+- O frontend nao deve usar `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` ou cliente Supabase para CRUD direto.
+- O frontend deve chamar somente a API FastAPI do backend.
+- O backend deve acessar PostgreSQL por `DATABASE_URL` configurada apenas em ambiente seguro.
+- `PUBLIC`, `anon` e `authenticated` nao devem ter acesso direto as tabelas do schema `public`.
+- `service_role` nao pode ser exposto no frontend; se usado futuramente, deve ficar restrito a backend/ambiente seguro.
+- RLS pode ser defesa adicional futura, mas nao substitui grants revogados quando o frontend nao acessa Supabase diretamente.
+
 ## Readiness para dados reais
 O backend possui verificacao de prontidao para `APP_MODE=production`. Esse modo permanece bloqueado ate existirem `DATABASE_URL`, `BBB_DATA_ENCRYPTION_KEY`, `BBB_AUTH_SECRET` forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
 
@@ -29,6 +39,8 @@ Campos sensiveis devem usar envelope criptografado versionado com Fernet (`crypt
 
 ## Fluxo de dados
 Frontend chama a API REST em `http://localhost:8000`. A API acessa SQLite via SQLAlchemy e devolve respostas JSON. Simulacoes e WhatsApp nao chamam servicos externos.
+
+Em PostgreSQL/Supabase futuro, o fluxo permanece: frontend -> backend -> banco. A API publica do Supabase nao deve ser caminho de dados do CRM.
 
 ## Modo demo obrigatorio
 O sistema deve permanecer com `APP_MODE=demo` nesta fase. Nesse modo:

@@ -42,8 +42,37 @@ A ordem PostgreSQL para um banco vazio deve ser:
 2. `2026_07_02_postgres_preparacao.sql`
 3. `2026_07_12_auth_sessions.sql`
 4. `2026_07_12_real_data_readiness.sql`
+5. `2026_07_12_backend_only_permissions.sql`
 
 Rollback do bootstrap em ambiente temporario deve ser feito descartando o banco temporario ou restaurando snapshot anterior. Nao ha `DROP` versionado para ambiente real, pois a cadeia foi desenhada para ser aditiva e auditavel.
+
+## Permissoes PostgreSQL BACKEND-ONLY
+
+Status: DEFINIDO PARA REVISAO. Nao autoriza apply no Supabase real.
+
+A tabela de dados do CRM deve ser acessada somente pelo backend. A migration `2026_07_12_backend_only_permissions.sql` revoga acesso direto de `PUBLIC`, `anon` e `authenticated` nas 12 tabelas:
+
+- `audit_logs`
+- `auth_sessions`
+- `backup_audit_logs`
+- `clientes`
+- `consents`
+- `leads`
+- `propostas`
+- `schema_migrations`
+- `simulations`
+- `tarefas`
+- `users`
+- `whatsapp_messages`
+
+Regras:
+- `anon` nao deve ter `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES` ou `TRIGGER`.
+- `authenticated` nao deve ter acesso direto as tabelas.
+- `PUBLIC` nao deve ter acesso direto ao schema/tabelas/sequences.
+- `postgres` permanece preservado como owner/administrador tecnico.
+- `service_role` nao e exposto no frontend; qualquer uso futuro deve ficar fora do Git e em ambiente seguro do backend.
+- Novas tabelas e sequences nao devem herdar grants publicos por default privileges.
+- RLS pode ser adicionado como camada extra futura, mas a decisao atual e `BACKEND-ONLY`.
 
 ## Preparacao proposta para piloto interno
 

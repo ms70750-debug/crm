@@ -74,3 +74,20 @@ A decisao do relatorio readonly nao autoriza dados reais automaticamente. Ela ap
 Para USO PROPRIO, o backend deve ser o unico caminho autorizado para acessar dados. O workflow `Supabase Permissions Audit` deve ser executado para confirmar grants de `public`, `anon`, `authenticated`, `service_role` e `postgres`, estado de RLS e policies.
 
 A recomendacao padrao deste projeto e `A) BACKEND-ONLY`: remover acessos diretos de `public`, `anon` e `authenticated` em tarefa futura aprovada. `B) RLS OBRIGATORIO` so deve ser escolhido se uma decisao futura exigir frontend acessando Supabase diretamente.
+
+## Correcao backend-only
+
+A migration `2026_07_12_backend_only_permissions.sql` formaliza a correcao backend-only para revisao:
+
+- revoga `USAGE`/`CREATE` indevido no schema `public` para `PUBLIC`, `anon` e `authenticated`;
+- revoga grants diretos nas 12 tabelas do CRM;
+- revoga grants em sequences;
+- ajusta default privileges para novas tabelas e sequences;
+- preserva acesso administrativo do `postgres`;
+- nao cria policies permissivas e nao ativa acesso direto pelo frontend.
+
+O apply real dessa migration continua dependendo de revisao, backup, dry-run, aprovacao explicita do dono e execucao manual controlada. Dados reais continuam proibidos ate aprovacao final.
+
+O workflow `PostgreSQL Backend Only Validation` valida essa decisao em PostgreSQL 16 descartavel no GitHub Actions. Ele aplica a cadeia de cinco migrations em banco vazio, simula os grants diretos existentes de `anon` e `authenticated`, aplica a migration backend-only, confirma bloqueio de acesso direto, testa CRUD minimo via role `backend_app`, valida default privileges, executa rollback manual em banco temporario e verifica que dados ficticios foram preservados.
+
+Essa validacao nao acessa Supabase real, nao usa `SUPABASE_DIRECT_URL`, nao aplica migration real e nao libera dados reais.
