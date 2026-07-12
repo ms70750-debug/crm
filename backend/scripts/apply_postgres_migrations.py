@@ -16,13 +16,20 @@ from app.database.session import normalize_database_url  # noqa: E402
 
 MIGRATIONS_DIR = BACKEND_ROOT / "migrations" / "postgres"
 BOOTSTRAP_MIGRATION = "2026_07_01_000_postgres_bootstrap_schema.sql"
+ORDERED_POSTGRES_MIGRATIONS = (
+    BOOTSTRAP_MIGRATION,
+    "2026_07_02_postgres_preparacao.sql",
+    "2026_07_12_auth_sessions.sql",
+    "2026_07_12_real_data_readiness.sql",
+    "2026_07_12_backend_only_permissions.sql",
+)
 PLACEHOLDER_DIRECT_URL_MESSAGE = "DIRECT_URL ainda contem [YOUR-PASSWORD]. Substitua pela senha real no Secret do GitHub."
 INVALID_DIRECT_URL_MESSAGE = (
     "DIRECT_URL invalida. Confira o Secret SUPABASE_DIRECT_URL no GitHub. "
     "Use uma senha sem caracteres reservados ou URL-encode a senha."
 )
 DANGEROUS_SQL_PATTERN = re.compile(
-    r"\b(DROP\s+(TABLE|COLUMN|DATABASE|SCHEMA)|TRUNCATE|DELETE\s+FROM|ALTER\s+TABLE\s+\S+\s+DROP)\b",
+    r"\b(DROP\s+(TABLE|COLUMN|DATABASE|SCHEMA)|TRUNCATE\s+(?:TABLE\s+)?[a-zA-Z_][\w]*|DELETE\s+FROM|ALTER\s+TABLE\s+\S+\s+DROP)\b",
     re.IGNORECASE,
 )
 CREATE_TABLE_PATTERN = re.compile(r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][\w]*)", re.IGNORECASE)
@@ -61,7 +68,8 @@ def mask_database_url(database_url: str) -> str:
 
 
 def load_postgres_migrations() -> list[Path]:
-    return sorted(MIGRATIONS_DIR.glob("*.sql"))
+    order = {name: index for index, name in enumerate(ORDERED_POSTGRES_MIGRATIONS)}
+    return sorted(MIGRATIONS_DIR.glob("*.sql"), key=lambda path: (order.get(path.name, len(order)), path.name))
 
 
 def get_direct_url() -> str:
