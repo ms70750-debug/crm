@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from subprocess import CompletedProcess, TimeoutExpired
 
 import pytest
 from cryptography.fernet import Fernet
@@ -23,6 +24,16 @@ def _metadata_loader(_: str) -> dict:
     return {
         "latest_migration": "2026_07_12_backend_only_permissions.sql",
         "table_count": 12,
+        "server_major": 16,
+    }
+
+
+def _preflight_loader(_: str) -> dict:
+    return {
+        "pg_dump_installed": True,
+        "pg_dump_major": 16,
+        "server_major": 16,
+        "compatible": True,
     }
 
 
@@ -34,6 +45,7 @@ def test_create_encrypted_backup_creates_safe_artifacts_and_removes_plaintext(tm
         env=_env(key),
         dump_runner=_dump_runner,
         metadata_loader=_metadata_loader,
+        preflight_loader=_preflight_loader,
     )
 
     assert result.encrypted_backup.exists()
@@ -62,6 +74,7 @@ def test_create_encrypted_backup_fails_without_key(tmp_path: Path) -> None:
             env={"DIRECT_URL": "postgresql://user:pass@example.test/db"},
             dump_runner=_dump_runner,
             metadata_loader=_metadata_loader,
+            preflight_loader=_preflight_loader,
         )
 
 
@@ -72,6 +85,7 @@ def test_create_encrypted_backup_fails_with_invalid_key(tmp_path: Path) -> None:
             env={"DIRECT_URL": "postgresql://user:pass@example.test/db", "BACKUP_ENCRYPTION_KEY": "invalida"},
             dump_runner=_dump_runner,
             metadata_loader=_metadata_loader,
+            preflight_loader=_preflight_loader,
         )
 
 
@@ -87,6 +101,7 @@ def test_create_encrypted_backup_masks_connection_errors(tmp_path: Path) -> None
             env=_env(key, "postgresql://secret-user:secret-pass@example.test/db"),
             dump_runner=failing_dump,
             metadata_loader=_metadata_loader,
+            preflight_loader=_preflight_loader,
         )
 
     assert "secret-pass" not in str(exc.value)
@@ -100,6 +115,7 @@ def test_restore_validates_checksums_and_removes_plaintext(tmp_path: Path, monke
         env=_env(key),
         dump_runner=_dump_runner,
         metadata_loader=_metadata_loader,
+        preflight_loader=_preflight_loader,
     )
     monkeypatch.setenv("BACKUP_ENCRYPTION_KEY", key.decode("utf-8"))
 
@@ -148,6 +164,7 @@ def test_restore_fails_with_wrong_key(tmp_path: Path, monkeypatch: pytest.Monkey
         env=_env(Fernet.generate_key()),
         dump_runner=_dump_runner,
         metadata_loader=_metadata_loader,
+        preflight_loader=_preflight_loader,
     )
     monkeypatch.setenv("BACKUP_ENCRYPTION_KEY", Fernet.generate_key().decode("utf-8"))
 
@@ -168,6 +185,7 @@ def test_restore_fails_with_tampered_checksum(tmp_path: Path, monkeypatch: pytes
         env=_env(key),
         dump_runner=_dump_runner,
         metadata_loader=_metadata_loader,
+        preflight_loader=_preflight_loader,
     )
     monkeypatch.setenv("BACKUP_ENCRYPTION_KEY", key.decode("utf-8"))
     result.encrypted_backup.write_bytes(result.encrypted_backup.read_bytes() + b"adulterado")
@@ -188,3 +206,72 @@ def test_restore_blocks_supabase_direct_url(monkeypatch: pytest.MonkeyPatch) -> 
 
     with pytest.raises(RuntimeError, match="SUPABASE_DIRECT_URL nao deve ser usado"):
         restore.get_restore_url()
+
+
+def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[list[str], dict[str, str] | None]] = []
+
+    def fake_run(args, **kwargs):
+        calls.append((args, kwargs.get("env")))
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 16.0")
+
+    backup.run_pg_dump("postgresql://secret-user:secret-pass@example.test/db", tmp_path / "safe.dump")
+
+    command, env = calls[0]
+    assert "postgresql://secret-user:secret-pass@example.test/db" not in command
+    assert env is not None
+    assert env["PGDATABASE"] == "postgresql://secret-user:secret-pass@example.test/db"
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        ("server version: 17.0; pg_dump version: 16.0", "PG_DUMP_VERSION_MISMATCH"),
+        ("password authentication failed for user", "AUTHENTICATION_FAILED"),
+        ("permission denied for table clientes", "PERMISSION_DENIED"),
+        ("could not connect to server", "CONNECTION_FAILED"),
+        ("unrecognized option '--bad'", "INVALID_ARGUMENT"),
+        ("could not open output file", "OUTPUT_FILE_ERROR"),
+        ("some database error", "DATABASE_DUMP_ERROR"),
+    ],
+)
+def test_pg_dump_error_classification(stderr: str, expected: str) -> None:
+    assert backup.classify_pg_dump_error(stderr, 1) == expected
+
+
+def test_pg_dump_timeout_is_safe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def timeout_run(*_, **__):
+        raise TimeoutExpired(cmd="pg_dump", timeout=1)
+
+    monkeypatch.setattr(backup.subprocess, "run", timeout_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 16.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump("postgresql://secret-user:secret-pass@example.test/db", tmp_path / "safe.dump", timeout=1)
+
+    assert exc.value.category == "TIMEOUT"
+    assert "secret-pass" not in str(exc.value)
+    assert "example.test" not in str(exc.value)
+
+
+def test_preflight_version_mismatch_blocks_before_dump(tmp_path: Path) -> None:
+    key = Fernet.generate_key()
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.create_encrypted_backup(
+            output_dir=tmp_path,
+            env=_env(key),
+            dump_runner=_dump_runner,
+            metadata_loader=_metadata_loader,
+            preflight_loader=lambda _: {
+                "pg_dump_installed": True,
+                "pg_dump_major": 16,
+                "server_major": 17,
+                "compatible": False,
+            },
+        )
+
+    assert exc.value.category == "PG_DUMP_VERSION_MISMATCH"

@@ -226,6 +226,12 @@ def test_supabase_encrypted_backup_workflow_is_manual_and_safe() -> None:
     assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
     assert "::add-mask::$DIRECT_URL" in content
     assert "::add-mask::$BACKUP_ENCRYPTION_KEY" in content
+    assert "postgresql-client-17" in content
+    assert "Safe pg_dump preflight" in content
+    assert "backup_preflight" in content
+    assert "versao principal do pg_dump" in content
+    assert "versao principal do servidor" in content
+    assert "compatibilidade" in content
     assert "actions/upload-artifact@v4" in content
     assert "retention-days: 1" in content
     assert "*.dump.enc" in content
