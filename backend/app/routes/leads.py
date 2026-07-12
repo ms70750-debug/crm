@@ -6,8 +6,8 @@ from app.database.session import get_db
 from app.models import Client, Lead, Proposal, Task, User, WhatsAppMessage
 from app.schemas.lead import LeadCreate, LeadDetail, LeadRead, LeadTimelineEvent, LeadUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
-from app.services.privacy import person_payload
-from app.services.security import can_view_sensitive_data, current_user, is_partner, require_roles
+from app.services.privacy import assert_demo_cpf_allowed, person_payload
+from app.services.security import can_view_sensitive_data, current_user, is_partner, log_audit, require_roles
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -106,7 +106,11 @@ def list_leads(
 
 @router.post("", response_model=LeadRead, status_code=201)
 def create_lead(payload: LeadCreate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return create_item(db, Lead, payload)
+    assert_demo_cpf_allowed(payload.cpf)
+    lead = create_item(db, Lead, payload)
+    log_audit(db, "lead_created", "lead", lead.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump())
+    db.commit()
+    return lead
 
 
 @router.get("/{lead_id}")
@@ -163,6 +167,7 @@ def convert_lead_to_client(lead_id: int, db: Session = Depends(get_db), user=Dep
     )
     db.add(client)
     lead.status = "Qualificado" if lead.status == "Novo lead" else lead.status
+    log_audit(db, "lead_converted_to_client", "lead", lead.id, actor=user.email, actor_user_id=user.id, metadata={"cliente_id": None, "cpf": lead.cpf})
     db.commit()
     db.refresh(client)
     return {"cliente": _client_payload(client), "criado": True}
@@ -190,6 +195,7 @@ def create_proposal_from_lead(lead_id: int, db: Session = Depends(get_db), user=
     )
     lead.status = "Proposta enviada"
     db.add(proposal)
+    log_audit(db, "lead_proposal_created", "lead", lead.id, actor=user.email, actor_user_id=user.id, metadata={"produto": lead.produto_interesse, "cpf": lead.cpf})
     db.commit()
     db.refresh(proposal)
     return {"proposta": _proposal_payload(proposal), "cliente": _client_payload(client)}
@@ -216,14 +222,25 @@ def _proposal_payload(proposal: Proposal) -> dict:
 
 @router.put("/{lead_id}", response_model=LeadRead)
 def update_lead(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return update_item(db, Lead, lead_id, payload)
+    if payload.cpf:
+        assert_demo_cpf_allowed(payload.cpf)
+    lead = update_item(db, Lead, lead_id, payload)
+    log_audit(db, "lead_updated", "lead", lead.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump(exclude_unset=True))
+    db.commit()
+    return lead
 
 
 @router.patch("/{lead_id}/status", response_model=LeadRead)
 def update_lead_status(lead_id: int, payload: LeadUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return update_item(db, Lead, lead_id, payload)
+    lead = update_item(db, Lead, lead_id, payload)
+    log_audit(db, "lead_status_updated", "lead", lead.id, actor=user.email, actor_user_id=user.id, metadata={"status": payload.status})
+    db.commit()
+    return lead
 
 
 @router.delete("/{lead_id}")
 def delete_lead(lead_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor"))):
-    return delete_item(db, Lead, lead_id)
+    result = delete_item(db, Lead, lead_id)
+    log_audit(db, "lead_deleted", "lead", lead_id, actor=user.email, actor_user_id=user.id)
+    db.commit()
+    return result

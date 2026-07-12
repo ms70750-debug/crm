@@ -10,6 +10,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class DemoLoginRequest(BaseModel):
+    role: str = "admin"
+
+
 class UserRead(ORMModel):
     id: int
     nome: str

@@ -6,7 +6,7 @@ from app.database.session import get_db
 from app.models import Task
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
-from app.services.security import require_roles
+from app.services.security import log_audit, require_roles
 
 router = APIRouter(prefix="/tarefas", tags=["tarefas"])
 
@@ -23,7 +23,10 @@ def list_tasks(status: str | None = None, prioridade: str | None = None, db: Ses
 
 @router.post("", response_model=TaskRead, status_code=201)
 def create_task(payload: TaskCreate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return create_item(db, Task, payload)
+    task = create_item(db, Task, payload)
+    log_audit(db, "task_created", "tarefa", task.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump())
+    db.commit()
+    return task
 
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -33,14 +36,23 @@ def get_task(task_id: int, db: Session = Depends(get_db), user=Depends(require_r
 
 @router.put("/{task_id}", response_model=TaskRead)
 def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return update_item(db, Task, task_id, payload)
+    task = update_item(db, Task, task_id, payload)
+    log_audit(db, "task_updated", "tarefa", task.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump(exclude_unset=True))
+    db.commit()
+    return task
 
 
 @router.patch("/{task_id}/concluir", response_model=TaskRead)
 def complete_task(task_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
-    return update_item(db, Task, task_id, TaskUpdate(status="Concluida"))
+    task = update_item(db, Task, task_id, TaskUpdate(status="Concluida"))
+    log_audit(db, "task_completed", "tarefa", task.id, actor=user.email, actor_user_id=user.id, metadata={"status": "Concluida"})
+    db.commit()
+    return task
 
 
 @router.delete("/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor"))):
-    return delete_item(db, Task, task_id)
+    result = delete_item(db, Task, task_id)
+    log_audit(db, "task_deleted", "tarefa", task_id, actor=user.email, actor_user_id=user.id)
+    db.commit()
+    return result

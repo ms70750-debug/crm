@@ -1,12 +1,13 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import { api, clearAuthToken, getAuthToken, setAuthToken } from "../lib/api";
+import { api, clearAuthToken, setAuthToken } from "../lib/api";
 import { LoginResponse, Perfil, User } from "../types";
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  demoLogin: (role: Perfil) => Promise<void>;
+  logout: () => Promise<void>;
   hasRole: (...roles: Perfil[]) => boolean;
 };
 
@@ -14,10 +15,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(Boolean(getAuthToken()));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!getAuthToken()) return;
     api
       .get<User>("/auth/me")
       .then(setUser)
@@ -34,7 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
-  function logout() {
+  async function demoLogin(role: Perfil) {
+    const data = await api.post<LoginResponse>("/auth/demo-login", { role });
+    setAuthToken(data.access_token);
+    setUser(data.user);
+  }
+
+  async function logout() {
+    try {
+      await api.post("/auth/logout", {});
+    } catch {
+      // A sessao local deve ser limpa mesmo se a API ja expirou o cookie.
+    }
     clearAuthToken();
     setUser(null);
   }
@@ -44,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       login,
+      demoLogin,
       logout,
       hasRole: (...roles) => Boolean(user && roles.includes(user.role)),
     }),

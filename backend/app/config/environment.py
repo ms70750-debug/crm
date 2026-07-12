@@ -7,10 +7,19 @@ PRODUCTION_ENV_VALUES = {"production", "prod", "render"}
 DEMO_AUTH_SECRET = "bbb-consig-crm-demo-secret"
 PLACEHOLDER_AUTH_SECRET = "troque-este-valor-em-ambiente-seguro"
 PENDING_REAL_DATA_CONTROLS = "criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD"
+DEMO_MODE_VALUES = {"demo", "demonstracao", "demonstração"}
 
 
 def is_production_environment() -> bool:
     return os.environ.get("APP_ENV", "local").strip().lower() in PRODUCTION_ENV_VALUES
+
+
+def app_mode() -> str:
+    return os.environ.get("APP_MODE", "demo").strip().lower() or "demo"
+
+
+def demo_mode_enabled() -> bool:
+    return app_mode() in DEMO_MODE_VALUES
 
 
 def is_postgresql_url(database_url: str) -> bool:
@@ -34,8 +43,11 @@ def validate_environment() -> None:
     cors_origins = os.environ.get("CORS_ORIGINS", "")
     database_url = os.environ.get("DATABASE_URL", "")
     evolution_mode = os.environ.get("EVOLUTION_API_MODE", "")
+    mode = app_mode()
     real_data_mode = real_data_mode_enabled()
 
+    if mode not in DEMO_MODE_VALUES:
+        errors.append("APP_MODE deve permanecer como demo nesta fase controlada")
     if not auth_secret or auth_secret in {DEMO_AUTH_SECRET, PLACEHOLDER_AUTH_SECRET}:
         errors.append("BBB_AUTH_SECRET ausente ou inseguro")
     if not cors_origins or "SEU-FRONTEND" in cors_origins:

@@ -1,5 +1,9 @@
 import re
 
+from fastapi import HTTPException
+
+from app.config.environment import demo_mode_enabled
+
 
 def only_digits(value: str | None) -> str:
     return re.sub(r"\D", "", value or "")
@@ -59,3 +63,21 @@ def person_payload(item, reveal_sensitive: bool = False) -> dict:
 
 def public_person_payload(item) -> dict:
     return person_payload(item, reveal_sensitive=False)
+
+
+def is_valid_cpf(value: str | None) -> bool:
+    digits = only_digits(value)
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+
+    def digit_for(prefix: str) -> str:
+        total = sum(int(number) * weight for number, weight in zip(prefix, range(len(prefix) + 1, 1, -1)))
+        check = (total * 10) % 11
+        return "0" if check == 10 else str(check)
+
+    return digits[9] == digit_for(digits[:9]) and digits[10] == digit_for(digits[:10])
+
+
+def assert_demo_cpf_allowed(value: str | None) -> None:
+    if demo_mode_enabled() and is_valid_cpf(value):
+        raise HTTPException(status_code=400, detail="Ambiente de demonstracao: use somente CPF ficticio/invalido para testes.")

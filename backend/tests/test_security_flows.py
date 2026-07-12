@@ -102,13 +102,23 @@ def test_auth_me_and_route_protection() -> None:
     assert me.status_code == 200
     assert me.json()["role"] == "admin"
     assert "password_hash" not in me.text
+    assert client.cookies.get("bbb_consig_session") is not None
 
+    client.cookies.clear()
     blocked = client.get("/dashboard/resumo")
     assert blocked.status_code == 401
 
     dashboard = client.get("/dashboard/resumo", headers=headers)
     assert dashboard.status_code == 200
     assert "cards" in dashboard.json()
+
+    cookie_login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    assert cookie_login["user"]["role"] == "admin"
+    cookie_dashboard = client.get("/dashboard/resumo")
+    assert cookie_dashboard.status_code == 200
+    logout = client.post("/auth/logout")
+    assert logout.status_code == 200
+    assert client.get("/dashboard/resumo").status_code == 401
 
 
 def test_partner_permissions_are_limited() -> None:

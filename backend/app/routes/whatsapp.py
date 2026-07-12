@@ -31,6 +31,17 @@ def list_templates(user=Depends(require_roles("admin", "supervisor", "operador")
     return [{"id": key, "nome": key.replace("_", " ").title()} for key in TEMPLATES]
 
 
+@router.get("/status")
+def whatsapp_status(user=Depends(require_roles("admin", "supervisor", "operador"))):
+    return {
+        "integration": "Evolution API",
+        "mode": "simulation",
+        "real_send_enabled": False,
+        "health": "simulated",
+        "message": "Nenhuma mensagem real e enviada nesta fase.",
+    }
+
+
 @router.post("/preview", response_model=WhatsAppPreview)
 def preview_message(payload: WhatsAppPreviewRequest, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     recipient = _find_recipient(db, payload.destinatario_tipo, payload.destinatario_id)
@@ -51,6 +62,15 @@ def simulate_send(payload: WhatsAppSendRequest, db: Session = Depends(get_db), u
         .order_by(Consent.id.desc())
     )
     if not consent:
+        log_audit(
+            db,
+            action="whatsapp_simulation_blocked_without_consent",
+            entity_type="whatsapp_message",
+            actor=user.email,
+            actor_user_id=user.id,
+            metadata={"destinatario_tipo": payload.destinatario_tipo, "destinatario_id": payload.destinatario_id, "modelo": payload.modelo},
+        )
+        db.commit()
         raise HTTPException(status_code=403, detail="Opt-in de WhatsApp obrigatorio antes de registrar mensagem simulada.")
     message = WhatsAppMessage(
         destinatario_tipo=payload.destinatario_tipo,

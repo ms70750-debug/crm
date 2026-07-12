@@ -8,7 +8,7 @@ from app.database.session import get_db
 from app.models import Client, Proposal
 from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
-from app.services.privacy import person_payload
+from app.services.privacy import assert_demo_cpf_allowed, person_payload
 from app.services.security import can_view_sensitive_data, log_audit, require_roles
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
@@ -25,6 +25,7 @@ def list_clients(q: str | None = None, db: Session = Depends(get_db), user=Depen
 
 @router.post("", status_code=201)
 def create_client(payload: ClientCreate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
+    assert_demo_cpf_allowed(payload.cpf)
     client = create_item(db, Client, payload)
     log_audit(db, "client_created", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump())
     db.commit()
@@ -46,6 +47,8 @@ def get_client_history(client_id: int, db: Session = Depends(get_db), user=Depen
 
 @router.put("/{client_id}")
 def update_client(client_id: int, payload: ClientUpdate, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
+    if payload.cpf:
+        assert_demo_cpf_allowed(payload.cpf)
     client = update_item(db, Client, client_id, payload)
     log_audit(db, "client_updated", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata=payload.model_dump(exclude_unset=True))
     db.commit()
