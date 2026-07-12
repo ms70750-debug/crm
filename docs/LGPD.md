@@ -1,6 +1,6 @@
 # LGPD
 
-Status: PROPOSTO PARA APROVACAO. Dados reais continuam proibidos.
+Status: ADRs 009 a 013 APROVADOS para USO PROPRIO. Dados reais continuam proibidos ate auditoria LGPD final e aprovacao explicita do dono.
 
 ## Principios Aplicados
 
@@ -25,8 +25,8 @@ CPF, telefone, email, beneficio, dados bancarios, observacoes com dados pessoais
 
 ## Pendencias Para Uso Real
 
-- Aprovar ADRs 009 a 013.
 - Provisionar chave real fora do Git.
 - Definir politica de retencao.
 - Testar backup/restore externo.
-- Fazer auditoria final.
+- Fazer auditoria LGPD final.
+- Obter aprovacao explicita para publicacao e uso real.

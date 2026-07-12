@@ -72,6 +72,16 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 ### Frontend Vercel
 - `VITE_API_URL`
 
+### Previews Vercel
+
+Branches de preparacao para dados reais nao podem gerar preview publico com configuracoes reais.
+
+O arquivo `frontend/vercel.json` bloqueia deploy automatico da branch `feature/real-data-readiness-2026-07-12`. Se a Vercel ja tiver criado um preview antes desta regra, remover/desativar manualmente no painel:
+1. Abrir Vercel > projeto `crm` > Deployments.
+2. Filtrar pela branch `feature/real-data-readiness-2026-07-12`.
+3. Remover ou cancelar o deployment preview existente.
+4. Confirmar que nenhum preview dessa branch usa `APP_MODE=production`, banco real, credenciais reais, WhatsApp real ou dados pessoais.
+
 ### Opcionais nesta fase
 - `BACKEND_HOST`
 - `BACKEND_PORT`

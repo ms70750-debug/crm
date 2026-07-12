@@ -20,6 +20,7 @@ Os ADRs de PostgreSQL, criptografia, autenticacao de producao, backup/restauraca
 | Testes | Backend, build, E2E e seguranca aprovados | PARCIAL |
 | Credenciais | Nenhum segredo no Git; secrets em provedor seguro | PENDENTE |
 | Publicacao | Nova publicacao aprovada pelo dono | PENDENTE |
+| Preview Vercel | Branches de preparacao para dados reais sem preview publico com configuracao real | PENDENTE |
 | Rollback | Plano validado com tag/backup | PENDENTE |
 
 ## Gate Tecnico
@@ -39,6 +40,12 @@ Os ADRs de PostgreSQL, criptografia, autenticacao de producao, backup/restauraca
 ## Classificacao Atual
 
 AINDA SOMENTE DEMO.
+
+## Politica De Preview
+
+Branches de preparacao para dados reais nao podem gerar preview publico com configuracoes reais. Qualquer preview existente deve permanecer no maximo em `APP_MODE=demo`, com dados ficticios, sem banco real, sem credenciais reais, sem WhatsApp real e sem dados pessoais.
+
+Para a branch `feature/real-data-readiness-2026-07-12`, o deploy automatico foi bloqueado em `frontend/vercel.json`. Previews ja criados antes da regra devem ser removidos ou cancelados manualmente em Vercel > projeto `crm` > Deployments.
 
 ## Proxima Aprovacao Necessaria
 

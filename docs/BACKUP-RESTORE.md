@@ -1,10 +1,12 @@
 # Backup E Restauracao
 
-Status: PROPOSTO PARA APROVACAO. Nenhum backup real configurado nesta tarefa.
+Status: ADR 012 APROVADO para USO PROPRIO. Nenhum backup real externo configurado nesta tarefa.
 
 ## Escopo Atual
 
 O projeto possui somente scripts auxiliares para backup/restauracao ficticia local, usados em testes automatizados com banco temporario. Eles nao conectam em provedor real e nao manipulam dados pessoais reais.
+
+A aprovacao do ADR nao autoriza dados reais, publicacao real ou backup externo de producao. Uso real depende de auditoria final, credenciais seguras, provedor configurado e aprovacao explicita do dono.
 
 ## Requisitos Para Piloto Real
 

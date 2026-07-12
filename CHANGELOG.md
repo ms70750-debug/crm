@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Correcao dos bloqueadores pre-merge do PR 10
+
+### Corrigido
+- Adicionada revogacao server-side de sessao no logout, com armazenamento de hash do identificador da sessao.
+- Alinhados `docs/LGPD.md` e `docs/BACKUP-RESTORE.md` aos ADRs 009 a 013 aprovados para USO PROPRIO.
+- Bloqueado deploy automatico da branch `feature/real-data-readiness-2026-07-12` no `frontend/vercel.json`.
+
+### Mantido
+- Dados reais, credenciais reais, WhatsApp real, PostgreSQL real e publicacao de producao continuam proibidos sem nova aprovacao explicita.
+
 ## 2026-07-12 - Aprovacao arquitetural para uso proprio
 
 ### Alterado
