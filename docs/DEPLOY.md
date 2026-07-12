@@ -63,6 +63,7 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `APP_MODE`
 - `PYTHON_VERSION`
 - `BBB_AUTH_SECRET`
+- `BBB_DATA_ENCRYPTION_KEY`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
 - `REAL_DATA_MODE`
@@ -80,6 +81,8 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 `EVOLUTION_API_URL` e `EVOLUTION_API_TOKEN` devem ficar vazios enquanto WhatsApp estiver em modo simulacao.
 
 `APP_MODE=demo` mantem o aviso de demonstracao, bloqueia CPF matematicamente valido em cadastros/simulacoes e impede que usuarios demo sejam tratados como operacao real.
+
+Para `APP_MODE=production`, o backend deve bloquear a inicializacao se qualquer item de readiness estiver ausente: PostgreSQL, chave de criptografia, segredo de autenticacao forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
 
 ## PostgreSQL para producao real
 

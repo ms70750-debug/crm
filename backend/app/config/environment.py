@@ -35,6 +35,13 @@ def real_data_mode_enabled() -> bool:
 
 
 def validate_environment() -> None:
+    from app.services.readiness import assert_production_ready, production_mode_enabled
+
+    assert_production_ready()
+    if production_mode_enabled():
+        logger.info("Readiness de producao validado sem expor valores secretos.")
+        return
+
     if not is_production_environment():
         return
 

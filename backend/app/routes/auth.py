@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.environment import demo_mode_enabled
+from app.services.readiness import production_mode_enabled
 from app.database.session import get_db
 from app.models import User
 from app.schemas.security import DemoLoginRequest, LoginRequest, LoginResponse, UserRead
@@ -49,7 +50,7 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
 
 @router.post("/demo-login", response_model=LoginResponse)
 def demo_login(payload: DemoLoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
-    if not demo_mode_enabled():
+    if production_mode_enabled() or not demo_mode_enabled():
         raise HTTPException(status_code=403, detail="Login de demonstracao indisponivel fora do modo demo")
     role = payload.role.strip().lower()
     email = DEMO_EMAIL_BY_ROLE.get(role)
