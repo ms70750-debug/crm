@@ -65,7 +65,7 @@ def test_real_data_mode_with_postgresql_still_requires_future_controls(monkeypat
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
     monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://usuario:senha@host:5432/bbb")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://host.local:5432/bbb")
     monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
     monkeypatch.setenv("REAL_DATA_MODE", "true")
 
@@ -205,7 +205,7 @@ def test_partner_permissions_are_limited() -> None:
     admin = _login("admin@bbbconsig.demo", "BbbConsig@2026")
     admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
     suffix = str(time_ns())[-9:]
-    raw_cpf = f"41{suffix}"
+    raw_cpf = _fictitious_cpf("41")
     created = client.post(
         "/leads",
         headers=admin_headers,
