@@ -335,9 +335,22 @@ Vercel:
 - Workflow `Supabase Readonly Audit` revisado e aprovado para auditoria pos-migration.
 - Workflow `Supabase Permissions Audit` revisado e aprovado para analise de grants/RLS.
 - Migration `2026_07_12_backend_only_permissions.sql` revisada para correcao backend-only.
+- ADR 014 aprovada e backup criptografado com restore temporario testado antes de qualquer dado real.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.
 - Nova autorizacao explicita do dono para aplicar migrations.
+
+## Backup externo criptografado
+
+Para Supabase Free, o caminho proposto e usar backup logico externo criptografado:
+
+1. `Supabase Encrypted Backup` cria backup manual sob confirmacao `CRIAR-BACKUP-CRIPTOGRAFADO`.
+2. O job usa `SUPABASE_DIRECT_URL` e `BACKUP_ENCRYPTION_KEY` apenas como GitHub Actions secrets.
+3. O dump aberto e apagado antes do artifact.
+4. O artifact contem somente `.dump.enc`, manifesto seguro e checksums.
+5. `PostgreSQL Backup Restore Test` valida o backup em PostgreSQL 16 temporario sob confirmacao `TESTAR-RESTAURACAO`.
+
+Nesta fase nao ha agendamento, armazenamento externo real ou backup real autorizado. Dados reais continuam proibidos.
 
 ## Estado Final Deste Plano
 

@@ -1,0 +1,98 @@
+name: PostgreSQL Backup Restore Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: "Run ID do workflow Supabase Encrypted Backup."
+        required: true
+      confirmation:
+        description: "Digite TESTAR-RESTAURACAO para confirmar."
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: postgres-backup-restore-test
+  cancel-in-progress: false
+
+jobs:
+  restore-test:
+    name: Restore encrypted backup on PostgreSQL 16
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: crm_restore_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_restore_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_restore_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_RESTORE_URL: postgresql+psycopg://postgres:postgres_restore_test_only@localhost:5432/crm_restore_test
+      BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      REAL_DATA_MODE: "false"
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "TESTAR-RESTAURACAO" ]; then
+            echo "Confirmacao invalida."
+            exit 1
+          fi
+          if [ -z "$BACKUP_ENCRYPTION_KEY" ]; then
+            echo "BACKUP_ENCRYPTION_KEY ausente. Valor nao exibido."
+            exit 1
+          fi
+          echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
+          echo "Confirmacao aceita. Restore sera feito apenas em PostgreSQL temporario."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Download encrypted backup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-encrypted-backup
+          run-id: ${{ github.event.inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          path: restore-artifact
+
+      - name: Verify encrypted restore
+        run: |
+          BACKUP_FILE="$(find restore-artifact -name '*.dump.enc' -print -quit)"
+          MANIFEST_FILE="$(find restore-artifact -name '*.manifest.json' -print -quit)"
+          if [ -z "$BACKUP_FILE" ] || [ -z "$MANIFEST_FILE" ]; then
+            echo "Artifact incompleto."
+            exit 1
+          fi
+          python backend/scripts/verify_encrypted_backup_restore.py --backup "$BACKUP_FILE" --manifest "$MANIFEST_FILE"
+
+      - name: Safe summary
+        run: |
+          echo "## PostgreSQL Backup Restore Test" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PostgreSQL temporario: usado" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Supabase real acessado: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dump aberto publicado: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Segredos exibidos: nao" >> "$GITHUB_STEP_SUMMARY"
