@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "feature/real-data-readiness-2026-07-12": false
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

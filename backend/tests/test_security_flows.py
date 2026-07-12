@@ -1,3 +1,6 @@
+import base64
+from datetime import datetime, timedelta
+import json
 from time import time_ns
 
 import pytest
@@ -8,11 +11,20 @@ from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.main import app
-from app.models import AuditLog, Client
+from app.models import AuditLog, AuthSession, Client
 from app.services.privacy import is_valid_cpf
 
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limits():
+    from app.services.security import _rate_buckets
+
+    _rate_buckets.clear()
+    yield
+    _rate_buckets.clear()
 
 
 def test_production_environment_rejects_insecure_required_vars(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -65,7 +77,7 @@ def test_real_data_mode_with_postgresql_still_requires_future_controls(monkeypat
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
     monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://usuario:senha@host:5432/bbb")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://host.local:5432/bbb")
     monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
     monkeypatch.setenv("REAL_DATA_MODE", "true")
 
@@ -85,6 +97,11 @@ def _login(email: str, password: str) -> dict:
     response = client.post("/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
     return response.json()
+
+
+def _token_payload(token: str) -> dict:
+    raw = token.split(".", 1)[0]
+    return json.loads(base64.urlsafe_b64decode(raw.encode()).decode())
 
 
 def _fictitious_cpf(prefix: str = "39") -> str:
@@ -155,6 +172,73 @@ def test_auth_me_and_route_protection() -> None:
     assert client.get("/dashboard/resumo").status_code == 401
 
 
+def test_login_creates_server_side_session_and_does_not_store_full_token() -> None:
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    payload = _token_payload(token)
+    assert payload["sid"]
+
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        assert session.revoked_at is None
+        assert session.expires_at > datetime.utcnow()
+        assert token not in str(session.__dict__)
+        assert payload["sid"] not in str(session.__dict__)
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+
+
+def test_logout_revokes_server_side_session_and_blocks_copied_bearer_token() -> None:
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/auth/me", headers=headers).status_code == 200
+
+    logout = client.post("/auth/logout", headers=headers)
+    assert logout.status_code == 200
+    assert client.cookies.get("bbb_consig_session") is None
+    assert client.get("/auth/me", headers=headers).status_code == 401
+
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        assert session.revoked_at is not None
+        assert session.revocation_reason == "logout"
+
+
+def test_expired_or_missing_server_side_session_fails() -> None:
+    expired_login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    expired_token = expired_login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == expired_login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        session.expires_at = datetime.utcnow() - timedelta(seconds=1)
+        db.commit()
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {expired_token}"}).status_code == 401
+
+    missing_login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    missing_token = missing_login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == missing_login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        db.delete(session)
+        db.commit()
+    assert client.get("/auth/me", headers={"Authorization": f"Bearer {missing_token}"}).status_code == 401
+
+
+def test_revoked_session_does_not_affect_another_valid_session_for_same_user() -> None:
+    first = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    first_headers = {"Authorization": f"Bearer {first['access_token']}"}
+    second = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    second_headers = {"Authorization": f"Bearer {second['access_token']}"}
+
+    assert client.post("/auth/logout", headers=first_headers).status_code == 200
+    assert client.get("/auth/me", headers=first_headers).status_code == 401
+    assert client.get("/auth/me", headers=second_headers).status_code == 200
+
+
 def test_demo_mode_blocks_valid_cpf_and_allows_fictitious_cpf(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_MODE", "demo")
     token = _token()
@@ -205,7 +289,7 @@ def test_partner_permissions_are_limited() -> None:
     admin = _login("admin@bbbconsig.demo", "BbbConsig@2026")
     admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
     suffix = str(time_ns())[-9:]
-    raw_cpf = f"41{suffix}"
+    raw_cpf = _fictitious_cpf("41")
     created = client.post(
         "/leads",
         headers=admin_headers,

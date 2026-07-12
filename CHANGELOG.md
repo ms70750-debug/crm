@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-07-12 - Correcao dos bloqueadores pre-merge do PR 10
+
+### Corrigido
+- Adicionada revogacao server-side de sessao no logout, com armazenamento de hash do identificador da sessao.
+- Alinhados `docs/LGPD.md` e `docs/BACKUP-RESTORE.md` aos ADRs 009 a 013 aprovados para USO PROPRIO.
+- Bloqueado deploy automatico da branch `feature/real-data-readiness-2026-07-12` no `frontend/vercel.json`.
+
+### Mantido
+- Dados reais, credenciais reais, WhatsApp real, PostgreSQL real e publicacao de producao continuam proibidos sem nova aprovacao explicita.
+
+## 2026-07-12 - Aprovacao arquitetural para uso proprio
+
+### Alterado
+- ADRs 009 a 013 marcados como APROVADO pelo dono do projeto para escopo de USO PROPRIO.
+- Registrado que a aprovacao dos ADRs nao autoriza dados reais, publicacao, integracoes reais, SaaS ou merge automatico do PR no 10.
+- Mantida exigencia de auditoria final, credenciais seguras e aprovacao explicita antes de qualquer ativacao real.
+
+## 2026-07-12 - Preparacao segura para dados reais
+
+### Adicionado
+- Propostos ADRs 009 a 013 para PostgreSQL, criptografia, autenticacao, backup/restauracao e retencao LGPD.
+- Criada fundacao de readiness para bloquear `APP_MODE=production` sem controles obrigatorios.
+- Adicionada camada isolada de protecao de dados com envelope versionado, autenticacao e hash separado de CPF.
+- Criadas migrations aditivas para soft delete, campos protegidos, consentimento ampliado e auditoria de backup.
+- Adicionados testes de criptografia, readiness, soft delete/restauracao, consentimento, migration temporaria e backup/restore ficticio.
+
+### Bloqueios preservados
+- `APP_MODE=demo` continua sendo o padrao seguro.
+- Dados reais continuam proibidos ate auditoria final e aprovacao explicita.
+- Nenhuma credencial real, conexao PostgreSQL real, publicacao ou merge foi realizado nesta preparacao.
+
 ## 2026-07-12 - Correcao documental do PR 9
 
 ### Corrigido

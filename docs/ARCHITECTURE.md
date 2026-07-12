@@ -19,6 +19,13 @@ BBB Consig CRM e um CRM local/demo para operacao de credito consignado. Ele orga
 - SQLite local em `backend/app.db`.
 - Migrations versionadas em `backend/migrations`.
 - Dados atuais sao ficticios.
+- PostgreSQL gerenciado fica preparado apenas por migrations e configuracao futura; nenhuma conexao real e necessaria no modo demo.
+
+## Readiness para dados reais
+O backend possui verificacao de prontidao para `APP_MODE=production`. Esse modo permanece bloqueado ate existirem `DATABASE_URL`, `BBB_DATA_ENCRYPTION_KEY`, `BBB_AUTH_SECRET` forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
+
+## Protecao de dados
+Campos sensiveis devem usar envelope criptografado versionado com Fernet (`cryptography`) e hash deterministico separado para CPF. A chave `BBB_DATA_ENCRYPTION_KEY` deve existir somente em ambiente seguro e nunca no Git.
 
 ## Fluxo de dados
 Frontend chama a API REST em `http://localhost:8000`. A API acessa SQLite via SQLAlchemy e devolve respostas JSON. Simulacoes e WhatsApp nao chamam servicos externos.

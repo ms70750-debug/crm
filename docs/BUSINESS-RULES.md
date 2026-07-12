@@ -47,3 +47,9 @@ WhatsApp permanece simulado. O registro de mensagem exige opt-in ativo e deve pe
 
 ## BR-016 Producao real e SaaS bloqueados
 Dados reais, integracoes reais, multi-tenancy e operacao SaaS dependem de decisao comercial explicita, ADRs, isolamento, revisao LGPD, auditoria e aprovacao antes de qualquer uso.
+
+## BR-017 Readiness nao autoriza uso real
+Campos de criptografia, readiness, backup e restauracao administrativa sao preparacao tecnica. Eles nao autorizam dados reais sem aprovacao final do dono.
+
+## BR-018 Restauracao administrativa
+Restauracao de registro com soft delete deve ser restrita a admin/supervisor, auditada e usada somente em fluxo controlado.

@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
@@ -25,10 +26,13 @@ def create_consent(payload: ConsentCreate, request: Request, db: Session = Depen
     consent = Consent(
         customer_id=payload.customer_id,
         channel=payload.channel,
+        purpose=payload.purpose,
         granted=payload.granted,
+        status="active" if payload.granted else "revoked",
         source=payload.source,
         ip_address=request.client.host if request.client else None,
         revoked_at=None if payload.granted else datetime.utcnow(),
+        metadata_json=json.dumps({"source": payload.source, "purpose": payload.purpose}),
     )
     db.add(consent)
     db.flush()
@@ -46,7 +50,9 @@ def revoke_consent(consent_id: int, db: Session = Depends(get_db), user=Depends(
 
         raise HTTPException(status_code=404, detail="Consentimento nao encontrado")
     consent.granted = False
+    consent.status = "revoked"
     consent.revoked_at = datetime.utcnow()
+    consent.revoked_by = user.id
     log_audit(db, "consent_revoked", "consent", consent.id, actor=user.email, actor_user_id=user.id, metadata={"customer_id": consent.customer_id, "channel": consent.channel})
     db.commit()
     db.refresh(consent)

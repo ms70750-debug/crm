@@ -63,6 +63,7 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `APP_MODE`
 - `PYTHON_VERSION`
 - `BBB_AUTH_SECRET`
+- `BBB_DATA_ENCRYPTION_KEY`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
 - `REAL_DATA_MODE`
@@ -70,6 +71,16 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 
 ### Frontend Vercel
 - `VITE_API_URL`
+
+### Previews Vercel
+
+Branches de preparacao para dados reais nao podem gerar preview publico com configuracoes reais.
+
+O arquivo `frontend/vercel.json` bloqueia deploy automatico da branch `feature/real-data-readiness-2026-07-12`. Se a Vercel ja tiver criado um preview antes desta regra, remover/desativar manualmente no painel:
+1. Abrir Vercel > projeto `crm` > Deployments.
+2. Filtrar pela branch `feature/real-data-readiness-2026-07-12`.
+3. Remover ou cancelar o deployment preview existente.
+4. Confirmar que nenhum preview dessa branch usa `APP_MODE=production`, banco real, credenciais reais, WhatsApp real ou dados pessoais.
 
 ### Opcionais nesta fase
 - `BACKEND_HOST`
@@ -80,6 +91,8 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 `EVOLUTION_API_URL` e `EVOLUTION_API_TOKEN` devem ficar vazios enquanto WhatsApp estiver em modo simulacao.
 
 `APP_MODE=demo` mantem o aviso de demonstracao, bloqueia CPF matematicamente valido em cadastros/simulacoes e impede que usuarios demo sejam tratados como operacao real.
+
+Para `APP_MODE=production`, o backend deve bloquear a inicializacao se qualquer item de readiness estiver ausente: PostgreSQL, chave de criptografia, segredo de autenticacao forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
 
 ## PostgreSQL para producao real
 

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -10,6 +8,7 @@ from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 from app.services.crud import create_item, delete_item, get_item, update_item
 from app.services.privacy import assert_demo_cpf_allowed, person_payload
 from app.services.security import can_view_sensitive_data, log_audit, require_roles
+from app.services.soft_delete import mark_deleted, restore_deleted
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -58,7 +57,16 @@ def update_client(client_id: int, payload: ClientUpdate, db: Session = Depends(g
 @router.delete("/{client_id}")
 def delete_client(client_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor"))):
     client = get_item(db, Client, client_id)
-    client.deleted_at = datetime.utcnow()
+    mark_deleted(client, user.id)
     log_audit(db, "client_soft_deleted", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata={"cpf": client.cpf, "email": client.email, "telefone": client.telefone})
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/{client_id}/restore")
+def restore_client(client_id: int, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor"))):
+    client = get_item(db, Client, client_id)
+    restore_deleted(client)
+    log_audit(db, "client_restored", "cliente", client.id, actor=user.email, actor_user_id=user.id, metadata={"cpf": client.cpf})
     db.commit()
     return {"ok": True}
