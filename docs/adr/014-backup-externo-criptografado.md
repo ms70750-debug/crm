@@ -1,8 +1,10 @@
 # ADR 014 - Backup externo criptografado
 
-Status: PROPOSTO PARA APROVACAO
+Status: APROVADO
 
 Data: 2026-07-12
+
+Aprovado pelo dono do projeto
 
 Escopo: USO PROPRIO
 
@@ -10,7 +12,7 @@ Escopo: USO PROPRIO
 
 O projeto CRM BBB CONSIG usa Supabase no plano Free como banco PostgreSQL futuro para uso proprio. Nesse plano, backup automatico gerenciado pode nao estar disponivel. O banco ja possui migrations estruturais aplicadas, arquitetura BACKEND-ONLY e grants diretos removidos de `PUBLIC`, `anon` e `authenticated`.
 
-Dados reais continuam proibidos ate aprovacao final. Esta ADR nao autoriza backup real, armazenamento externo real, publicacao ou uso de dados pessoais reais.
+Dados reais continuam proibidos ate aprovacao final. Esta ADR nao autoriza backup real, armazenamento externo real, publicacao, agendamento ou uso de dados pessoais reais.
 
 ## Decisao proposta
 
@@ -27,6 +29,14 @@ Adotar uma fundacao de backup externo criptografado com:
 - Teste mensal de restauracao em PostgreSQL temporario.
 - Armazenamento externo ainda nao ativado.
 - Nenhuma chave no Git.
+
+## Pendencias mantidas
+
+- Armazenamento externo real ainda pendente.
+- Primeiro backup real ainda pendente.
+- Restore real controlado ainda pendente.
+- Agendamento ainda pendente.
+- Dados reais continuam proibidos ate nova aprovacao explicita.
 
 ## Riscos
 

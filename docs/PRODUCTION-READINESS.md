@@ -94,7 +94,7 @@ Essa validacao nao acessa Supabase real, nao usa `SUPABASE_DIRECT_URL`, nao apli
 
 ## Backup externo criptografado
 
-Status: ADR 014 PROPOSTO PARA APROVACAO.
+Status: ADR 014 APROVADO para USO PROPRIO em 2026-07-12.
 
 O projeto possui uma fundacao para backup externo criptografado, ainda sem execucao real obrigatoria:
 
@@ -102,4 +102,4 @@ O projeto possui uma fundacao para backup externo criptografado, ainda sem execu
 - `PostgreSQL Backup Restore Test`: workflow manual para baixar artifact criptografado, validar checksum, descriptografar em area temporaria e restaurar em PostgreSQL 16 temporario.
 - Scripts locais: `backend/scripts/create_encrypted_postgres_backup.py` e `backend/scripts/verify_encrypted_backup_restore.py`.
 
-Dados reais continuam proibidos. Backup agendado, armazenamento externo real, chave real e primeiro backup real dependem de aprovacao explicita.
+Dados reais continuam proibidos. `BACKUP_ENCRYPTION_KEY` real, armazenamento externo, primeiro backup real, primeiro restore real controlado e agendamento seguem pendentes e dependem de nova aprovacao explicita.

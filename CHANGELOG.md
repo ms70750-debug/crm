@@ -2,6 +2,10 @@
 
 ## 2026-07-12 - Backup externo criptografado
 
+### Aprovado
+- ADR 014 aprovada pelo dono do projeto para USO PROPRIO em 2026-07-12.
+- Mantidas como pendentes a chave real, armazenamento externo, primeiro backup real, primeiro restore real controlado e agendamento.
+
 ### Adicionado
 - Proposta a ADR 014 para backup externo criptografado com `pg_dump`, criptografia autenticada, checksum SHA-256 e restore testavel.
 - Criados scripts `create_encrypted_postgres_backup.py` e `verify_encrypted_backup_restore.py` para backup criptografado e validacao de restore em PostgreSQL temporario.
