@@ -38,6 +38,7 @@ SAFE_ERROR_CATEGORIES = {
     "OUTPUT_FILE_ERROR",
     "TIMEOUT",
     "DATABASE_DUMP_ERROR",
+    "DRIVER_NOT_AVAILABLE",
     "UNKNOWN_SAFE_ERROR",
 }
 
@@ -102,6 +103,16 @@ def get_database_url(env: dict[str, str] | None = None) -> str:
     return database_url
 
 
+def sqlalchemy_database_url(database_url: str) -> str:
+    if database_url.startswith("postgresql+psycopg://"):
+        return database_url
+    if database_url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + database_url.removeprefix("postgresql://")
+    if database_url.startswith("postgres://"):
+        return "postgresql+psycopg://" + database_url.removeprefix("postgres://")
+    return database_url
+
+
 def safe_completed_process(args: list[str], env: dict[str, str] | None = None, timeout: int = 15) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(args, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, timeout=timeout)
@@ -129,9 +140,25 @@ def pg_dump_major(version_text: str) -> int | None:
 
 
 def safe_server_major(database_url: str) -> int | None:
-    engine = create_engine(database_url)
-    with engine.connect() as conn:
-        version_num = conn.execute(text("SHOW server_version_num")).scalar()
+    try:
+        engine = create_engine(sqlalchemy_database_url(database_url))
+        with engine.connect() as conn:
+            version_num = conn.execute(text("SHOW server_version_num")).scalar()
+    except ModuleNotFoundError as exc:
+        raise SafePgDumpError(
+            "DRIVER_NOT_AVAILABLE",
+            step="preflight",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("DRIVER_NOT_AVAILABLE"),
+        ) from exc
+    except Exception as exc:
+        category = classify_pg_dump_error(str(exc), None)
+        raise SafePgDumpError(
+            category,
+            step="preflight",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation(category),
+        ) from exc
     if not version_num:
         return None
     return int(str(version_num)) // 10000
@@ -167,15 +194,27 @@ def safe_recommendation(category: str) -> str:
         "OUTPUT_FILE_ERROR": "Revise diretorio temporario e permissoes de escrita do runner.",
         "TIMEOUT": "Tente novamente e avalie tamanho do banco ou timeout operacional.",
         "DATABASE_DUMP_ERROR": "Revise objetos e extensoes do banco com logs sanitizados.",
+        "DRIVER_NOT_AVAILABLE": "Use o driver psycopg 3 ja previsto no projeto para conexoes SQLAlchemy.",
     }.get(category, "Revise a falha com logs sanitizados e sem secrets.")
 
 
 def collect_metadata(database_url: str) -> dict:
-    engine = create_engine(database_url)
-    with engine.connect() as conn:
-        latest_migration = conn.execute(text(LATEST_MIGRATION_QUERY)).scalar()
-        table_count = conn.execute(text(TABLE_COUNT_QUERY)).scalar()
-        server_major = safe_server_major(database_url)
+    try:
+        engine = create_engine(sqlalchemy_database_url(database_url))
+        with engine.connect() as conn:
+            latest_migration = conn.execute(text(LATEST_MIGRATION_QUERY)).scalar()
+            table_count = conn.execute(text(TABLE_COUNT_QUERY)).scalar()
+            server_major = safe_server_major(database_url)
+    except SafePgDumpError:
+        raise
+    except Exception as exc:
+        category = classify_pg_dump_error(str(exc), None)
+        raise SafePgDumpError(
+            category,
+            step="metadata",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation(category),
+        ) from exc
     return {
         "latest_migration": latest_migration or "unknown",
         "table_count": int(table_count or 0),
