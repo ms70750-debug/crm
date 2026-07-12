@@ -1,0 +1,52 @@
+name: PostgreSQL Backend Only Validation
+
+on:
+  pull_request:
+    paths:
+      - "backend/migrations/postgres/**"
+      - "backend/scripts/validate_backend_only_permissions.py"
+      - "backend/scripts/apply_postgres_migrations.py"
+      - "backend/scripts/apply_single_postgres_migration.py"
+      - "backend/tests/test_backend_only_permissions_migration.py"
+      - ".github/workflows/postgres-backend-only-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-backend-only:
+    name: Validate backend-only permissions on PostgreSQL 16
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: crm_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_VALIDATION_URL: postgresql+psycopg://postgres:postgres_test_only@localhost:5432/crm_test
+      REAL_DATA_MODE: "false"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Validate backend-only permissions
+        run: python backend/scripts/validate_backend_only_permissions.py

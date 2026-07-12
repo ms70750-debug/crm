@@ -87,3 +87,7 @@ A migration `2026_07_12_backend_only_permissions.sql` formaliza a correcao backe
 - nao cria policies permissivas e nao ativa acesso direto pelo frontend.
 
 O apply real dessa migration continua dependendo de revisao, backup, dry-run, aprovacao explicita do dono e execucao manual controlada. Dados reais continuam proibidos ate aprovacao final.
+
+O workflow `PostgreSQL Backend Only Validation` valida essa decisao em PostgreSQL 16 descartavel no GitHub Actions. Ele aplica a cadeia de cinco migrations em banco vazio, simula os grants diretos existentes de `anon` e `authenticated`, aplica a migration backend-only, confirma bloqueio de acesso direto, testa CRUD minimo via role `backend_app`, valida default privileges, executa rollback manual em banco temporario e verifica que dados ficticios foram preservados.
+
+Essa validacao nao acessa Supabase real, nao usa `SUPABASE_DIRECT_URL`, nao aplica migration real e nao libera dados reais.

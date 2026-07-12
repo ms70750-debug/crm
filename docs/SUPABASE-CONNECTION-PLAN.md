@@ -235,6 +235,8 @@ Para a quinta migration, o workflow unitario deve exigir `expected_previous_migr
 
 Rollback manual documentado: `backend/migrations/postgres/rollback/2026_07_12_backend_only_permissions_down.sql`. Ele nao deve ser executado automaticamente e requer aprovacao explicita.
 
+Validacao temporaria: o workflow `PostgreSQL Backend Only Validation` usa PostgreSQL 16 descartavel, credenciais somente de teste, roles temporarias `anon`, `authenticated`, `service_role` e `backend_app`, e valida grants, acesso direto bloqueado, CRUD pelo backend, default privileges, rollback e preservacao de dados ficticios. Ele nao usa `SUPABASE_DIRECT_URL` e nao acessa Supabase real.
+
 ## Conexao GitHub/Supabase
 
 Classificacao: B) GitHub Actions e suficiente.
