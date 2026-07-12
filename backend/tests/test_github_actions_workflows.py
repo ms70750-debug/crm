@@ -6,6 +6,7 @@ DRY_RUN_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migrations-dry-run.yml"
 APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migrations-apply.yml"
 SINGLE_APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migration-single-apply.yml"
 READONLY_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-readonly-audit.yml"
+PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.yml"
 
 
 def test_supabase_dry_run_workflow_exists_and_is_manual() -> None:
@@ -139,6 +140,34 @@ def test_supabase_readonly_audit_workflow_is_manual_readonly_and_safe() -> None:
 
 def test_supabase_readonly_audit_workflow_does_not_expose_connection_string() -> None:
     content = READONLY_AUDIT_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "printenv" not in content
+    assert "env |" not in content
+    assert "echo ${DIRECT_URL}" not in content
+    assert "echo $DIRECT_URL" not in content
+    assert "postgresql://" not in content
+    assert "postgres://" not in content
+
+
+def test_supabase_permissions_audit_workflow_is_manual_readonly_and_safe() -> None:
+    content = PERMISSIONS_AUDIT_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: Supabase Permissions Audit" in content
+    assert "workflow_dispatch:" in content
+    assert "\npush:" not in content
+    assert "pull_request:" not in content
+    assert "schedule:" not in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 10" in content
+    assert "concurrency:" in content
+    assert "SUPABASE_DIRECT_URL" in content
+    assert "::add-mask::${DIRECT_URL}" in content
+    assert "upload-artifact" in content
+    assert "supabase-permissions-audit" in content
+
+
+def test_supabase_permissions_audit_workflow_does_not_expose_connection_string() -> None:
+    content = PERMISSIONS_AUDIT_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "printenv" not in content
     assert "env |" not in content
