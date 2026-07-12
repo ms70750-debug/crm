@@ -12,7 +12,20 @@ As migrations seguem estrategia separada por banco:
 
 `Base.metadata.create_all` pode ser usado como bootstrap local/controlado, mas nao e a estrategia final de producao real. Em PostgreSQL com `APP_ENV=production`, schema e migrations devem ser aplicados formalmente depois de banco gerenciado, backup/restore e aprovacao explicita.
 
-Uso com dados reais continua bloqueado ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
+Uso com dados reais continua bloqueado ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento, revisao LGPD e aprovacao final do dono.
+
+## Preparacao proposta para piloto interno
+
+Status: PROPOSTO PARA APROVACAO.
+
+A nova fundacao tecnica deve preservar o modo demo e preparar campos adicionais para uso futuro:
+- `deleted_by` e `deletion_reason` junto de `deleted_at` nas tabelas com dados pessoais ou comunicacao.
+- `cpf_hash` para busca deterministica sem indexar CPF puro.
+- `cpf_encrypted`, `telefone_encrypted`, `email_encrypted` e `bank_data_encrypted` para protecao por envelope criptografado versionado com Fernet.
+- `purpose`, `status`, `revoked_by` e `metadata_json` em consentimentos.
+- `backup_audit_logs` para registrar testes e rotinas de backup/restauracao sem guardar segredo.
+
+Esses campos nao liberam dados reais automaticamente. Eles apenas criam compatibilidade para um piloto interno futuro.
 
 ## Tabelas existentes
 - `leads`
@@ -62,9 +75,10 @@ Essa validacao nao substitui criptografia em repouso. Ela tambem nao e regra def
 ## Soft delete
 Tabelas com dados pessoais devem usar `deleted_at` antes de remocao definitiva.
 
-Status atual:
-- `clientes`: possui `deleted_at` e exclusao logica.
-- `leads`, `propostas`, `tarefas`, `whatsapp_messages`, `consents`, `simulations`: ainda nao possuem soft delete padronizado. A expansao exige migration versionada e plano de compatibilidade.
+Status proposto:
+- `clientes`, `leads`, `propostas`, `tarefas`, `whatsapp_messages`, `consents` e `simulations` devem ter `deleted_at`, `deleted_by` e `deletion_reason`.
+- Restauracao administrativa deve registrar auditoria e nunca apagar historico.
+- Exclusao definitiva permanece politica futura documentada, nao implementada como rotina automatica nesta etapa.
 
 ## ERD
 ```mermaid
