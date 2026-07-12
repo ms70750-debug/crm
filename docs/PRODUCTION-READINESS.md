@@ -62,3 +62,9 @@ O workflow `Supabase Migrations Dry Run` deve falhar se a bootstrap estiver ause
 O workflow `Supabase Migration Single Apply` e o caminho controlado para aplicar migrations no Supabase. Ele roda apenas manualmente, usa somente `SUPABASE_DIRECT_URL` como secret, exige confirmacao `APLICAR-MIGRATION`, bloqueia ordem incorreta, bloqueia reaplicacao, registra checksum em `schema_migrations`, faz teste transacional antes do apply e aplica somente uma migration por execucao.
 
 Mesmo com esse workflow, dados reais continuam proibidos ate auditoria final, backup/restore aceito, credenciais seguras, validação LGPD e aprovacao explicita do dono.
+
+## Auditoria Readonly Supabase
+
+O workflow `Supabase Readonly Audit` deve ser executado depois das migrations e antes de qualquer configuracao de chaves de producao. Ele usa transacao `READ ONLY`, bloqueia comandos de escrita, nao aplica migrations, nao insere dados, nao imprime credenciais e publica apenas um relatorio seguro em job summary e artifact.
+
+A decisao do relatorio readonly nao autoriza dados reais automaticamente. Ela apenas informa se o banco pode seguir para a proxima etapa de configuracao segura.

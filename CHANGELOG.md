@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Auditoria readonly Supabase
+
+### Adicionado
+- Criado workflow manual `Supabase Readonly Audit` para auditar o Supabase real sem aplicar migrations, DDL ou DML.
+- Criado script `backend/scripts/audit_supabase_readonly.py` com transacao `READ ONLY`, bloqueio de comandos de escrita, relatorio seguro, job summary e artifact `supabase-readonly-audit`.
+- Adicionados testes para validar bloqueio de escrita, mascaramento de erros, ausencia de segredos e relatorio apenas com metadados/contagens.
+
+### Mantido
+- Nenhum Supabase real acessado nesta tarefa, nenhuma migration aplicada, nenhum dado inserido, nenhum segredo exposto e nenhuma publicacao realizada.
+
 ## 2026-07-12 - Workflow unitario de apply Supabase
 
 ### Adicionado
