@@ -33,6 +33,10 @@ def _write_allowed_migrations(root: Path) -> None:
         "CREATE TABLE IF NOT EXISTS backup_audit_logs (id INTEGER PRIMARY KEY);",
         encoding="utf-8",
     )
+    (root / "2026_07_12_backend_only_permissions.sql").write_text(
+        "REVOKE SELECT ON TABLE leads FROM anon;",
+        encoding="utf-8",
+    )
 
 
 @pytest.fixture()
@@ -136,6 +140,26 @@ def test_single_migration_blocks_missing_previous(migration_dir: Path, tmp_path:
             expected_previous="2026_07_01_000_postgres_bootstrap_schema.sql",
             confirmation=single.CONFIRMATION_VALUE,
             direct_url=db_url,
+        )
+
+
+def test_single_migration_allows_backend_only_permissions_after_readiness(migration_dir: Path) -> None:
+    assert "2026_07_12_backend_only_permissions.sql" in single.ALLOWED_MIGRATIONS
+    assert (
+        single.EXPECTED_PREVIOUS["2026_07_12_backend_only_permissions.sql"]
+        == "2026_07_12_real_data_readiness.sql"
+    )
+    assert single.validate_selection(
+        "2026_07_12_backend_only_permissions.sql",
+        "2026_07_12_real_data_readiness.sql",
+    ).name == "2026_07_12_backend_only_permissions.sql"
+
+
+def test_single_migration_rejects_backend_only_permissions_wrong_order(migration_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="Ordem invalida"):
+        single.validate_selection(
+            "2026_07_12_backend_only_permissions.sql",
+            "2026_07_12_auth_sessions.sql",
         )
 
 
