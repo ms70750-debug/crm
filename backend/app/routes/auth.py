@@ -1,17 +1,35 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config.environment import demo_mode_enabled
 from app.database.session import get_db
 from app.models import User
-from app.schemas.security import LoginRequest, LoginResponse, UserRead
-from app.services.security import check_rate_limit, create_token, current_user, demo_token_expiration, log_audit, require_roles, user_payload, verify_password
+from app.schemas.security import DemoLoginRequest, LoginRequest, LoginResponse, UserRead
+from app.services.security import (
+    SESSION_COOKIE_NAME,
+    check_rate_limit,
+    create_token,
+    current_user,
+    demo_token_expiration,
+    log_audit,
+    require_roles,
+    session_cookie_options,
+    user_payload,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+DEMO_EMAIL_BY_ROLE = {
+    "admin": "admin@bbbconsig.demo",
+    "supervisor": "supervisor@bbbconsig.demo",
+    "operador": "operador@bbbconsig.demo",
+    "parceiro": "parceiro@bbbconsig.demo",
+}
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "local"
     check_rate_limit(f"login:{client_ip}:{payload.email}", limit=10, window_seconds=60)
     user = db.scalar(select(User).where(User.email == payload.email))
@@ -19,11 +37,35 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     log_audit(db, "login_success" if ok else "login_failed", "user", user.id if user else None, actor=payload.email, metadata={"email": payload.email, "ip": client_ip})
     db.commit()
     if not ok or not user:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=401, detail="Credenciais invalidas")
+    token = create_token(user)
+    response.set_cookie(value=token, **session_cookie_options())
     return {
-        "access_token": create_token(user),
+        "access_token": token,
+        "expires_at": demo_token_expiration(),
+        "user": user_payload(user),
+    }
+
+
+@router.post("/demo-login", response_model=LoginResponse)
+def demo_login(payload: DemoLoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    if not demo_mode_enabled():
+        raise HTTPException(status_code=403, detail="Login de demonstracao indisponivel fora do modo demo")
+    role = payload.role.strip().lower()
+    email = DEMO_EMAIL_BY_ROLE.get(role)
+    if not email:
+        raise HTTPException(status_code=400, detail="Perfil de demonstracao invalido")
+    client_ip = request.client.host if request.client else "local"
+    check_rate_limit(f"demo-login:{client_ip}:{role}", limit=10, window_seconds=60)
+    user = db.scalar(select(User).where(User.email == email, User.ativo.is_(True)))
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario de demonstracao nao encontrado")
+    log_audit(db, "demo_login_success", "user", user.id, actor=email, actor_user_id=user.id, metadata={"role": role, "ip": client_ip})
+    db.commit()
+    token = create_token(user)
+    response.set_cookie(value=token, **session_cookie_options())
+    return {
+        "access_token": token,
         "expires_at": demo_token_expiration(),
         "user": user_payload(user),
     }
@@ -32,6 +74,14 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 @router.get("/me", response_model=UserRead)
 def me(user: User = Depends(current_user)):
     return user_payload(user)
+
+
+@router.post("/logout")
+def logout(response: Response, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    log_audit(db, "logout", "user", user.id, actor=user.email, actor_user_id=user.id)
+    db.commit()
+    response.delete_cookie(SESSION_COOKIE_NAME, path="/")
+    return {"ok": True}
 
 
 @router.get("/users", response_model=list[UserRead])

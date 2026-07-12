@@ -6,7 +6,7 @@ import { CrudShell, Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
 import { useAsync } from "../hooks/useAsync";
 import { api } from "../lib/api";
-import { Client } from "../types";
+import { Client, Consent } from "../types";
 
 const schema = z.object({ nome: z.string().min(3), cpf: z.string().min(11), telefone: z.string().min(10), email: z.string().optional(), data_nascimento: z.string().optional(), beneficio: z.string().optional(), convenio: z.string(), banco_pagamento: z.string().optional(), observacoes: z.string().optional() });
 type FormData = z.infer<typeof schema>;
@@ -46,6 +46,23 @@ export function Clients() {
     }
   }
 
+  async function revokeConsent(client: Client) {
+    setError("");
+    setMessage("");
+    try {
+      const consents = await api.get<Consent[]>(`/consents?customer_id=${client.id}`);
+      const active = consents.find((item) => item.channel === "whatsapp" && item.granted && !item.revoked_at);
+      if (!active) {
+        setMessage(`Nenhum opt-in ativo encontrado para ${client.nome}.`);
+        return;
+      }
+      await api.post(`/consents/${active.id}/revoke`, {});
+      setMessage(`Opt-out de WhatsApp registrado para ${client.nome}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel revogar opt-in");
+    }
+  }
+
   return (
     <>
       <PageHeader title="Clientes" subtitle="Cadastro, dados de beneficio e historico operacional simples." />
@@ -73,7 +90,7 @@ export function Clients() {
             <table className="w-full min-w-[1040px]">
               <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Contato</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">Observacoes</th><th className="table-cell">LGPD</th></tr></thead>
               <tbody>{(data ?? []).map((client) => (
-                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">CPF {client.cpf}</div></td><td className="table-cell"><div>{client.telefone}</div><div className="text-xs text-slate-500">{client.email || "-"}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><span className="line-clamp-2 text-xs text-slate-400">{client.observacoes ?? "-"}</span></td><td className="table-cell"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button></td></tr>
+                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">CPF {client.cpf}</div></td><td className="table-cell"><div>{client.telefone}</div><div className="text-xs text-slate-500">{client.email || "-"}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><span className="line-clamp-2 text-xs text-slate-400">{client.observacoes ?? "-"}</span></td><td className="table-cell"><div className="flex flex-wrap gap-2"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button><button className="btn-secondary py-1 text-xs" onClick={() => revokeConsent(client)}>Opt-out</button></div></td></tr>
               ))}</tbody>
             </table>
           </div>

@@ -3,6 +3,8 @@
 CRM para operacao de credito consignado com leads, clientes, propostas, tarefas, consultas simuladas INSS/FGTS, WhatsApp simulado, treinamentos e administracao.
 
 ## Status do projeto
+STATUS ATUAL: MVP CONTROLADO - USO SOMENTE COM DADOS FICTICIOS.
+
 Classificacao atual: **USO_PROPRIO - MVP CONTROLADO**.
 
 Este projeto ainda nao esta liberado para operacao real com dados pessoais de clientes. Uso atual permitido apenas para teste controlado com dados ficticios.
@@ -11,6 +13,8 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - Capacidade alvo do MVP: ate 10 usuarios internos.
 - Dados permitidos: ficticios ou anonimizados.
 - Dados proibidos nesta fase: CPF real, conta bancaria real, beneficio real, margem real e contrato real.
+- Modo esperado: `APP_MODE=demo`.
+- No modo demo, CPFs matematicamente validos sao bloqueados em cadastros e simulacoes para reduzir risco de uso indevido.
 - Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso e autenticacao segura.
 
 ## Stack
@@ -31,11 +35,15 @@ URL: `http://localhost:8000`
 Rotas principais:
 - `GET /healthz`
 - `GET /dashboard/resumo`
+- `POST /auth/login`
+- `POST /auth/demo-login`
+- `POST /auth/logout`
 - CRUD em `/leads`, `/clientes`, `/propostas` e `/tarefas`
 - `GET /consultas/inss/{cpf}`
 - `GET /consultas/fgts/{cpf}`
 - `POST /whatsapp/preview`
 - `POST /whatsapp/simular-envio`
+- `GET /whatsapp/status`
 
 ## Como rodar o frontend
 ```bash
@@ -57,6 +65,8 @@ npm run e2e
 
 ## Deploy controlado
 Esta versao esta preparada para deploy controlado/teste, sem dados reais e sem integracoes reais com WhatsApp, INSS, FGTS ou bancos.
+
+Mesmo no deploy controlado, mantenha `APP_MODE=demo`, `REAL_DATA_MODE=false` e `EVOLUTION_API_MODE=simulation`.
 
 ## Ambiente controlado online
 Ambiente publicado somente para homologacao com dados ficticios ou anonimizados:
@@ -94,6 +104,7 @@ npm run build
 - WhatsApp Simulado com previa, modelos e historico interno.
 - Treinamentos com aulas, checklist, prompts e base inicial.
 - Administracao com usuarios ficticios e Evolution API em simulacao.
+- Aviso visivel de ambiente de demonstracao para impedir uso de dados reais.
 
 ## Banco de dados
 O SQLite e criado automaticamente no startup do backend em `backend/app.db`. A migration inicial versionada esta em `backend/migrations/2026_06_30_initial_schema.sql`.

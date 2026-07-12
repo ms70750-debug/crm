@@ -8,16 +8,18 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.models import AuditLog, User
+from app.config.environment import is_production_environment
 from app.services.privacy import mask_cpf, mask_email, mask_phone
 
 SECRET = os.environ.get("BBB_AUTH_SECRET", "bbb-consig-crm-demo-secret")
 TOKEN_TTL_SECONDS = 60 * 60 * 8
+SESSION_COOKIE_NAME = "bbb_consig_session"
 _rate_buckets: dict[str, deque[float]] = defaultdict(deque)
 ROLES = ("admin", "supervisor", "operador", "parceiro")
 ROLE_LABELS = {
@@ -63,10 +65,17 @@ def parse_token(token: str) -> dict[str, Any]:
     return payload
 
 
-def current_user(authorization: str | None = Header(default=None), db: Session = Depends(get_db)) -> User:
-    if not authorization or not authorization.lower().startswith("bearer "):
+def current_user(
+    authorization: str | None = Header(default=None),
+    session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    db: Session = Depends(get_db),
+) -> User:
+    token = session_token
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1]
+    if not token:
         raise HTTPException(status_code=401, detail="Autenticacao obrigatoria")
-    payload = parse_token(authorization.split(" ", 1)[1])
+    payload = parse_token(token)
     user = db.get(User, int(payload["sub"]))
     if not user or not user.ativo:
         raise HTTPException(status_code=401, detail="Usuario invalido")
@@ -151,3 +160,15 @@ def sanitize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
 def demo_token_expiration() -> datetime:
     return datetime.utcnow() + timedelta(seconds=TOKEN_TTL_SECONDS)
+
+
+def session_cookie_options() -> dict[str, Any]:
+    production = is_production_environment()
+    return {
+        "key": SESSION_COOKIE_NAME,
+        "httponly": True,
+        "secure": production,
+        "samesite": "none" if production else "lax",
+        "max_age": TOKEN_TTL_SECONDS,
+        "path": "/",
+    }

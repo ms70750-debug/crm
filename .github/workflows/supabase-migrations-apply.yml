@@ -1,0 +1,54 @@
+name: Supabase Migrations Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacao:
+        description: "Digite APLICAR_MIGRATIONS_SUPABASE para aplicar as migrations PostgreSQL."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply migrations PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
+      REAL_DATA_MODE: "false"
+      CONFIRMACAO: ${{ github.event.inputs.confirmacao }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate manual confirmation
+        shell: bash
+        run: |
+          if [ "${CONFIRMACAO}" != "APLICAR_MIGRATIONS_SUPABASE" ]; then
+            echo "Confirmacao invalida. Nenhuma migration foi aplicada."
+            exit 1
+          fi
+          echo "Confirmacao valida. Prosseguindo com aplicacao controlada."
+
+      - name: Validate secret presence
+        shell: bash
+        run: |
+          if [ -z "${DIRECT_URL}" ]; then
+            echo "SUPABASE_DIRECT_URL ausente. Configure o Repository secret antes de aplicar migrations."
+            exit 1
+          fi
+          echo "SUPABASE_DIRECT_URL presente. Valor oculto."
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Apply Supabase migrations
+        run: python backend/scripts/apply_postgres_migrations.py --apply

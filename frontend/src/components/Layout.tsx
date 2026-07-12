@@ -62,11 +62,12 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>
+              <div className="badge border-yellow-400/40 text-yellow-200">Ambiente demo: nao insira dados reais</div>
               {user && <div className="badge">{user.nome} - {roleLabel(user.role)}</div>}
               <button
                 className="btn-secondary py-1 text-xs"
-                onClick={() => {
-                  logout();
+                onClick={async () => {
+                  await logout();
                   window.location.assign("/login");
                 }}
               >

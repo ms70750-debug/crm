@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
+import { useAuth } from "../auth/AuthContext";
 import { CrudShell, Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
@@ -28,10 +29,12 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export function Leads() {
+  const { user } = useAuth();
   const [status, setStatus] = useState("");
   const [origem, setOrigem] = useState("");
   const [produto, setProduto] = useState("");
   const [q, setQ] = useState("");
+  const [error, setError] = useState("");
   const { data, reload } = useAsync<Lead[]>(
     () => api.get(`/leads?${new URLSearchParams({ ...(status && { status }), ...(origem && { origem }), ...(produto && { produto_interesse: produto }), ...(q && { q }) })}`),
     [status, origem, produto, q]
@@ -41,15 +44,43 @@ export function Leads() {
   const form = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { origem: "Manual", produto_interesse: "INSS", status: "Novo lead", prioridade: "Media", responsavel: "Equipe BBB" } });
 
   async function submit(values: FormData) {
-    await api.post("/leads", values);
-    form.reset({ origem: "Manual", produto_interesse: "INSS", status: "Novo lead", prioridade: "Media", responsavel: "Equipe BBB" });
-    allLeads.reload();
-    reload();
+    setError("");
+    try {
+      await api.post("/leads", values);
+      form.reset({ origem: "Manual", produto_interesse: "INSS", status: "Novo lead", prioridade: "Media", responsavel: "Equipe BBB" });
+      allLeads.reload();
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel criar o lead");
+    }
+  }
+
+  async function updateStatus(lead: Lead, nextStatus: string) {
+    setError("");
+    try {
+      await api.patch(`/leads/${lead.id}/status`, { status: nextStatus });
+      allLeads.reload();
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel atualizar o lead");
+    }
+  }
+
+  async function deleteLead(lead: Lead) {
+    setError("");
+    try {
+      await api.delete(`/leads/${lead.id}`);
+      allLeads.reload();
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel excluir o lead");
+    }
   }
 
   return (
     <>
       <PageHeader title="Leads" subtitle="Captacao, qualificacao e acompanhamento do pipeline comercial." />
+      {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
       <CrudShell>
         <Panel>
           <h3 className="mb-4 font-semibold">Novo lead</h3>
@@ -96,11 +127,25 @@ export function Leads() {
                   <td className="table-cell"><div>{lead.telefone}</div><div className="text-xs text-slate-500">{lead.email || "-"}</div></td>
                   <td className="table-cell">{lead.origem}</td>
                   <td className="table-cell">{lead.produto_interesse}</td>
-                  <td className="table-cell"><StatusBadge value={lead.status} /></td>
+                  <td className="table-cell">
+                    <div className="grid gap-2">
+                      <StatusBadge value={lead.status} />
+                      {user?.role !== "parceiro" && (
+                        <select className="input py-1 text-xs" value={lead.status} onChange={(event) => updateStatus(lead, event.target.value)}>
+                          {statuses.map((s) => <option key={s}>{s}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  </td>
                   <td className="table-cell"><span className="badge">{lead.prioridade}</span></td>
                   <td className="table-cell">{lead.responsavel}</td>
                   <td className="table-cell">{isOverdue(lead.proximo_contato) ? <span className="badge border-red-400/40 text-red-300">Atrasado - {lead.proximo_contato}</span> : lead.proximo_contato || "-"}</td>
-                  <td className="table-cell"><Link className="btn-secondary" to={`/leads/${lead.id}`}>Detalhe</Link></td>
+                  <td className="table-cell">
+                    <div className="flex flex-wrap gap-2">
+                      <Link className="btn-secondary" to={`/leads/${lead.id}`}>Detalhe</Link>
+                      {(user?.role === "admin" || user?.role === "supervisor") && <button className="btn-secondary" onClick={() => deleteLead(lead)}>Excluir</button>}
+                    </div>
+                  </td>
                 </tr>
               ))}</tbody>
             </table>

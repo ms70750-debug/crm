@@ -11,6 +11,8 @@ services:
     envVars:
       - key: APP_ENV
         value: "production"
+      - key: APP_MODE
+        value: "demo"
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: BBB_AUTH_SECRET

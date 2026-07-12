@@ -6,18 +6,18 @@ import { Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
 
 const demoUsers = [
-  ["Administrador", "admin@bbbconsig.demo", "BbbConsig@2026"],
-  ["Supervisor", "supervisor@bbbconsig.demo", "Supervisor@2026"],
-  ["Operador/Vendedor", "operador@bbbconsig.demo", "Operador@2026"],
-  ["Parceiro", "parceiro@bbbconsig.demo", "Parceiro@2026"],
-];
+  ["Administrador", "admin"],
+  ["Supervisor", "supervisor"],
+  ["Operador/Vendedor", "operador"],
+  ["Parceiro", "parceiro"],
+] as const;
 
 export function Login() {
-  const { login } = useAuth();
+  const { demoLogin, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("admin@bbbconsig.demo");
-  const [password, setPassword] = useState("BbbConsig@2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,10 +36,27 @@ export function Login() {
     }
   }
 
+  async function submitDemo(role: (typeof demoUsers)[number][1]) {
+    setError("");
+    setLoading(true);
+    try {
+      await demoLogin(role);
+      const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel autenticar em demo");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
       <div className="mx-auto max-w-5xl p-5">
       <PageHeader title="Login local" subtitle="Sessao demo para rotas protegidas, consentimentos e administracao." />
+      <div className="mb-5 rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">
+        Ambiente de demonstracao. Nao insira dados reais de clientes.
+      </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
         <Panel>
           <form className="grid gap-3" onSubmit={submit}>
@@ -60,18 +77,15 @@ export function Login() {
         <Panel>
           <h3 className="mb-4 font-semibold">Usuarios demo</h3>
           <div className="grid gap-3">
-            {demoUsers.map(([perfil, userEmail, userPassword]) => (
+            {demoUsers.map(([perfil, role]) => (
               <button
                 className="rounded-md border border-line bg-white/5 p-3 text-left transition hover:border-lime/60"
-                key={userEmail}
-                onClick={() => {
-                  setEmail(userEmail);
-                  setPassword(userPassword);
-                }}
+                key={role}
+                onClick={() => submitDemo(role)}
+                disabled={loading}
               >
                 <strong className="block">{perfil}</strong>
-                <span className="block text-sm text-slate-400">{userEmail}</span>
-                <span className="block text-xs text-slate-500">{userPassword}</span>
+                <span className="block text-sm text-slate-400">Entrar em ambiente de demonstracao</span>
               </button>
             ))}
           </div>

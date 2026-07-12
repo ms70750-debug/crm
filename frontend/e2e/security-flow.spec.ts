@@ -5,7 +5,7 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   const name = `Cliente E2E ${suffix}`;
 
   await page.goto("/login");
-  await page.getByRole("button", { name: /entrar/i }).click();
+  await page.getByRole("button", { name: /administrador/i }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto("/clientes");
@@ -16,6 +16,10 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   await page.getByRole("button", { name: "Criar cliente" }).click();
   await expect(page.getByText("Cliente ficticio cadastrado.")).toBeVisible();
   await expect(page.getByText(name)).toBeVisible();
+  await page.locator("tr", { hasText: name }).getByRole("button", { name: "Opt-in WhatsApp" }).click();
+  await expect(page.getByText(`Opt-in de WhatsApp registrado para ${name}.`)).toBeVisible();
+  await page.locator("tr", { hasText: name }).getByRole("button", { name: "Opt-out" }).click();
+  await expect(page.getByText(`Opt-out de WhatsApp registrado para ${name}.`)).toBeVisible();
   await page.locator("tr", { hasText: name }).getByRole("button", { name: "Opt-in WhatsApp" }).click();
   await expect(page.getByText(`Opt-in de WhatsApp registrado para ${name}.`)).toBeVisible();
 
@@ -30,4 +34,12 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   await page.getByRole("button", { name: "Registrar simulacao" }).click();
   await expect(page.getByText("Simulacao registrada. Nenhuma mensagem real foi enviada.")).toBeVisible();
   await expect(page.getByText("Registrada em simulacao").first()).toBeVisible();
+
+  await page.goto("/consulta-inss");
+  await page.getByPlaceholder("CPF").fill(`37${suffix}`);
+  await page.getByRole("button", { name: "Consultar INSS" }).click();
+  await expect(page.getByText("Resultado simulado")).toBeVisible();
+
+  await page.goto("/admin");
+  await expect(page.getByText("Nenhuma mensagem real e enviada nesta fase.")).toBeVisible();
 });
