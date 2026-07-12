@@ -208,6 +208,109 @@ def test_restore_blocks_supabase_direct_url(monkeypatch: pytest.MonkeyPatch) -> 
         restore.get_restore_url()
 
 
+@pytest.mark.parametrize(
+    ("input_url", "expected"),
+    [
+        ("postgresql://user:pass@example.test/db", "postgresql+psycopg://user:pass@example.test/db"),
+        ("postgres://user:pass@example.test/db", "postgresql+psycopg://user:pass@example.test/db"),
+        ("postgresql+psycopg://user:pass@example.test/db", "postgresql+psycopg://user:pass@example.test/db"),
+    ],
+)
+def test_sqlalchemy_database_url_uses_psycopg_driver(input_url: str, expected: str) -> None:
+    assert backup.sqlalchemy_database_url(input_url) == expected
+
+
+def test_safe_server_major_uses_psycopg_not_psycopg2(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def execute(self, _):
+            class Result:
+                @staticmethod
+                def scalar():
+                    return "160008"
+
+            return Result()
+
+    class FakeEngine:
+        @staticmethod
+        def connect():
+            return FakeConnection()
+
+    def fake_create_engine(url: str):
+        calls.append(url)
+        return FakeEngine()
+
+    monkeypatch.setattr(backup, "create_engine", fake_create_engine)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 16.0")
+
+    assert backup.safe_server_major("postgresql://secret-user:secret-pass@example.test/db") == 16
+    assert calls == ["postgresql+psycopg://secret-user:secret-pass@example.test/db"]
+    assert "psycopg2" not in calls[0]
+
+
+def test_safe_server_major_masks_invalid_authentication(monkeypatch: pytest.MonkeyPatch) -> None:
+    secret_url = "postgresql://secret-user:secret-pass@example.test/db"
+
+    class FakeEngine:
+        @staticmethod
+        def connect():
+            raise RuntimeError(f"password authentication failed for {secret_url}")
+
+    monkeypatch.setattr(backup, "create_engine", lambda _: FakeEngine())
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 16.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.safe_server_major(secret_url)
+
+    assert exc.value.category == "AUTHENTICATION_FAILED"
+    assert "secret-pass" not in str(exc.value)
+    assert "example.test" not in str(exc.value)
+    assert secret_url not in str(exc.value)
+
+
+def test_preflight_compatibility_uses_safe_server_major(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.2")
+    monkeypatch.setattr(backup, "safe_server_major", lambda _: 16)
+
+    result = backup.backup_preflight("postgresql://secret-user:secret-pass@example.test/db")
+
+    assert result == {
+        "pg_dump_installed": True,
+        "pg_dump_major": 17,
+        "server_major": 16,
+        "compatible": True,
+    }
+
+
+def test_preflight_driver_error_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    def missing_driver(_: str):
+        raise ModuleNotFoundError("No module named 'psycopg2'")
+
+    monkeypatch.setattr(backup, "create_engine", missing_driver)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 16.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.safe_server_major("postgresql://secret-user:secret-pass@example.test/db")
+
+    assert exc.value.category == "DRIVER_NOT_AVAILABLE"
+    assert "psycopg2" not in str(exc.value)
+    assert "secret-pass" not in str(exc.value)
+
+
+def test_project_does_not_require_psycopg2_dependency() -> None:
+    requirements = Path(__file__).parents[1].joinpath("requirements.txt").read_text(encoding="utf-8")
+
+    assert "psycopg[binary]" in requirements
+    assert "psycopg2" not in requirements
+
+
 def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[list[str], dict[str, str] | None]] = []
 

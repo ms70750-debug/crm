@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-12 - Driver psycopg no preflight de backup
+
+### Corrigido
+- Normalizadas URLs PostgreSQL para `postgresql+psycopg://` em conexoes SQLAlchemy do preflight, evitando dependencia implicita de `psycopg2`.
+- Mantido `pg_dump` recebendo a conexao por ambiente seguro, sem URL em argumentos e sem exposicao de host, usuario, senha ou chave.
+
+### Mantido
+- Nenhum backup real foi criado, nenhum Supabase real foi acessado, nenhum secret foi exposto e nenhuma publicacao foi realizada.
+
 ## 2026-07-12 - Diagnostico seguro de pg_dump
 
 ### Corrigido
