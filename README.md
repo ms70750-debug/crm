@@ -19,6 +19,7 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - No modo demo, CPFs matematicamente validos sao bloqueados em cadastros e simulacoes para reduzir risco de uso indevido.
 - Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso, autenticacao segura e auditoria final.
 - A branch de readiness prepara fundacao tecnica para revisao futura, mas nao ativa banco real, chaves reais, WhatsApp real ou publicacao.
+- ADRs 009 a 013 foram aprovados para USO PROPRIO, mas o PR no 10 ainda aguarda auditoria final antes de qualquer merge ou ativacao real.
 
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.

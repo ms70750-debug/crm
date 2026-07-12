@@ -1,6 +1,8 @@
 # Production Readiness
 
-Status: PROPOSTO PARA APROVACAO. O sistema nao esta autorizado para dados reais.
+Status: ADRs 009 a 013 APROVADOS para USO PROPRIO. O sistema nao esta autorizado para dados reais.
+
+Os ADRs de PostgreSQL, criptografia, autenticacao de producao, backup/restauracao e retencao LGPD foram aprovados pelo dono em 2026-07-12. Essa aprovacao nao autoriza publicacao, uso de dados reais, integracoes reais, SaaS ou merge automatico do PR no 10.
 
 ## Checklist
 
@@ -40,4 +42,4 @@ AINDA SOMENTE DEMO.
 
 ## Proxima Aprovacao Necessaria
 
-Antes de dados reais: aprovar ADRs, provisionar secrets reais em cofre/provedor, aplicar migrations em PostgreSQL gerenciado, validar backup/restore externo, rodar auditoria final e obter aprovacao explicita do dono.
+Antes de dados reais: provisionar secrets reais em cofre/provedor, aplicar migrations em PostgreSQL gerenciado, validar backup/restore externo, rodar auditoria final e obter aprovacao explicita do dono para uso real e publicacao.

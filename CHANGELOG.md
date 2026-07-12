@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-12 - Aprovacao arquitetural para uso proprio
+
+### Alterado
+- ADRs 009 a 013 marcados como APROVADO pelo dono do projeto para escopo de USO PROPRIO.
+- Registrado que a aprovacao dos ADRs nao autoriza dados reais, publicacao, integracoes reais, SaaS ou merge automatico do PR no 10.
+- Mantida exigencia de auditoria final, credenciais seguras e aprovacao explicita antes de qualquer ativacao real.
+
 ## 2026-07-12 - Preparacao segura para dados reais
 
 ### Adicionado

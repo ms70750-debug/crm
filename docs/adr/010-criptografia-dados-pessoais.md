@@ -1,6 +1,11 @@
 # ADR 010 - Criptografia De Dados Pessoais
 
-Status: PROPOSTO PARA APROVACAO.
+Status: APROVADO.
+
+Data da aprovacao: 2026-07-12.
+Aprovado pelo dono do projeto.
+Escopo: USO PROPRIO.
+Observacao: ativacao real depende de auditoria final, credenciais seguras e aprovacao explicita para publicacao.
 
 ## Contexto
 
