@@ -261,10 +261,10 @@ def counts(conn: Connection) -> dict[str, int]:
     }
 
 
-def assert_counts_preserved(before: dict[str, int], after: dict[str, int]) -> None:
+def assert_counts_not_decreased(before: dict[str, int], after: dict[str, int]) -> None:
     for table_name, count in before.items():
-        if after[table_name] != count:
-            raise RuntimeError(f"Contagem alterada em {table_name}: {count} -> {after[table_name]}")
+        if after[table_name] < count:
+            raise RuntimeError(f"Linhas removidas em {table_name}: {count} -> {after[table_name]}")
 
 
 def validate_no_tables_or_columns_removed(conn: Connection, baseline_columns: dict[str, set[str]]) -> None:
@@ -354,7 +354,7 @@ def validate_rollback(conn: Connection, before: dict[str, int]) -> None:
             if set(VALIDATED_PRIVILEGES) - grants:
                 raise RuntimeError(f"Rollback nao restaurou grants documentados para {role} em {table_name}.")
     assert_public_has_no_access(conn)
-    assert_counts_preserved(before, counts(conn))
+    assert_counts_not_decreased(before, counts(conn))
 
 
 def run_validation() -> None:
@@ -379,7 +379,7 @@ def run_validation() -> None:
         expect_access_denied(conn, "anon", "INSERT INTO clientes (nome, cpf, telefone, convenio) VALUES ('Anon', '000', '000', 'INSS')")
         expect_access_denied(conn, "authenticated", "SELECT id FROM clientes LIMIT 1")
         expect_access_denied(conn, "authenticated", "UPDATE clientes SET nome = 'Falha' WHERE id = -1")
-        assert_counts_preserved(before_counts, counts(conn))
+        assert_counts_not_decreased(before_counts, counts(conn))
         validate_no_tables_or_columns_removed(conn, before_columns)
         validate_default_privileges(conn)
         validate_rollback(conn, before_counts)

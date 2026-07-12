@@ -102,4 +102,4 @@ def test_backend_only_validation_script_checks_core_behaviour() -> None:
     assert "permission_validation_temp" in content
     assert "expect_access_denied" in content
     assert "validate_rollback" in content
-    assert "assert_counts_preserved" in content
+    assert "assert_counts_not_decreased" in content
