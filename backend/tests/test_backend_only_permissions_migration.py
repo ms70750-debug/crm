@@ -7,6 +7,7 @@ from scripts import apply_single_postgres_migration as single
 MIGRATIONS_ROOT = Path(__file__).resolve().parents[1] / "migrations" / "postgres"
 MIGRATION_PATH = MIGRATIONS_ROOT / "2026_07_12_backend_only_permissions.sql"
 ROLLBACK_PATH = MIGRATIONS_ROOT / "rollback" / "2026_07_12_backend_only_permissions_down.sql"
+VALIDATION_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "validate_backend_only_permissions.py"
 EXPECTED_TABLES = (
     "audit_logs",
     "auth_sessions",
@@ -81,3 +82,24 @@ def test_rollback_is_manual_explicit_and_not_public() -> None:
     assert "to anon, authenticated" in normalized
     assert "drop table" not in normalized
     assert "delete from" not in normalized
+
+
+def test_backend_only_validation_script_uses_only_temporary_database_env() -> None:
+    content = VALIDATION_SCRIPT_PATH.read_text(encoding="utf-8")
+
+    assert "POSTGRES_VALIDATION_URL" in content
+    assert "SUPABASE_DIRECT_URL" in content
+    assert "postgres_test_only" not in content
+    assert "print(validation_url" not in content
+    assert "DIRECT_URL" not in content.replace("SUPABASE_DIRECT_URL", "")
+
+
+def test_backend_only_validation_script_checks_core_behaviour() -> None:
+    content = VALIDATION_SCRIPT_PATH.read_text(encoding="utf-8")
+
+    for role in ("anon", "authenticated", "service_role", "backend_app"):
+        assert role in content
+    assert "permission_validation_temp" in content
+    assert "expect_access_denied" in content
+    assert "validate_rollback" in content
+    assert "assert_counts_preserved" in content

@@ -7,6 +7,7 @@ APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migrations-apply.yml"
 SINGLE_APPLY_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-migration-single-apply.yml"
 READONLY_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-readonly-audit.yml"
 PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.yml"
+POSTGRES_BACKEND_ONLY_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backend-only-validation.yml"
 
 
 def test_supabase_dry_run_workflow_exists_and_is_manual() -> None:
@@ -183,3 +184,28 @@ def test_supabase_permissions_audit_workflow_does_not_expose_connection_string()
     assert "echo $DIRECT_URL" not in content
     assert "postgresql://" not in content
     assert "postgres://" not in content
+
+
+def test_postgres_backend_only_validation_workflow_uses_disposable_postgres() -> None:
+    content = POSTGRES_BACKEND_ONLY_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: PostgreSQL Backend Only Validation" in content
+    assert "pull_request:" in content
+    assert "workflow_dispatch:" in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 10" in content
+    assert "postgres:16" in content
+    assert "POSTGRES_DB: crm_test" in content
+    assert "POSTGRES_PASSWORD: postgres_test_only" in content
+    assert "pg_isready -U postgres -d crm_test" in content
+    assert "python backend/scripts/validate_backend_only_permissions.py" in content
+
+
+def test_postgres_backend_only_validation_workflow_does_not_use_supabase_secret() -> None:
+    content = POSTGRES_BACKEND_ONLY_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "SUPABASE_DIRECT_URL" not in content
+    assert "DIRECT_URL" not in content
+    assert "secrets." not in content
+    assert "printenv" not in content
+    assert "env |" not in content
