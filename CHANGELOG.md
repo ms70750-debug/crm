@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-12 - Plano de conexao Supabase
+
+### Adicionado
+- Criado `docs/SUPABASE-CONNECTION-PLAN.md` com inventario de variaveis, migrations, GitHub Actions, backup, rollback e criterios para futura conexao controlada ao projeto Supabase.
+
+### Mantido
+- Nenhuma migration aplicada, nenhuma credencial real configurada, nenhuma publicacao realizada e dados reais continuam proibidos.
+
 ## 2026-07-12 - Correcao dos bloqueadores pre-merge do PR 10
 
 ### Corrigido
