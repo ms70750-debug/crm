@@ -9,7 +9,7 @@ Os ADRs de PostgreSQL, criptografia, autenticacao de producao, backup/restauraca
 | Area | Condicao | Status |
 | --- | --- | --- |
 | Banco | PostgreSQL gerenciado via `DATABASE_URL` | PENDENTE |
-| Migrations | Aplicadas formalmente e revisadas | PENDENTE |
+| Migrations | Cadeia PostgreSQL com bootstrap para schema vazio, dry-run e apply formal | PENDENTE |
 | Criptografia | `BBB_DATA_ENCRYPTION_KEY` forte em cofre | PENDENTE |
 | Autenticacao | `BBB_AUTH_SECRET` forte, cookie Secure e demo-login bloqueado | PARCIAL |
 | Backup | Backup externo diario configurado | PENDENTE |
@@ -50,3 +50,9 @@ Para a branch `feature/real-data-readiness-2026-07-12`, o deploy automatico foi 
 ## Proxima Aprovacao Necessaria
 
 Antes de dados reais: provisionar secrets reais em cofre/provedor, aplicar migrations em PostgreSQL gerenciado, validar backup/restore externo, rodar auditoria final e obter aprovacao explicita do dono para uso real e publicacao.
+
+## Supabase Vazio
+
+Para projeto Supabase sem tabelas no schema `public`, a primeira migration PostgreSQL deve ser `2026_07_01_000_postgres_bootstrap_schema.sql`. Ela cria somente o schema base vazio usado pelo CRM e deve rodar antes das migrations aditivas de preparacao, sessoes e readiness.
+
+O workflow `Supabase Migrations Dry Run` deve falhar se a bootstrap estiver ausente, fora de ordem, se houver `ALTER TABLE` em tabela inexistente para schema vazio ou se alguma migration contiver operacao destrutiva conhecida.

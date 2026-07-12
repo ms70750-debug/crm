@@ -14,6 +14,37 @@ As migrations seguem estrategia separada por banco:
 
 Uso com dados reais continua bloqueado ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento, revisao LGPD e aprovacao final do dono.
 
+## Schema PostgreSQL inicial
+
+Status: DEFINIDO PARA DRY RUN EM BANCO VAZIO. Nao autoriza aplicacao no Supabase real, dados reais ou publicacao.
+
+Um Supabase vazio precisa receber uma migration bootstrap PostgreSQL antes das migrations aditivas. O schema inicial deve conter somente tabelas usadas pelo CRM:
+
+| Tabela | Finalidade | Requisitos iniciais |
+| --- | --- | --- |
+| `leads` | Captacao e funil de leads | `id`, dados de contato, status, prioridade, soft delete, campos protegidos, `created_at`, `updated_at` |
+| `clientes` | Cadastro de clientes ficticios/controlados | `id`, dados cadastrais, convenio, soft delete, campos protegidos, `created_at`, `updated_at` |
+| `propostas` | Propostas simuladas | `id`, `cliente_id`, produto, banco, valores simulados, soft delete, `created_at`, `updated_at` |
+| `tarefas` | Pendencias operacionais | `id`, responsavel, vinculos opcionais com lead/cliente, soft delete, `created_at`, `updated_at` |
+| `whatsapp_messages` | Historico de WhatsApp simulado | `id`, destinatario, telefone, modelo, mensagem, soft delete, `created_at`, `updated_at` |
+| `users` | Usuarios internos do MVP controlado | `id`, email unico, senha hash, papel, ativo, `created_at`, `updated_at` |
+| `audit_logs` | Auditoria tecnica e operacional | `id`, ator, acao, entidade, metadados mascarados, `created_at`, `updated_at` |
+| `consents` | Registro de consentimento/opt-in | `id`, cliente, canal, finalidade, status, revogacao, soft delete, `created_at`, `updated_at` |
+| `simulations` | Simulacoes INSS/FGTS ficticias | `id`, cliente opcional, CPF mascarado, produto, regra, payload, hash, soft delete, `created_at`, `updated_at` |
+
+Tabelas criadas por migrations posteriores continuam fora do bootstrap quando ja possuem migration propria:
+- `auth_sessions`: criada por `2026_07_12_auth_sessions.sql`.
+- `backup_audit_logs`: criada por `2026_07_12_real_data_readiness.sql`.
+
+A ordem PostgreSQL para um banco vazio deve ser:
+
+1. `2026_07_01_000_postgres_bootstrap_schema.sql`
+2. `2026_07_02_postgres_preparacao.sql`
+3. `2026_07_12_auth_sessions.sql`
+4. `2026_07_12_real_data_readiness.sql`
+
+Rollback do bootstrap em ambiente temporario deve ser feito descartando o banco temporario ou restaurando snapshot anterior. Nao ha `DROP` versionado para ambiente real, pois a cadeia foi desenhada para ser aditiva e auditavel.
+
 ## Preparacao proposta para piloto interno
 
 Status: PROPOSTO PARA APROVACAO.
