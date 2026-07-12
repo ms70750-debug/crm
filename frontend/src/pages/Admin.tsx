@@ -6,6 +6,7 @@ import type { User } from "../types";
 
 export function Admin() {
   const users = useAsync<User[]>(() => api.get("/auth/users"));
+  const whatsapp = useAsync<{ mode: string; health: string; real_send_enabled: boolean; message: string }>(() => api.get("/whatsapp/status"));
 
   return (
     <>
@@ -33,6 +34,8 @@ export function Admin() {
             <label className="text-sm text-slate-400">Modo<input className="input mt-1" value="simulation" readOnly /></label>
             <label className="text-sm text-slate-400">URL<input className="input mt-1" value="Nao configurada nesta versao" readOnly /></label>
             <label className="text-sm text-slate-400">Envio real<input className="input mt-1 text-lime" value="Bloqueado" readOnly /></label>
+            <label className="text-sm text-slate-400">Health<input className="input mt-1" value={whatsapp.data?.health ?? "simulated"} readOnly /></label>
+            <p className="text-sm text-slate-300">{whatsapp.data?.message ?? "Nenhuma mensagem real e enviada nesta fase."}</p>
           </div>
         </Panel>
         <Panel className="lg:col-span-2">

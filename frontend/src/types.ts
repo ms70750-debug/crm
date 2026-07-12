@@ -95,3 +95,13 @@ export type Task = {
   cliente_id?: number;
   data_vencimento?: string;
 };
+
+export type Consent = {
+  id: number;
+  customer_id: number;
+  channel: string;
+  granted: boolean;
+  source: string;
+  created_at: string;
+  revoked_at?: string | null;
+};
