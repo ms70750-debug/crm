@@ -104,28 +104,27 @@ SQLite controlado:
 - `backend/migrations/sqlite/2026_07_12_real_data_readiness.sql`
 
 PostgreSQL/Supabase:
+- `backend/migrations/postgres/2026_07_01_000_postgres_bootstrap_schema.sql`
 - `backend/migrations/postgres/2026_07_02_postgres_preparacao.sql`
 - `backend/migrations/postgres/2026_07_12_auth_sessions.sql`
 - `backend/migrations/postgres/2026_07_12_real_data_readiness.sql`
 
 ### Ordem Recomendada
 
-O script atual carrega somente `backend/migrations/postgres/*.sql` em ordem lexicografica:
+O script atual carrega somente `backend/migrations/postgres/*.sql` em ordem lexicografica. Para Supabase vazio, a ordem segura e:
 
-1. `2026_07_02_postgres_preparacao.sql`
-2. `2026_07_12_auth_sessions.sql`
-3. `2026_07_12_real_data_readiness.sql`
+1. `2026_07_01_000_postgres_bootstrap_schema.sql`
+2. `2026_07_02_postgres_preparacao.sql`
+3. `2026_07_12_auth_sessions.sql`
+4. `2026_07_12_real_data_readiness.sql`
 
 ### Dependencias
 
-As migrations PostgreSQL atuais sao aditivas e dependem das tabelas base ja existirem: `leads`, `clientes`, `propostas`, `tarefas`, `whatsapp_messages`, `users`, `audit_logs`, `consents` e `simulations`.
+As migrations PostgreSQL de preparacao, sessoes e readiness sao aditivas e dependem das tabelas base ja existirem: `leads`, `clientes`, `propostas`, `tarefas`, `whatsapp_messages`, `users`, `audit_logs`, `consents` e `simulations`.
 
-Como o projeto Supabase foi informado como sem migrations aplicadas, antes de qualquer apply real e necessario aprovar um destes caminhos:
+Como o projeto Supabase foi informado como sem migrations aplicadas, a migration bootstrap PostgreSQL passa a ser obrigatoria antes de qualquer apply real. Ela cria o schema base vazio, sem usuario demo, sem dados reais e sem secrets.
 
-1. Criar uma migration PostgreSQL inicial equivalente ao schema base, revisada e testada em banco temporario.
-2. Executar um bootstrap tecnico controlado de schema base em ambiente isolado, registrar em `schema_migrations` e so entao rodar as migrations aditivas.
-
-Sem schema base, o workflow `Supabase Migrations Apply` tende a falhar nas primeiras instrucoes `ALTER TABLE`.
+Sem essa migration base, o workflow `Supabase Migrations Apply` tende a falhar nas primeiras instrucoes `ALTER TABLE`.
 
 ### Compatibilidade PostgreSQL
 
@@ -158,6 +157,7 @@ Nao ha migrations down formais. O rollback seguro para a primeira conexao deve s
 - `npm audit --audit-level=moderate`
 - varredura de segredos no diff
 - dry-run do workflow `Supabase Migrations Dry Run`
+- validacao da cadeia PostgreSQL para schema vazio pelo script `backend/scripts/apply_postgres_migrations.py`
 - teste de backup/restore do Supabase em projeto sem dados reais
 - validacao manual de que logs nao imprimem connection strings
 
@@ -169,7 +169,7 @@ Para etapa futura, depois de credenciais seguras e backup:
 
 1. Rodar `Supabase Migrations Dry Run` no GitHub Actions.
 2. Conferir que os logs listam migrations sem exibir URL, usuario, host, senha ou path completo.
-3. Se o banco estiver vazio, pausar antes do apply e aprovar schema base PostgreSQL.
+3. Confirmar que `2026_07_01_000_postgres_bootstrap_schema.sql` aparece como primeira migration.
 4. Somente apos nova aprovacao, rodar `Supabase Migrations Apply` com confirmacao manual.
 
 ## Conexao GitHub/Supabase
@@ -258,7 +258,7 @@ Vercel:
 - `SUPABASE_DIRECT_URL` configurado como GitHub Repository Secret, sem expor valor.
 - Backup/snapshot Supabase confirmado.
 - Restore testado ou procedimento de restore formalmente aceito.
-- Schema base PostgreSQL aprovado se o banco estiver vazio.
+- Schema base PostgreSQL aprovado e validado se o banco estiver vazio.
 - Dry-run do GitHub Actions com sucesso.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.

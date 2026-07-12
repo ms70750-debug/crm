@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Bootstrap PostgreSQL para Supabase vazio
+
+### Adicionado
+- Criada migration `backend/migrations/postgres/2026_07_01_000_postgres_bootstrap_schema.sql` para schema PostgreSQL inicial vazio.
+- Documentado o schema base PostgreSQL em `docs/DATA-MODEL.md`.
+- Reforcado o dry-run para validar cadeia em schema vazio antes de listar migrations.
+
+### Mantido
+- Nenhum Supabase real acessado, nenhuma migration real aplicada, nenhum dado real usado e nenhuma publicacao realizada.
+
 ## 2026-07-12 - Plano de conexao Supabase
 
 ### Adicionado
