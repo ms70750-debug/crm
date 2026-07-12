@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-12 - Auditoria de permissoes Supabase
+
+### Adicionado
+- Criado workflow manual `Supabase Permissions Audit` para auditar grants, owners, RLS, policies e roles sem alterar o banco.
+- Criado script `backend/scripts/audit_supabase_permissions.py` para classificar tabelas como SEGURO, ATENCAO ou CRITICO e recomendar BACKEND-ONLY ou RLS OBRIGATORIO.
+- Adicionados testes de classificacao para grants de `public`, `anon`, `authenticated`, tabelas sem RLS, mascaramento e estrategia backend-only.
+
+### Mantido
+- Nenhum GRANT, REVOKE, RLS, policy, migration, dado, credencial, deploy ou publicacao foi executado nesta tarefa.
+
 ## 2026-07-12 - Auditoria readonly Supabase
 
 ### Adicionado

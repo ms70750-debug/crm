@@ -18,7 +18,7 @@ Este plano prepara a conexao futura do CRM BBB CONSIG com o projeto Supabase ja 
 | Runtime backend | Usa `DATABASE_URL` em `backend/app/database/session.py` | SQLite segue padrao local/controlado |
 | Readiness | `backend/app/services/readiness.py` bloqueia `APP_MODE=production` sem controles obrigatorios | Inclui `DATABASE_URL`, chave de dados, auth secret, migrations, backup, consentimento, logs, HTTPS e testes |
 | Script de migrations | `backend/scripts/apply_postgres_migrations.py` | Usa `DIRECT_URL`, mascara logs, bloqueia `REAL_DATA_MODE=true` |
-| GitHub Actions | `Supabase Migrations Dry Run`, `Supabase Migrations Apply`, `Supabase Migration Single Apply` e `Supabase Readonly Audit` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
+| GitHub Actions | `Supabase Migrations Dry Run`, `Supabase Migrations Apply`, `Supabase Migration Single Apply`, `Supabase Readonly Audit` e `Supabase Permissions Audit` | Workflows manuais, com `SUPABASE_DIRECT_URL` como Repository Secret |
 | Migrations PostgreSQL | `backend/migrations/postgres/*.sql` | Aditivas, com `IF NOT EXISTS`, sem `DROP` |
 | Migrations SQLite/legadas | `backend/migrations/*.sql` e `backend/migrations/sqlite/*.sql` | Usadas para MVP local/controlado |
 | Render | `render.yaml` ainda usa SQLite controlado | Nao alterar nesta tarefa |
@@ -211,6 +211,14 @@ Passos manuais:
 6. Abrir o job summary ou baixar o artifact `supabase-readonly-audit`.
 7. Conferir divergencias, bloqueadores e decisao antes de qualquer proxima etapa.
 
+### Auditoria De Permissoes
+
+Depois da auditoria readonly estrutural, usar `Supabase Permissions Audit` para detalhar grants e RLS. O workflow roda somente manualmente, usa `SUPABASE_DIRECT_URL` como secret, inicia transacao `BEGIN READ ONLY`, finaliza com `ROLLBACK` e publica artifact seguro `supabase-permissions-audit`.
+
+Ele relata por tabela: owner, RLS ativo/forcado, policies, grants para `public`, `anon`, `authenticated`, `service_role` e `postgres`, alem de classificar cada tabela como `SEGURO`, `ATENCAO` ou `CRITICO`.
+
+Para este projeto de USO PROPRIO, como o frontend nao acessa Supabase diretamente, a estrategia recomendada e `A) BACKEND-ONLY`: revogar em etapa futura aprovada os acessos diretos de `public`, `anon` e `authenticated`, mantendo o backend como unico caminho autorizado. RLS pode ser defesa adicional, mas `B) RLS OBRIGATORIO` so deve ser preferido se houver acesso direto do frontend ao Supabase.
+
 ## Conexao GitHub/Supabase
 
 Classificacao: B) GitHub Actions e suficiente.
@@ -275,6 +283,7 @@ GitHub:
 7. Rodar uma migration por vez, com `expected_previous_migration` correto e confirmacao `APLICAR-MIGRATION`.
 8. Validar o resultado antes da proxima migration.
 9. Apos as quatro migrations, rodar `Supabase Readonly Audit` e revisar o artifact seguro.
+10. Rodar `Supabase Permissions Audit` para decidir entre BACKEND-ONLY e RLS OBRIGATORIO antes de qualquer liberacao real.
 
 Render:
 1. Nao alterar `DATABASE_URL` nesta etapa.
@@ -305,6 +314,7 @@ Vercel:
 - Dry-run do GitHub Actions com sucesso.
 - Workflow `Supabase Migration Single Apply` revisado e aprovado.
 - Workflow `Supabase Readonly Audit` revisado e aprovado para auditoria pos-migration.
+- Workflow `Supabase Permissions Audit` revisado e aprovado para analise de grants/RLS.
 - Varredura de segredos limpa.
 - Backend, frontend build e E2E com dados ficticios aprovados.
 - Nova autorizacao explicita do dono para aplicar migrations.
