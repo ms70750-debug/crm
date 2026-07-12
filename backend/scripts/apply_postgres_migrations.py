@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -14,10 +15,21 @@ from app.config.environment import is_postgresql_url, real_data_mode_enabled  # 
 from app.database.session import normalize_database_url  # noqa: E402
 
 MIGRATIONS_DIR = BACKEND_ROOT / "migrations" / "postgres"
+BOOTSTRAP_MIGRATION = "2026_07_01_000_postgres_bootstrap_schema.sql"
 PLACEHOLDER_DIRECT_URL_MESSAGE = "DIRECT_URL ainda contem [YOUR-PASSWORD]. Substitua pela senha real no Secret do GitHub."
 INVALID_DIRECT_URL_MESSAGE = (
     "DIRECT_URL invalida. Confira o Secret SUPABASE_DIRECT_URL no GitHub. "
     "Use uma senha sem caracteres reservados ou URL-encode a senha."
+)
+DANGEROUS_SQL_PATTERN = re.compile(
+    r"\b(DROP\s+(TABLE|COLUMN|DATABASE|SCHEMA)|TRUNCATE|DELETE\s+FROM|ALTER\s+TABLE\s+\S+\s+DROP)\b",
+    re.IGNORECASE,
+)
+CREATE_TABLE_PATTERN = re.compile(r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][\w]*)", re.IGNORECASE)
+ALTER_TABLE_PATTERN = re.compile(r"\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?([a-zA-Z_][\w]*)", re.IGNORECASE)
+CREATE_INDEX_PATTERN = re.compile(
+    r"\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?[a-zA-Z_][\w]*\s+ON\s+([a-zA-Z_][\w]*)",
+    re.IGNORECASE,
 )
 
 
@@ -71,9 +83,37 @@ def split_sql_statements(content: str) -> list[str]:
     return [statement.strip() for statement in content.split(";") if statement.strip()]
 
 
+def validate_migration_chain_for_empty_schema(migration_paths: list[Path]) -> None:
+    migration_names = [path.name for path in migration_paths]
+    if BOOTSTRAP_MIGRATION not in migration_names:
+        raise RuntimeError(f"Migration bootstrap ausente: {BOOTSTRAP_MIGRATION}.")
+    if migration_names[0] != BOOTSTRAP_MIGRATION:
+        raise RuntimeError("Migration bootstrap deve ser a primeira migration PostgreSQL aplicada.")
+
+    known_tables: set[str] = set()
+    for path in migration_paths:
+        content = path.read_text(encoding="utf-8")
+        if DANGEROUS_SQL_PATTERN.search(content):
+            raise RuntimeError(f"Operacao destrutiva bloqueada em {path.name}.")
+        for statement in split_sql_statements(content):
+            for table in CREATE_TABLE_PATTERN.findall(statement):
+                known_tables.add(table.lower())
+
+            for table in ALTER_TABLE_PATTERN.findall(statement):
+                table_name = table.lower()
+                if table_name not in known_tables:
+                    raise RuntimeError(f"{path.name} altera tabela inexistente em schema vazio: {table}.")
+
+            for table in CREATE_INDEX_PATTERN.findall(statement):
+                table_name = table.lower()
+                if table_name not in known_tables:
+                    raise RuntimeError(f"{path.name} cria indice em tabela inexistente em schema vazio: {table}.")
+
+
 def dry_run(migration_paths: list[Path], direct_url: str) -> None:
     print("Dry-run de migrations PostgreSQL.")
     print(f"DIRECT_URL configurada: {mask_database_url(direct_url)}")
+    print("Validacao offline de schema vazio: OK.")
     for path in migration_paths:
         print(f"DRY-RUN aplicaria: {path.name}")
 
@@ -105,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     migration_paths = load_postgres_migrations()
     if not migration_paths:
         raise RuntimeError("Nenhuma migration PostgreSQL encontrada.")
+    validate_migration_chain_for_empty_schema(migration_paths)
 
     if args.apply:
         apply_migrations(migration_paths, direct_url)
