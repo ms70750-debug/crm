@@ -1,0 +1,99 @@
+name: Supabase Migration Single Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration:
+        description: "Migration PostgreSQL unica a aplicar."
+        required: true
+        type: choice
+        options:
+          - 2026_07_01_000_postgres_bootstrap_schema.sql
+          - 2026_07_02_postgres_preparacao.sql
+          - 2026_07_12_auth_sessions.sql
+          - 2026_07_12_real_data_readiness.sql
+      expected_previous_migration:
+        description: "Migration anterior esperada ja aplicada."
+        required: true
+        type: choice
+        options:
+          - NONE
+          - 2026_07_01_000_postgres_bootstrap_schema.sql
+          - 2026_07_02_postgres_preparacao.sql
+          - 2026_07_12_auth_sessions.sql
+      confirmation:
+        description: "Digite APLICAR-MIGRATION para confirmar."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migration-apply
+  cancel-in-progress: false
+
+jobs:
+  single-apply:
+    name: Apply single PostgreSQL migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: supabase-migrations
+    env:
+      DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
+      REAL_DATA_MODE: "false"
+      MIGRATION: ${{ github.event.inputs.migration }}
+      EXPECTED_PREVIOUS_MIGRATION: ${{ github.event.inputs.expected_previous_migration }}
+      CONFIRMATION: ${{ github.event.inputs.confirmation }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate safe inputs and secret presence
+        shell: bash
+        run: |
+          if [ "${CONFIRMATION}" != "APLICAR-MIGRATION" ]; then
+            echo "Confirmacao invalida. Nenhuma migration foi aplicada."
+            exit 1
+          fi
+          if [ -z "${DIRECT_URL}" ]; then
+            echo "SUPABASE_DIRECT_URL ausente. Configure o Repository secret antes de aplicar migrations."
+            exit 1
+          fi
+          echo "SUPABASE_DIRECT_URL presente. Valor oculto."
+          echo "::add-mask::${DIRECT_URL}"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Static validation and transaction test
+        run: >
+          python backend/scripts/apply_single_postgres_migration.py
+          --migration "${MIGRATION}"
+          --expected-previous "${EXPECTED_PREVIOUS_MIGRATION}"
+          --confirmation "${CONFIRMATION}"
+          --transaction-test
+
+      - name: Apply selected migration only
+        run: >
+          python backend/scripts/apply_single_postgres_migration.py
+          --migration "${MIGRATION}"
+          --expected-previous "${EXPECTED_PREVIOUS_MIGRATION}"
+          --confirmation "${CONFIRMATION}"
+
+      - name: Safe summary
+        shell: bash
+        run: |
+          {
+            echo "## Supabase Migration Single Apply"
+            echo "- Migration: ${MIGRATION}"
+            echo "- Expected previous migration: ${EXPECTED_PREVIOUS_MIGRATION}"
+            echo "- Status: concluido pelo workflow"
+            echo "- Horario UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Credenciais: nao exibidas"
+          } >> "${GITHUB_STEP_SUMMARY}"
