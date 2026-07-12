@@ -121,6 +121,7 @@ def test_migration_script_dry_run_masks_valid_url(monkeypatch: pytest.MonkeyPatc
     output = capsys.readouterr().out
 
     assert "DRY-RUN aplicaria" in output
+    assert "Validacao offline de schema vazio: OK." in output
     assert "postgresql://[DIRECT_URL_OCULTA]" in output
     assert direct_url not in output
     assert "postgres:senha-super-secreta" not in output
@@ -138,3 +139,27 @@ def test_migration_script_blocks_real_data_mode(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(RuntimeError, match="REAL_DATA_MODE=true"):
         apply_postgres_migrations.main([])
+
+
+def test_migration_chain_requires_bootstrap_first(tmp_path: Path) -> None:
+    migration = tmp_path / "2026_07_02_postgres_preparacao.sql"
+    migration.write_text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="Migration bootstrap ausente"):
+        apply_postgres_migrations.validate_migration_chain_for_empty_schema([migration])
+
+
+def test_current_postgres_migration_chain_validates_for_empty_schema() -> None:
+    migration_paths = apply_postgres_migrations.load_postgres_migrations()
+
+    apply_postgres_migrations.validate_migration_chain_for_empty_schema(migration_paths)
+
+
+def test_migration_chain_detects_alter_table_without_base_table(tmp_path: Path) -> None:
+    bootstrap = tmp_path / "2026_07_01_000_postgres_bootstrap_schema.sql"
+    bootstrap.write_text("CREATE TABLE IF NOT EXISTS clientes (id SERIAL PRIMARY KEY);", encoding="utf-8")
+    migration = tmp_path / "2026_07_02_postgres_preparacao.sql"
+    migration.write_text("ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="altera tabela inexistente"):
+        apply_postgres_migrations.validate_migration_chain_for_empty_schema([bootstrap, migration])

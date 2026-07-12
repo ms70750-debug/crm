@@ -36,6 +36,30 @@ def test_sqlite_preparation_migration_remains_separated() -> None:
     assert "TIMESTAMPTZ" in postgres_path.read_text(encoding="utf-8").upper()
 
 
+def test_postgres_bootstrap_migration_is_first_for_empty_schema() -> None:
+    postgres_migrations = sorted((MIGRATIONS_ROOT / "postgres").glob("*.sql"))
+
+    assert postgres_migrations[0].name == "2026_07_01_000_postgres_bootstrap_schema.sql"
+
+
+def test_postgres_bootstrap_creates_base_tables_used_by_later_migrations() -> None:
+    bootstrap = MIGRATIONS_ROOT / "postgres" / "2026_07_01_000_postgres_bootstrap_schema.sql"
+    content = bootstrap.read_text(encoding="utf-8").lower()
+
+    for table in (
+        "leads",
+        "clientes",
+        "propostas",
+        "tarefas",
+        "whatsapp_messages",
+        "users",
+        "audit_logs",
+        "consents",
+        "simulations",
+    ):
+        assert f"create table if not exists {table}" in content
+
+
 def test_production_postgres_does_not_auto_bootstrap_schema(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setattr(init_db, "DATABASE_URL", "postgresql+psycopg://usuario:senha@host:5432/bbb")
