@@ -320,6 +320,7 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
 
     def fake_run(args, **kwargs):
         calls.append((args, kwargs.get("env")))
+        Path(args[args.index("--file") + 1]).write_bytes(b"PGDMP ficticio")
         return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(backup.subprocess, "run", fake_run)
@@ -331,6 +332,108 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
     assert "postgresql://secret-user:secret-pass@example.test/db" not in command
     assert env is not None
     assert env["PGDATABASE"] == "postgresql://secret-user:secret-pass@example.test/db"
+    assert Path(command[command.index("--file") + 1]).is_absolute()
+
+
+def test_pg_dump_creates_missing_output_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    output_path = tmp_path / "nested" / "safe.dump"
+
+    def fake_run(args, **_):
+        Path(args[args.index("--file") + 1]).write_bytes(b"PGDMP ficticio")
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    backup.run_pg_dump("postgresql://user:pass@example.test/db", output_path)
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_pg_dump_rejects_invalid_output_parent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    invalid_parent = tmp_path / "not-a-directory"
+    invalid_parent.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump("postgresql://user:pass@example.test/db", invalid_parent / "safe.dump")
+
+    assert exc.value.category == "OUTPUT_FILE_ERROR"
+    assert exc.value.diagnostic_code == "PGDUMP_OUTPUT_FILE_ERROR"
+
+
+def test_pg_dump_rejects_low_disk_space(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    class DiskUsage:
+        free = 1
+
+    monkeypatch.setattr(backup.shutil, "disk_usage", lambda _: DiskUsage())
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump("postgresql://user:pass@example.test/db", tmp_path / "safe.dump")
+
+    assert exc.value.category == "DISK_SPACE_LOW"
+    assert exc.value.diagnostic_code == "PGDUMP_DISK_SPACE_LOW"
+
+
+def test_pg_dump_success_with_empty_file_is_output_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(args, **_):
+        Path(args[args.index("--file") + 1]).write_bytes(b"")
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump("postgresql://user:pass@example.test/db", tmp_path / "safe.dump")
+
+    assert exc.value.category == "OUTPUT_FILE_ERROR"
+    assert exc.value.output_created is True
+    assert exc.value.output_nonempty is False
+
+
+def test_pg_dump_failure_keeps_database_error_when_empty_file_is_only_a_symptom(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(args, **_):
+        Path(args[args.index("--file") + 1]).write_bytes(b"")
+        return CompletedProcess(args=args, returncode=1, stdout="", stderr="could not stat file: No such file or directory")
+
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump(
+            "postgresql://secret-user:secret-pass@secret-host.internal/db",
+            tmp_path / "safe.dump",
+        )
+
+    assert exc.value.category == "DATABASE_DUMP_ERROR"
+    assert exc.value.diagnostic_code == "PGDUMP_DATABASE_DUMP_ERROR"
+    assert exc.value.output_created is True
+    assert exc.value.output_nonempty is False
+    assert "secret-pass" not in str(exc.value)
+    assert "secret-host" not in str(exc.value)
+
+
+def test_pg_dump_uses_absolute_path_for_relative_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    recorded_output_paths: list[Path] = []
+
+    def fake_run(args, **_):
+        output_path = Path(args[args.index("--file") + 1])
+        recorded_output_paths.append(output_path)
+        output_path.write_bytes(b"PGDMP ficticio")
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    backup.run_pg_dump("postgresql://user:pass@example.test/db", Path("relative.dump"))
+
+    assert recorded_output_paths == [tmp_path / "relative.dump"]
 
 
 @pytest.mark.parametrize(
@@ -344,6 +447,7 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
         ("could not connect to server", "CONNECTION_FAILED"),
         ("unrecognized option '--bad'", "INVALID_ARGUMENT"),
         ("could not open output file", "OUTPUT_FILE_ERROR"),
+        ("could not stat file: No such file or directory", "DATABASE_DUMP_ERROR"),
         ("some database error", "DATABASE_DUMP_ERROR"),
     ],
 )
