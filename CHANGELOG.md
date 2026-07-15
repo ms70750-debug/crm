@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-15 - pg_dump 17 no workflow de backup
+
+### Corrigido
+- Ajustado o workflow `Supabase Encrypted Backup` para priorizar `/usr/lib/postgresql/17/bin` no `PATH` apos instalar `postgresql-client-17`, evitando que o runner use um `pg_dump` antigo no preflight.
+
+### Mantido
+- Nenhuma nova tentativa de backup foi executada, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-15 - Diagnostico seguro complementar de pg_dump
 
 ### Adicionado
