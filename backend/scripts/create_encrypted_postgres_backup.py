@@ -31,6 +31,8 @@ PG_DUMP_TIMEOUT_SECONDS = 120
 SAFE_ERROR_CATEGORIES = {
     "PG_DUMP_NOT_FOUND",
     "PG_DUMP_VERSION_MISMATCH",
+    "DNS_FAILED",
+    "SSL_FAILED",
     "CONNECTION_FAILED",
     "AUTHENTICATION_FAILED",
     "PERMISSION_DENIED",
@@ -38,8 +40,26 @@ SAFE_ERROR_CATEGORIES = {
     "OUTPUT_FILE_ERROR",
     "TIMEOUT",
     "DATABASE_DUMP_ERROR",
+    "ENCRYPTION_FAILED",
     "DRIVER_NOT_AVAILABLE",
     "UNKNOWN_SAFE_ERROR",
+}
+
+DIAGNOSTIC_CODES = {
+    "PG_DUMP_NOT_FOUND": "PGDUMP_NOT_FOUND",
+    "PG_DUMP_VERSION_MISMATCH": "PGDUMP_VERSION_MISMATCH",
+    "DNS_FAILED": "PGDUMP_DNS_FAILED",
+    "SSL_FAILED": "PGDUMP_SSL_FAILED",
+    "CONNECTION_FAILED": "PGDUMP_CONNECTION_FAILED",
+    "AUTHENTICATION_FAILED": "PGDUMP_AUTHENTICATION_FAILED",
+    "PERMISSION_DENIED": "PGDUMP_PERMISSION_DENIED",
+    "INVALID_ARGUMENT": "PGDUMP_INVALID_ARGUMENT",
+    "OUTPUT_FILE_ERROR": "PGDUMP_OUTPUT_FILE_ERROR",
+    "TIMEOUT": "PGDUMP_TIMEOUT",
+    "DATABASE_DUMP_ERROR": "PGDUMP_DATABASE_DUMP_ERROR",
+    "DRIVER_NOT_AVAILABLE": "PGDUMP_DRIVER_NOT_AVAILABLE",
+    "ENCRYPTION_FAILED": "BACKUP_ENCRYPTION_FAILED",
+    "UNKNOWN_SAFE_ERROR": "PGDUMP_UNKNOWN_SAFE_ERROR",
 }
 
 
@@ -59,12 +79,29 @@ class SafePgDumpError(RuntimeError):
     exit_code: int | None = None
     pg_dump_version: str = "unknown"
     recommendation: str = "Revise a configuracao segura do workflow e tente novamente."
+    binary_found: bool | None = None
+    output_created: bool | None = None
+    output_nonempty: bool | None = None
+    encryption_started: bool = False
+    upload_started: bool = False
+
+    @property
+    def diagnostic_code(self) -> str:
+        return DIAGNOSTIC_CODES.get(self.category, DIAGNOSTIC_CODES["UNKNOWN_SAFE_ERROR"])
 
     def __str__(self) -> str:
         exit_code = "n/a" if self.exit_code is None else str(self.exit_code)
+        binary_found = "desconhecido" if self.binary_found is None else ("sim" if self.binary_found else "nao")
+        output_created = "desconhecido" if self.output_created is None else ("sim" if self.output_created else "nao")
+        output_nonempty = "desconhecido" if self.output_nonempty is None else ("sim" if self.output_nonempty else "nao")
         return (
-            f"{self.category}: etapa={self.step}; exit_code={exit_code}; "
-            f"pg_dump_version={self.pg_dump_version}; recomendacao={self.recommendation}"
+            f"BACKUP_DIAGNOSTIC_CODE={self.diagnostic_code}; categoria={self.category}; "
+            f"etapa={self.step}; exit_code={exit_code}; pg_dump_version={self.pg_dump_version}; "
+            f"pg_dump_encontrado={binary_found}; arquivo_saida_criado={output_created}; "
+            f"arquivo_saida_nao_vazio={output_nonempty}; "
+            f"criptografia_iniciada={'sim' if self.encryption_started else 'nao'}; "
+            f"upload_iniciado={'sim' if self.upload_started else 'nao'}; "
+            f"recomendacao={self.recommendation}"
         )
 
 
@@ -168,6 +205,16 @@ def classify_pg_dump_error(stderr: str, exit_code: int | None) -> str:
     normalized = stderr.lower()
     if "server version" in normalized and "pg_dump version" in normalized:
         return "PG_DUMP_VERSION_MISMATCH"
+    if "could not translate host name" in normalized or "temporary failure in name resolution" in normalized:
+        return "DNS_FAILED"
+    if "ssl" in normalized and (
+        "certificate" in normalized
+        or "tls" in normalized
+        or "sslmode" in normalized
+        or "ssl error" in normalized
+        or "server does not support ssl" in normalized
+    ):
+        return "SSL_FAILED"
     if "authentication failed" in normalized or "password authentication failed" in normalized:
         return "AUTHENTICATION_FAILED"
     if "permission denied" in normalized or "must be owner" in normalized or "permission for" in normalized:
@@ -187,6 +234,8 @@ def safe_recommendation(category: str) -> str:
     return {
         "PG_DUMP_NOT_FOUND": "Instale o cliente PostgreSQL antes do backup.",
         "PG_DUMP_VERSION_MISMATCH": "Use pg_dump com versao principal igual ou superior ao servidor.",
+        "DNS_FAILED": "Confira resolucao DNS e rede sem expor host ou URL.",
+        "SSL_FAILED": "Confira requisitos de SSL sem expor parametros ou host.",
         "CONNECTION_FAILED": "Confira rede, allowlist e disponibilidade do banco sem expor a URL.",
         "AUTHENTICATION_FAILED": "Revise o secret SUPABASE_DIRECT_URL sem copiar o valor para logs.",
         "PERMISSION_DENIED": "Revise permissoes do usuario de backup sem ampliar acesso do frontend.",
@@ -195,7 +244,14 @@ def safe_recommendation(category: str) -> str:
         "TIMEOUT": "Tente novamente e avalie tamanho do banco ou timeout operacional.",
         "DATABASE_DUMP_ERROR": "Revise objetos e extensoes do banco com logs sanitizados.",
         "DRIVER_NOT_AVAILABLE": "Use o driver psycopg 3 ja previsto no projeto para conexoes SQLAlchemy.",
+        "ENCRYPTION_FAILED": "Revise a etapa de criptografia com dados ficticios antes de nova tentativa.",
     }.get(category, "Revise a falha com logs sanitizados e sem secrets.")
+
+
+def output_status(path: Path) -> tuple[bool, bool]:
+    if not path.exists() or path.is_dir():
+        return False, False
+    return True, path.stat().st_size > 0
 
 
 def collect_metadata(database_url: str) -> dict:
@@ -229,6 +285,9 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
             step="pg_dump",
             pg_dump_version=pg_dump_version(),
             recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
+            binary_found=True,
+            output_created=False,
+            output_nonempty=False,
         )
     dump_path.parent.mkdir(parents=True, exist_ok=True)
     command = [
@@ -257,22 +316,33 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
             step="pg_dump",
             pg_dump_version="not_found",
             recommendation=safe_recommendation("PG_DUMP_NOT_FOUND"),
+            binary_found=False,
+            output_created=False,
+            output_nonempty=False,
         ) from exc
     except subprocess.TimeoutExpired as exc:
+        output_created, output_nonempty = output_status(dump_path)
         raise SafePgDumpError(
             "TIMEOUT",
             step="pg_dump",
             pg_dump_version=pg_dump_version(),
             recommendation=safe_recommendation("TIMEOUT"),
+            binary_found=True,
+            output_created=output_created,
+            output_nonempty=output_nonempty,
         ) from exc
     if result.returncode != 0:
         category = classify_pg_dump_error(result.stderr or "", result.returncode)
+        output_created, output_nonempty = output_status(dump_path)
         raise SafePgDumpError(
             category,
             step="pg_dump",
             exit_code=result.returncode,
             pg_dump_version=pg_dump_version(),
             recommendation=safe_recommendation(category),
+            binary_found=True,
+            output_created=output_created,
+            output_nonempty=output_nonempty,
         )
 
 
@@ -340,12 +410,28 @@ def create_encrypted_backup(
                     step="validate-output",
                     pg_dump_version=pg_dump_version(),
                     recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
+                    binary_found=True,
+                    output_created=plaintext_dump.exists(),
+                    output_nonempty=plaintext_dump.exists() and plaintext_dump.stat().st_size > 0,
                 )
 
             metadata = metadata_loader(database_url)
             plaintext_checksum = sha256_file(plaintext_dump)
             plaintext_size = plaintext_dump.stat().st_size
-            encrypt_file(plaintext_dump, encrypted_backup, key)
+            try:
+                encrypt_file(plaintext_dump, encrypted_backup, key)
+            except Exception as exc:
+                output_created, output_nonempty = output_status(plaintext_dump)
+                raise SafePgDumpError(
+                    "ENCRYPTION_FAILED",
+                    step="encrypt",
+                    pg_dump_version=str(preflight.get("pg_dump_major") or "unknown"),
+                    recommendation=safe_recommendation("ENCRYPTION_FAILED"),
+                    binary_found=bool(preflight.get("pg_dump_installed")),
+                    output_created=output_created,
+                    output_nonempty=output_nonempty,
+                    encryption_started=True,
+                ) from exc
             encrypted_checksum = sha256_file(encrypted_backup)
 
             manifest = {

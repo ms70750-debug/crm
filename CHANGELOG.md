@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-15 - Diagnostico seguro complementar de pg_dump
+
+### Adicionado
+- Criados codigos internos `BACKUP_DIAGNOSTIC_CODE` para falhas de `pg_dump`, DNS, SSL, autenticacao, permissao, timeout, saida vazia e criptografia.
+- Incluidas flags seguras sobre binario encontrado, arquivo de saida criado, arquivo nao vazio, criptografia iniciada e upload iniciado.
+- Ampliados testes mockados para garantir que host, usuario, senha, URL e stderr bruto nao sejam exibidos nos diagnosticos.
+
+### Mantido
+- Nenhum backup real foi executado, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-12 - Driver psycopg no preflight de backup
 
 ### Corrigido

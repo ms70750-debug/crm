@@ -9,6 +9,10 @@ from scripts import create_encrypted_postgres_backup as backup
 from scripts import verify_encrypted_backup_restore as restore
 
 
+WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+ENCRYPTED_BACKUP_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-encrypted-backup.yml"
+
+
 def _env(key: bytes, database_url: str = "postgresql://user:pass@example.test:5432/db") -> dict[str, str]:
     return {
         "BACKUP_ENCRYPTION_KEY": key.decode("utf-8"),
@@ -333,6 +337,8 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
     ("stderr", "expected"),
     [
         ("server version: 17.0; pg_dump version: 16.0", "PG_DUMP_VERSION_MISMATCH"),
+        ("could not translate host name \"private-db.example\" to address", "DNS_FAILED"),
+        ("SSL error: certificate verify failed", "SSL_FAILED"),
         ("password authentication failed for user", "AUTHENTICATION_FAILED"),
         ("permission denied for table clientes", "PERMISSION_DENIED"),
         ("could not connect to server", "CONNECTION_FAILED"),
@@ -356,8 +362,118 @@ def test_pg_dump_timeout_is_safe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         backup.run_pg_dump("postgresql://secret-user:secret-pass@example.test/db", tmp_path / "safe.dump", timeout=1)
 
     assert exc.value.category == "TIMEOUT"
+    assert exc.value.diagnostic_code == "PGDUMP_TIMEOUT"
+    assert "BACKUP_DIAGNOSTIC_CODE=PGDUMP_TIMEOUT" in str(exc.value)
     assert "secret-pass" not in str(exc.value)
     assert "example.test" not in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected_category", "expected_code"),
+    [
+        ("could not translate host name \"secret-host.internal\" to address", "DNS_FAILED", "PGDUMP_DNS_FAILED"),
+        ("SSL error: certificate verify failed for secret-host.internal", "SSL_FAILED", "PGDUMP_SSL_FAILED"),
+        ("password authentication failed for user secret-user", "AUTHENTICATION_FAILED", "PGDUMP_AUTHENTICATION_FAILED"),
+        ("permission denied for table clientes", "PERMISSION_DENIED", "PGDUMP_PERMISSION_DENIED"),
+    ],
+)
+def test_pg_dump_safe_diagnostics_remove_sensitive_details(
+    stderr: str,
+    expected_category: str,
+    expected_code: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(args, **kwargs):
+        return CompletedProcess(args=args, returncode=1, stdout="", stderr=stderr)
+
+    secret_url = "postgresql://secret-user:secret-pass@secret-host.internal:5432/db?sslmode=require"
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump(secret_url, tmp_path / "safe.dump")
+
+    message = str(exc.value)
+    assert exc.value.category == expected_category
+    assert exc.value.diagnostic_code == expected_code
+    assert f"BACKUP_DIAGNOSTIC_CODE={expected_code}" in message
+    assert "secret-user" not in message
+    assert "secret-pass" not in message
+    assert "secret-host" not in message
+    assert "postgresql://" not in message
+
+
+def test_pg_dump_not_installed_reports_safe_diagnostic(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def missing_pg_dump(*_, **__):
+        raise FileNotFoundError("pg_dump")
+
+    monkeypatch.setattr(backup.subprocess, "run", missing_pg_dump)
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.run_pg_dump("postgresql://user:pass@example.test/db", tmp_path / "safe.dump")
+
+    assert exc.value.category == "PG_DUMP_NOT_FOUND"
+    assert exc.value.diagnostic_code == "PGDUMP_NOT_FOUND"
+    assert "pg_dump_encontrado=nao" in str(exc.value)
+
+
+def test_empty_pg_dump_output_reports_safe_diagnostic(tmp_path: Path) -> None:
+    key = Fernet.generate_key()
+
+    def empty_dump(_: str, dump_path: Path) -> None:
+        dump_path.write_bytes(b"")
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.create_encrypted_backup(
+            output_dir=tmp_path,
+            env=_env(key),
+            dump_runner=empty_dump,
+            metadata_loader=_metadata_loader,
+            preflight_loader=_preflight_loader,
+        )
+
+    assert exc.value.category == "OUTPUT_FILE_ERROR"
+    assert exc.value.diagnostic_code == "PGDUMP_OUTPUT_FILE_ERROR"
+    assert not list(tmp_path.glob("*.dump"))
+
+
+def test_encryption_failure_is_safe_and_removes_plaintext(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    key = Fernet.generate_key()
+
+    def fail_encrypt(*_, **__) -> None:
+        raise RuntimeError("secret-host secret-user secret-pass")
+
+    monkeypatch.setattr(backup, "encrypt_file", fail_encrypt)
+
+    with pytest.raises(backup.SafePgDumpError) as exc:
+        backup.create_encrypted_backup(
+            output_dir=tmp_path,
+            env=_env(key, "postgresql://secret-user:secret-pass@secret-host.internal/db"),
+            dump_runner=_dump_runner,
+            metadata_loader=_metadata_loader,
+            preflight_loader=_preflight_loader,
+        )
+
+    message = str(exc.value)
+    assert exc.value.category == "ENCRYPTION_FAILED"
+    assert exc.value.diagnostic_code == "BACKUP_ENCRYPTION_FAILED"
+    assert "criptografia_iniciada=sim" in message
+    assert "secret-host" not in message
+    assert "secret-user" not in message
+    assert "secret-pass" not in message
+    assert not list(tmp_path.glob("*.dump"))
+
+
+def test_workflow_blocks_invalid_or_empty_artifact_upload() -> None:
+    content = ENCRYPTED_BACKUP_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "Verify artifact contents" in content
+    assert "backup-artifact/*.dump.enc" in content
+    assert "backup-artifact/*.manifest.json" in content
+    assert "backup-artifact/*.sha256" in content
+    assert "if-no-files-found: error" in content
+    assert "Dump aberto nao pode ser publicado como artifact." in content
 
 
 def test_preflight_version_mismatch_blocks_before_dump(tmp_path: Path) -> None:
