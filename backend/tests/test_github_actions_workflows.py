@@ -10,6 +10,7 @@ PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.ym
 POSTGRES_BACKEND_ONLY_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backend-only-validation.yml"
 ENCRYPTED_BACKUP_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-encrypted-backup.yml"
 BACKUP_RESTORE_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backup-restore-test.yml"
+CREATE_FIRST_ADMIN_WORKFLOW_PATH = WORKFLOWS_DIR / "create-first-admin.yml"
 
 
 def test_supabase_dry_run_workflow_exists_and_is_manual() -> None:
@@ -96,6 +97,7 @@ def test_supabase_single_apply_workflow_has_closed_migration_options() -> None:
         "2026_07_12_auth_sessions.sql",
         "2026_07_12_real_data_readiness.sql",
         "2026_07_12_backend_only_permissions.sql",
+        "2026_07_15_first_admin_bootstrap.sql",
     ):
         assert migration in content
     assert "APLICAR-MIGRATION" in content
@@ -271,5 +273,32 @@ def test_backup_restore_workflow_uses_temporary_postgres_and_no_supabase() -> No
     assert "SUPABASE_DIRECT_URL" not in content
     assert "DIRECT_URL:" not in content
     assert "actions/upload-artifact" not in content
+    assert "printenv" not in content
+    assert "env |" not in content
+
+
+def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:
+    content = CREATE_FIRST_ADMIN_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: Create First Admin" in content
+    assert "workflow_dispatch:" in content
+    assert "admin_email:" in content
+    assert "confirmation:" in content
+    assert "CRIAR-PRIMEIRO-ADMIN" in content
+    assert "pull_request:" not in content
+    assert "\npush:" not in content
+    assert "if: github.ref == 'refs/heads/main'" in content
+    assert "contents: read" in content
+    assert "concurrency:" in content
+    assert "SUPABASE_DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
+    assert "::add-mask::$SUPABASE_DIRECT_URL" in content
+    assert "create_first_admin_bootstrap.py" in content
+    assert "actions/upload-artifact@v4" in content
+    assert "name: admin-activation-link" in content
+    assert "admin-activation-link.txt" in content
+    assert "retention-days: 1" in content
+    assert "rm -f admin-activation-link.txt" in content
+    assert "?token=" not in content
+    assert "echo $ADMIN_EMAIL" not in content
     assert "printenv" not in content
     assert "env |" not in content

@@ -7,6 +7,7 @@ type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   demoLogin: (role: Perfil) => Promise<void>;
+  activateAdmin: (token: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (...roles: Perfil[]) => boolean;
 };
@@ -40,6 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }
 
+  async function activateAdmin(token: string, password: string, passwordConfirmation: string) {
+    const data = await api.post<LoginResponse>("/auth/admin-bootstrap/activate", {
+      token,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+    setAuthToken(data.access_token);
+    setUser(data.user);
+  }
+
   async function logout() {
     try {
       await api.post("/auth/logout", {});
@@ -56,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       demoLogin,
+      activateAdmin,
       logout,
       hasRole: (...roles) => Boolean(user && roles.includes(user.role)),
     }),

@@ -4,6 +4,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LOGIN_PAGE = ROOT / "frontend" / "src" / "pages" / "Login.tsx"
 LAYOUT_COMPONENT = ROOT / "frontend" / "src" / "components" / "Layout.tsx"
+ADMIN_ACTIVATION_PAGE = ROOT / "frontend" / "src" / "pages" / "AdminActivation.tsx"
+APP_ROUTES = ROOT / "frontend" / "src" / "App.tsx"
+AUTH_CONTEXT = ROOT / "frontend" / "src" / "auth" / "AuthContext.tsx"
 
 
 def test_public_login_hides_demo_shortcuts_without_explicit_flag() -> None:
@@ -24,3 +27,19 @@ def test_layout_hides_demo_badges_without_explicit_flag() -> None:
     assert 'import.meta.env.VITE_DEMO_MODE === "true"' in content
     assert '{demoModeEnabled && <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>}' in content
     assert "Ambiente demo: nao insira dados reais" in content
+
+
+def test_admin_activation_page_removes_token_from_url_and_does_not_store_it() -> None:
+    content = ADMIN_ACTIVATION_PAGE.read_text(encoding="utf-8")
+    auth_context = AUTH_CONTEXT.read_text(encoding="utf-8")
+    routes = APP_ROUTES.read_text(encoding="utf-8")
+
+    assert 'path="/ativar-admin"' in routes
+    assert "window.history.replaceState" in content
+    assert "localStorage" not in content
+    assert "sessionStorage" not in content
+    assert "console." not in content
+    assert "/auth/admin-bootstrap/validate" in content
+    assert "/auth/admin-bootstrap/activate" in auth_context
+    assert "X-Admin-Bootstrap-Token" in content
+    assert "/validate?token=" not in content

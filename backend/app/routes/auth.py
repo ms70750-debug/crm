@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -6,7 +6,8 @@ from app.config.environment import demo_mode_enabled, public_demo_login_enabled
 from app.services.readiness import production_mode_enabled
 from app.database.session import get_db
 from app.models import User
-from app.schemas.security import DemoLoginRequest, LoginRequest, LoginResponse, UserRead
+from app.schemas.security import AdminBootstrapActivateRequest, AdminBootstrapValidateResponse, DemoLoginRequest, LoginRequest, LoginResponse, UserRead
+from app.services.admin_bootstrap import AdminBootstrapBlocked, AdminBootstrapError, activate_admin_bootstrap_token, validate_admin_bootstrap_token
 from app.services.security import (
     SESSION_COOKIE_NAME,
     check_rate_limit,
@@ -65,6 +66,41 @@ def demo_login(payload: DemoLoginRequest, request: Request, response: Response, 
         raise HTTPException(status_code=404, detail="Usuario de demonstracao nao encontrado")
     log_audit(db, "demo_login_success", "user", user.id, actor=email, actor_user_id=user.id, metadata={"role": role, "ip": client_ip})
     db.commit()
+    token = create_session_token(db, user)
+    response.set_cookie(value=token, **session_cookie_options())
+    db.commit()
+    return {
+        "access_token": token,
+        "expires_at": demo_token_expiration(),
+        "user": user_payload(user),
+    }
+
+
+@router.get("/admin-bootstrap/validate", response_model=AdminBootstrapValidateResponse)
+def validate_admin_bootstrap(
+    request: Request,
+    token: str | None = Header(default=None, alias="X-Admin-Bootstrap-Token"),
+    db: Session = Depends(get_db),
+):
+    client_ip = request.client.host if request.client else "local"
+    check_rate_limit(f"admin-bootstrap-validate:{client_ip}", limit=6, window_seconds=60)
+    try:
+        record = validate_admin_bootstrap_token(db, token or "")
+    except AdminBootstrapError:
+        return {"valid": False, "expires_at": None}
+    return {"valid": True, "expires_at": record.expires_at}
+
+
+@router.post("/admin-bootstrap/activate", response_model=LoginResponse)
+def activate_admin_bootstrap(payload: AdminBootstrapActivateRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "local"
+    check_rate_limit(f"admin-bootstrap-activate:{client_ip}", limit=5, window_seconds=300)
+    try:
+        user = activate_admin_bootstrap_token(db, payload.token, payload.password, payload.password_confirmation)
+    except AdminBootstrapBlocked as exc:
+        raise HTTPException(status_code=409, detail="Ativacao indisponivel") from exc
+    except AdminBootstrapError as exc:
+        raise HTTPException(status_code=400, detail="Link invalido ou expirado") from exc
     token = create_session_token(db, user)
     response.set_cookie(value=token, **session_cookie_options())
     db.commit()

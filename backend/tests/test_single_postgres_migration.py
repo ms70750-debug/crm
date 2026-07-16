@@ -37,6 +37,10 @@ def _write_allowed_migrations(root: Path) -> None:
         "REVOKE SELECT ON TABLE leads FROM anon;",
         encoding="utf-8",
     )
+    (root / "2026_07_15_first_admin_bootstrap.sql").write_text(
+        "CREATE TABLE IF NOT EXISTS admin_bootstrap_tokens (id INTEGER PRIMARY KEY, token_hash TEXT);",
+        encoding="utf-8",
+    )
 
 
 @pytest.fixture()
@@ -153,6 +157,18 @@ def test_single_migration_allows_backend_only_permissions_after_readiness(migrat
         "2026_07_12_backend_only_permissions.sql",
         "2026_07_12_real_data_readiness.sql",
     ).name == "2026_07_12_backend_only_permissions.sql"
+
+
+def test_single_migration_allows_first_admin_after_backend_only_permissions(migration_dir: Path) -> None:
+    assert "2026_07_15_first_admin_bootstrap.sql" in single.ALLOWED_MIGRATIONS
+    assert (
+        single.EXPECTED_PREVIOUS["2026_07_15_first_admin_bootstrap.sql"]
+        == "2026_07_12_backend_only_permissions.sql"
+    )
+    assert single.validate_selection(
+        "2026_07_15_first_admin_bootstrap.sql",
+        "2026_07_12_backend_only_permissions.sql",
+    ).name == "2026_07_15_first_admin_bootstrap.sql"
 
 
 def test_single_migration_rejects_backend_only_permissions_wrong_order(migration_dir: Path) -> None:

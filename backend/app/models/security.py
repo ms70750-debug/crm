@@ -32,6 +32,22 @@ class AuthSession(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
 
+class AdminBootstrapToken(Base):
+    __tablename__ = "admin_bootstrap_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    email: Mapped[str] = mapped_column(String(140), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    purpose: Mapped[str] = mapped_column(String(80), default="first_admin_activation")
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    github_run_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_by_source: Mapped[str] = mapped_column(String(120), default="github_actions")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

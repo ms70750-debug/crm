@@ -14,6 +14,17 @@ class DemoLoginRequest(BaseModel):
     role: str = "admin"
 
 
+class AdminBootstrapValidateResponse(BaseModel):
+    valid: bool
+    expires_at: datetime | None = None
+
+
+class AdminBootstrapActivateRequest(BaseModel):
+    token: str
+    password: str
+    password_confirmation: str
+
+
 class UserRead(ORMModel):
     id: int
     nome: str
