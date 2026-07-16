@@ -22,6 +22,10 @@ def demo_mode_enabled() -> bool:
     return app_mode() in DEMO_MODE_VALUES
 
 
+def public_demo_login_enabled() -> bool:
+    return os.environ.get("PUBLIC_DEMO_LOGIN_ENABLED", "false").strip().lower() in {"1", "true", "yes", "sim"}
+
+
 def is_postgresql_url(database_url: str) -> bool:
     return database_url.startswith(("postgres://", "postgresql://", "postgresql+psycopg://", "postgresql+psycopg2://"))
 
