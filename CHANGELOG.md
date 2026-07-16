@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-15 - Ativacao segura do primeiro administrador
+
+### Adicionado
+- Criado fluxo oficial de uso unico para ativacao do primeiro administrador real por link temporario.
+- Adicionada tabela `admin_bootstrap_tokens` com somente hash do token, expiracao, uso unico e metadados auditaveis.
+- Criados endpoints `/auth/admin-bootstrap/validate` e `/auth/admin-bootstrap/activate`.
+- Criado workflow manual privado `Create First Admin` com artifact sensivel `admin-activation-link`.
+- Criada pagina `/ativar-admin` para o proprietario definir a propria senha sem cadastro publico.
+- Criada ADR 010 documentando riscos, expiracao, uso unico, auditoria e reversao.
+
+### Mantido
+- Login demo publico bloqueado, nenhum backup manual executado, nenhuma restauracao executada, nenhum secret revelado.
+
 ## 2026-07-15 - Liberacao segura para uso real
 
 ### Alterado

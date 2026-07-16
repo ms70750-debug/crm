@@ -35,6 +35,7 @@ Um Supabase vazio precisa receber uma migration bootstrap PostgreSQL antes das m
 Tabelas criadas por migrations posteriores continuam fora do bootstrap quando ja possuem migration propria:
 - `auth_sessions`: criada por `2026_07_12_auth_sessions.sql`.
 - `backup_audit_logs`: criada por `2026_07_12_real_data_readiness.sql`.
+- `admin_bootstrap_tokens`: criada por `2026_07_15_first_admin_bootstrap.sql`.
 
 A ordem PostgreSQL para um banco vazio deve ser:
 
@@ -43,6 +44,7 @@ A ordem PostgreSQL para um banco vazio deve ser:
 3. `2026_07_12_auth_sessions.sql`
 4. `2026_07_12_real_data_readiness.sql`
 5. `2026_07_12_backend_only_permissions.sql`
+6. `2026_07_15_first_admin_bootstrap.sql`
 
 Rollback do bootstrap em ambiente temporario deve ser feito descartando o banco temporario ou restaurando snapshot anterior. Nao ha `DROP` versionado para ambiente real, pois a cadeia foi desenhada para ser aditiva e auditavel.
 
@@ -98,11 +100,14 @@ Esses campos nao liberam dados reais automaticamente. Eles apenas criam compatib
 ## Tabelas de seguranca/LGPD
 - `users`
 - `auth_sessions`
+- `admin_bootstrap_tokens`
 - `audit_logs`
 - `consents`
 - `simulations`
 
 `auth_sessions` armazena somente hash do `sid`, usuario, `created_at`, `expires_at`, `revoked_at` e motivo de revogacao. O token completo nao deve ser persistido em banco ou logs.
+
+`admin_bootstrap_tokens` armazena somente hash SHA-256 do token de ativacao, e-mail normalizado, proposito, expiracao, uso, origem segura e identificador da execucao GitHub quando disponivel. O token aberto nunca deve ser persistido. Tokens expiram em ate 60 minutos, sao de uso unico e ficam restritos ao fluxo de primeiro administrador real/recuperacao administrativa do mesmo e-mail.
 
 Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como `data_criacao` e `criado_em` permanecem para compatibilidade do MVP.
 

@@ -4,6 +4,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { Admin } from "./pages/Admin";
+import { AdminActivation } from "./pages/AdminActivation";
 import { Clients } from "./pages/Clients";
 import { Dashboard } from "./pages/Dashboard";
 import { FGTS } from "./pages/FGTS";
@@ -22,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/ativar-admin" element={<AdminActivation />} />
         <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
         <Route path="/leads" element={<ProtectedPage><Leads /></ProtectedPage>} />
         <Route path="/leads/:id" element={<ProtectedPage><LeadDetail /></ProtectedPage>} />

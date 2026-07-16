@@ -1,0 +1,79 @@
+name: Create First Admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: "E-mail do administrador real"
+        required: true
+      confirmation:
+        description: "Digite CRIAR-PRIMEIRO-ADMIN para confirmar."
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: create-first-admin
+  cancel-in-progress: false
+
+jobs:
+  create-first-admin:
+    name: Create first admin activation link
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
+      ADMIN_EMAIL: ${{ github.event.inputs.admin_email }}
+      CONFIRMATION: ${{ github.event.inputs.confirmation }}
+      ADMIN_BOOTSTRAP_OUTPUT_FILE: admin-activation-link.txt
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "$CONFIRMATION" != "CRIAR-PRIMEIRO-ADMIN" ]; then
+            echo "Confirmacao invalida."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_DIRECT_URL" ]; then
+            echo "SUPABASE_DIRECT_URL ausente. Valor nao exibido."
+            exit 1
+          fi
+          echo "::add-mask::$SUPABASE_DIRECT_URL"
+          echo "Configuracao validada sem exibir secrets."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Create activation link artifact file
+        run: python backend/scripts/create_first_admin_bootstrap.py --output admin-activation-link.txt
+
+      - name: Upload activation link artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-activation-link
+          path: admin-activation-link.txt
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Remove local activation link file
+        if: always()
+        run: rm -f admin-activation-link.txt
+
+      - name: Safe summary
+        if: always()
+        run: |
+          echo "## Create First Admin" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Link criado: sim/nao conforme status do job" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Expiracao: 60 minutos" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact criado: sim se upload-artifact concluiu" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Token exibido: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Administrador duplicado: nao exibido em detalhe" >> "$GITHUB_STEP_SUMMARY"

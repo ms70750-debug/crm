@@ -31,6 +31,7 @@ ALLOWED_MIGRATIONS = (
     "2026_07_12_auth_sessions.sql",
     "2026_07_12_real_data_readiness.sql",
     "2026_07_12_backend_only_permissions.sql",
+    "2026_07_15_first_admin_bootstrap.sql",
 )
 EXPECTED_PREVIOUS = {
     "2026_07_01_000_postgres_bootstrap_schema.sql": NONE_PREVIOUS,
@@ -38,6 +39,7 @@ EXPECTED_PREVIOUS = {
     "2026_07_12_auth_sessions.sql": "2026_07_02_postgres_preparacao.sql",
     "2026_07_12_real_data_readiness.sql": "2026_07_12_auth_sessions.sql",
     "2026_07_12_backend_only_permissions.sql": "2026_07_12_real_data_readiness.sql",
+    "2026_07_15_first_admin_bootstrap.sql": "2026_07_12_backend_only_permissions.sql",
 }
 EXPECTED_TABLES_AFTER_APPLY = {
     "2026_07_01_000_postgres_bootstrap_schema.sql": {
@@ -78,6 +80,7 @@ EXPECTED_TABLES_AFTER_APPLY = {
         "backup_audit_logs",
         "schema_migrations",
     },
+    "2026_07_15_first_admin_bootstrap.sql": {"admin_bootstrap_tokens"},
 }
 SECRET_PATTERN = re.compile(
     r"(postgres(?:ql)?://[^\s`'\"]+|SUPABASE_SERVICE_ROLE_KEY|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35})",
