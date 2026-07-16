@@ -1,27 +1,29 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+let authToken: string | null = null;
 
 export function getAuthToken() {
-  return null;
+  return authToken;
 }
 
 export function setAuthToken(token: string) {
-  void token;
+  authToken = token;
 }
 
 export function clearAuthToken() {
+  authToken = null;
   localStorage.removeItem("bbb_consig_auth_token");
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
   const res = await fetch(`${API_URL}${path}`, {
+    ...init,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
-    ...init,
   });
   if (!res.ok) {
     let detail = `Erro ${res.status} em ${path}`;
