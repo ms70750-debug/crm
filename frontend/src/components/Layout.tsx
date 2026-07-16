@@ -17,6 +17,8 @@ const nav = [
   { to: "/admin", label: "Administracao", icon: Settings, roles: ["admin", "supervisor"] },
 ];
 
+const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === "true";
+
 export function Layout({ children }: { children: ReactNode }) {
   const { logout, user } = useAuth();
   const visibleNav = nav.filter((item) => user && item.roles.includes(user.role));
@@ -61,8 +63,8 @@ export function Layout({ children }: { children: ReactNode }) {
               <h1 className="text-xl font-semibold">BBB Consig CRM</h1>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>
-              <div className="badge border-yellow-400/40 text-yellow-200">Ambiente demo: nao insira dados reais</div>
+              {demoModeEnabled && <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>}
+              {demoModeEnabled && <div className="badge border-yellow-400/40 text-yellow-200">Ambiente demo: nao insira dados reais</div>}
               {user && <div className="badge">{user.nome} - {roleLabel(user.role)}</div>}
               <button
                 className="btn-secondary py-1 text-xs"

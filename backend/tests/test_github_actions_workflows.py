@@ -213,17 +213,23 @@ def test_postgres_backend_only_validation_workflow_does_not_use_supabase_secret(
     assert "env |" not in content
 
 
-def test_supabase_encrypted_backup_workflow_is_manual_and_safe() -> None:
+def test_supabase_encrypted_backup_workflow_is_manual_scheduled_and_safe() -> None:
     content = ENCRYPTED_BACKUP_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "name: Supabase Encrypted Backup" in content
     assert "workflow_dispatch:" in content
-    assert "schedule:" not in content
+    assert "schedule:" in content
+    assert 'cron: "0 6 * * *"' in content
+    assert "pull_request:" not in content
+    assert "\npush:" not in content
     assert "contents: read" in content
     assert "timeout-minutes: 15" in content
+    assert "if: github.ref == 'refs/heads/main'" in content
     assert "CRIAR-BACKUP-CRIPTOGRAFADO" in content
+    assert '${{ github.event_name }}" = "workflow_dispatch"' in content
     assert "DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
     assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
+    assert 'REAL_DATA_MODE: "true"' in content
     assert "::add-mask::$DIRECT_URL" in content
     assert "::add-mask::$BACKUP_ENCRYPTION_KEY" in content
     assert "actions/setup-node@v4" in content
@@ -233,7 +239,7 @@ def test_supabase_encrypted_backup_workflow_is_manual_and_safe() -> None:
     assert "Safe Supabase CLI preflight" in content
     assert "create_supabase_cli_encrypted_backup.py" in content
     assert "actions/upload-artifact@v4" in content
-    assert "retention-days: 1" in content
+    assert "retention-days: 7" in content
     assert "*.tar.enc" in content
     assert "*.manifest.json" in content
     assert "*.sha256" in content

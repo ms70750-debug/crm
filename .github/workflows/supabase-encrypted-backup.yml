@@ -6,6 +6,8 @@ on:
       confirmation:
         description: "Digite CRIAR-BACKUP-CRIPTOGRAFADO para confirmar."
         required: true
+  schedule:
+    - cron: "0 6 * * *"
 
 permissions:
   contents: read
@@ -17,17 +19,18 @@ concurrency:
 jobs:
   encrypted-backup:
     name: Create encrypted PostgreSQL backup
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
       BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
-      REAL_DATA_MODE: "false"
+      REAL_DATA_MODE: "true"
       SUPABASE_TELEMETRY_DISABLED: "1"
     steps:
       - name: Validate confirmation
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" != "CRIAR-BACKUP-CRIPTOGRAFADO" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.confirmation }}" != "CRIAR-BACKUP-CRIPTOGRAFADO" ]; then
             echo "Confirmacao invalida."
             exit 1
           fi
@@ -91,7 +94,7 @@ jobs:
             backup-artifact/*.tar.enc
             backup-artifact/*.manifest.json
             backup-artifact/*.sha256
-          retention-days: 1
+          retention-days: 7
           if-no-files-found: error
 
       - name: Safe summary

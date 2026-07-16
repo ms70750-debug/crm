@@ -1,12 +1,12 @@
 # Backup E Restauracao
 
-Status: ADR 012 APROVADO para USO PROPRIO. Nenhum backup real externo configurado nesta tarefa.
+Status: ADR 012 APROVADO para USO PROPRIO. Backup real criptografado validado no GitHub Actions em artifact protegido; restauracao real continua proibida sem ambiente isolado e aprovacao explicita.
 
 ## Escopo Atual
 
-O projeto possui somente scripts auxiliares para backup/restauracao ficticia local, usados em testes automatizados com banco temporario. Eles nao conectam em provedor real e nao manipulam dados pessoais reais.
+O projeto possui scripts auxiliares para backup/restauracao ficticia local, usados em testes automatizados com banco temporario, e workflow operacional de backup criptografado do Supabase via CLI oficial.
 
-A aprovacao do ADR nao autoriza dados reais, publicacao real ou backup externo de producao. Uso real depende de auditoria final, credenciais seguras, provedor configurado e aprovacao explicita do dono.
+A aprovacao do ADR nao autoriza restauracao real, publicacao real ou armazenamento externo fora do GitHub Actions. Uso real depende de auditoria final, credenciais seguras, provedor configurado e aprovacao explicita do dono.
 
 ## Requisitos Para Piloto Real
 
@@ -67,16 +67,29 @@ Variaveis futuras:
 - `BACKUP_STORAGE_PROVIDER`: placeholder; armazenamento externo real ainda nao configurado.
 - `BACKUP_STORAGE_BUCKET`: placeholder; bucket real ainda nao configurado.
 
+### Backup automatico diario
+
+O workflow `Supabase Encrypted Backup` roda automaticamente todos os dias as 06:00 UTC, equivalente a 03:00 no horario de Brasilia. A execucao automatica fica limitada a branch `main`, sem gatilho por pull request e sem gatilho por push.
+
+Controles ativos:
+
+- Supabase CLI oficial para roles, schema e dados;
+- artifact somente com `.tar.enc`, manifesto sanitizado e `.sha256`;
+- nenhum SQL aberto publicado;
+- nenhum secret em argumento de linha de comando;
+- concurrency unica para impedir duas rotinas simultaneas;
+- retencao do GitHub Actions em 7 dias.
+
 ### Criar backup manual futuro
 
-1. Confirmar aprovacao explicita para backup real.
+1. Confirmar aprovacao explicita para backup manual.
 2. Configurar `BACKUP_ENCRYPTION_KEY` como secret seguro do GitHub Actions.
 3. Confirmar que `SUPABASE_DIRECT_URL` existe somente como secret.
 4. Executar manualmente `Supabase Encrypted Backup`.
 5. Informar a confirmacao `CRIAR-BACKUP-CRIPTOGRAFADO`.
 6. Baixar o artifact criptografado, quando aprovado, e armazenar em cofre/armazenamento externo aprovado.
 
-O workflow nao e agendado e nao faz upload externo nesta fase.
+O workflow automatico nao faz upload externo nesta fase.
 
 ### Restauracao documentada
 
@@ -97,11 +110,11 @@ Nunca restaurar sobre o Supabase real.
 
 ### Retencao proposta
 
-- 7 backups diarios.
+- 7 backups diarios no GitHub Actions artifact.
 - 4 semanais.
 - 3 mensais.
 
-Artifacts do GitHub Actions devem ter retencao curta. Retencao real depende de armazenamento externo aprovado.
+Retencao semanal/mensal depende de armazenamento externo aprovado. Enquanto esse armazenamento nao existir, a retencao efetiva e de 7 dias no GitHub Actions.
 
 ### Chave e corrupcao
 
@@ -121,5 +134,4 @@ O provedor externo ainda nao foi escolhido nem configurado. Opcoes futuras devem
 - Nao colar credenciais no chat.
 - Nao testar restore com dados reais nesta etapa.
 - Nao armazenar dump aberto como artifact permanente.
-- Nao agendar backup sem aprovacao explicita.
 - Nao configurar armazenamento externo real sem nova aprovacao.

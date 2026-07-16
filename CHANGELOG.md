@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-15 - Liberacao segura para uso real
+
+### Alterado
+- Removidos da superficie publica os atalhos de login demo e avisos de ambiente demo quando `VITE_DEMO_MODE` nao estiver explicitamente habilitado.
+- Ajustados os E2E para autenticar pelo formulario, sem botao de administrador demo.
+- Agendado o workflow `Supabase Encrypted Backup` diariamente as 06:00 UTC apenas na `main`, mantendo acionamento manual com confirmacao.
+- Aumentada a retencao do artifact criptografado do backup para 7 dias.
+
+### Documentado
+- Atualizados procedimento de backup/restauracao e ADR 009 com horario diario, escopo da `main`, retencao e proibicao de restore real.
+
+### Mantido
+- Nenhuma nova tentativa manual de backup foi executada, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-15 - Backup oficial com Supabase CLI
 
 ### Alterado
