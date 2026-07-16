@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import { api, clearAuthToken, setAuthToken } from "../lib/api";
+import { api, clearAuthToken, getAuthToken, setAuthToken } from "../lib/api";
 import { LoginResponse, Perfil, User } from "../types";
 
 type AuthContextValue = {
@@ -19,11 +19,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const tokenAtStart = getAuthToken();
     api
       .get<User>("/auth/me")
       .then(setUser)
       .catch(() => {
-        clearAuthToken();
+        if (getAuthToken() === tokenAtStart) {
+          clearAuthToken();
+        }
         setUser(null);
       })
       .finally(() => setLoading(false));

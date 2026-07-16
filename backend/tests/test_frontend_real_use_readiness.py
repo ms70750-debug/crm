@@ -7,6 +7,7 @@ LAYOUT_COMPONENT = ROOT / "frontend" / "src" / "components" / "Layout.tsx"
 ADMIN_ACTIVATION_PAGE = ROOT / "frontend" / "src" / "pages" / "AdminActivation.tsx"
 APP_ROUTES = ROOT / "frontend" / "src" / "App.tsx"
 AUTH_CONTEXT = ROOT / "frontend" / "src" / "auth" / "AuthContext.tsx"
+API_LIB = ROOT / "frontend" / "src" / "lib" / "api.ts"
 
 
 def test_public_login_hides_demo_shortcuts_without_explicit_flag() -> None:
@@ -43,3 +44,17 @@ def test_admin_activation_page_removes_token_from_url_and_does_not_store_it() ->
     assert "/auth/admin-bootstrap/activate" in auth_context
     assert "X-Admin-Bootstrap-Token" in content
     assert "/validate?token=" not in content
+
+
+def test_frontend_auth_token_is_memory_only() -> None:
+    content = API_LIB.read_text(encoding="utf-8")
+    auth_context = AUTH_CONTEXT.read_text(encoding="utf-8")
+
+    assert "let authToken: string | null = null" in content
+    assert "authToken = token" in content
+    assert "authToken = null" in content
+    assert "const tokenAtStart = getAuthToken()" in auth_context
+    assert "getAuthToken() === tokenAtStart" in auth_context
+    assert content.index("...init") < content.index("headers: {")
+    assert "localStorage.setItem" not in content
+    assert "sessionStorage" not in content
