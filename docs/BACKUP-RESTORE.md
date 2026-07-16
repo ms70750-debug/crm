@@ -37,17 +37,28 @@ Rollback automatico so ocorre dentro da transacao da migration em caso de erro d
 
 ## Backup Externo Criptografado
 
-Status: ADR 014 PROPOSTO PARA APROVACAO. A fundacao tecnica existe, mas backup real externo ainda nao esta autorizado.
+Status: ADR 014 APROVADA para USO PROPRIO e ADR 009 aceita para o metodo operacional com Supabase CLI.
 
-O fluxo proposto usa `pg_dump` em formato custom, criptografa o dump com Fernet antes de qualquer artifact, gera checksums SHA-256 e cria manifesto seguro sem URL, host, usuario, senha ou conteudo de cliente.
+O fluxo ativo usa o Supabase CLI oficial para gerar tres arquivos logicos temporarios: `roles.sql`, `schema.sql` e `data.sql`. O arquivo de dados usa `--data-only` e `--use-copy`. O script empacota esses arquivos com manifesto e checksums internos, criptografa o pacote com Fernet e publica somente artifact criptografado, manifesto externo sanitizado e checksum externo.
 
-### Escopo do dump PostgreSQL
+### Escopo do dump Supabase CLI
 
-O backup criptografado exporta explicitamente o schema `public`, que e o schema usado pelas migrations e modelos do CRM. Esse escopo inclui a estrutura e os dados das tabelas do CRM, sequences, indices, constraints, funcoes, triggers, policies RLS e objetos proprios existentes em `public` que sejam exportaveis pelo usuario de backup.
+O backup criptografado usa o schema `public`, que e o schema usado pelas migrations e modelos do CRM. O Supabase CLI aplica filtros especificos para o ambiente Supabase, evitando schemas internos e papeis reservados que causavam falhas no `pg_dump` bruto.
 
-Schemas gerenciados pelo Supabase, como `auth`, `storage`, `vault`, `realtime` e `extensions`, nao sao exportados como parte do dump logico do CRM. Eles devem ser recriados pelo provedor ou por configuracao administrativa controlada do ambiente, e o manifesto do backup registra os schemas excluidos e as extensoes encontradas para apoiar uma restauracao isolada.
+O artifact final contem somente:
 
-Se `pg_dump` falhar por permissao em tabela, sequence ou schema essencial do CRM, o backup deve falhar com diagnostico sanitizado. Essa falha nao deve ser mascarada por exclusao de objeto essencial.
+- `crm-supabase-backup.tar.enc`;
+- `crm-supabase-backup.manifest.json`;
+- `crm-supabase-backup.sha256`.
+
+Nao devem ser enviados como artifact:
+
+- `roles.sql`;
+- `schema.sql`;
+- `data.sql`;
+- pacote `.tar` aberto;
+- dump bruto;
+- logs com conteudo SQL.
 
 Variaveis futuras:
 
@@ -67,14 +78,20 @@ Variaveis futuras:
 
 O workflow nao e agendado e nao faz upload externo nesta fase.
 
-### Testar restauracao
+### Restauracao documentada
 
-1. Executar manualmente `PostgreSQL Backup Restore Test`.
-2. Informar o `artifact_run_id` do backup criptografado.
-3. Informar a confirmacao `TESTAR-RESTAURACAO`.
-4. O workflow restaura somente em PostgreSQL 16 temporario.
-5. Validar tabelas, migrations, indices, constraints, contagens e permissoes BACKEND-ONLY.
-6. Conferir o manifesto para extensoes e schemas gerenciados que precisam existir ou ser recriados no ambiente isolado.
+1. Validar o checksum externo do `crm-supabase-backup.tar.enc`.
+2. Descriptografar o pacote em diretorio temporario isolado.
+3. Validar `checksums.txt` contra `roles.sql`, `schema.sql`, `data.sql` e `manifest.json`.
+4. Restaurar `roles.sql`.
+5. Restaurar `schema.sql`.
+6. Restaurar `data.sql`.
+7. Usar transacao e parada no primeiro erro (`ON_ERROR_STOP`).
+8. Validar `schema_migrations`.
+9. Validar tabelas, indices, constraints e policies esperadas.
+10. Validar contagens sem mostrar dados.
+11. Validar login e dashboard em ambiente isolado.
+12. Remover arquivos SQL e tar abertos.
 
 Nunca restaurar sobre o Supabase real.
 

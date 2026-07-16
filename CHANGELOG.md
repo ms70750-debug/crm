@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-15 - Backup oficial com Supabase CLI
+
+### Alterado
+- Substituido o fluxo ativo de backup criptografado por Supabase CLI oficial, separando roles, schema e dados.
+- Adicionado pacote unico criptografado `crm-supabase-backup.tar.enc` com manifesto/checksums seguros.
+- Criada ADR 009 documentando a decisao e o rollback por tag.
+
+### Mantido
+- Nenhum backup real foi executado, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-15 - Escopo seguro do pg_dump de producao
 
 ### Corrigido
