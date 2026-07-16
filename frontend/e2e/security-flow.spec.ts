@@ -5,7 +5,10 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   const name = `Cliente E2E ${suffix}`;
 
   await page.goto("/login");
-  await page.getByRole("button", { name: /administrador/i }).click();
+  await expect(page.getByRole("button", { name: /administrador/i })).toHaveCount(0);
+  await page.getByLabel("E-mail").fill("admin@bbbconsig.demo");
+  await page.getByLabel("Senha").fill("BbbConsig@2026");
+  await page.getByRole("button", { name: /entrar/i }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto("/clientes");

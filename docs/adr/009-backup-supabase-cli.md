@@ -33,6 +33,8 @@ Esses arquivos ficam apenas em diretorio temporario, sao empacotados localmente,
 - O artifact contem somente `crm-supabase-backup.tar.enc`, manifesto externo e checksum externo.
 - A restauracao passa a ser em etapas: roles, schema e data.
 - O runner do GitHub Actions passa a depender do Supabase CLI instalado via npm.
+- O workflow passa a ter execucao diaria as 06:00 UTC somente na `main`, mantendo `workflow_dispatch` com confirmacao manual.
+- A retencao do artifact no GitHub Actions passa a ser 7 dias.
 
 ## Plano de Reversao
 
@@ -45,3 +47,4 @@ A tag `pre-merge-supabase-cli-backup-2026-07-15` preserva a `main` anterior ao m
 - Falha em roles, schema ou data interrompe o processo.
 - Temporarios sao removidos em sucesso ou falha.
 - Testes cobrem CLI ausente, falhas por etapa, pacote incompleto, criptografia, checksums, manifesto sanitizado e ordem ficticia de restauracao.
+- Testes cobrem o gatilho diario, bloqueio de PR/push, execucao apenas na `main` e retencao de 7 dias.
