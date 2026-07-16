@@ -4,6 +4,7 @@
 
 ### Alterado
 - Removidos da superficie publica os atalhos de login demo e avisos de ambiente demo quando `VITE_DEMO_MODE` nao estiver explicitamente habilitado.
+- Bloqueado o endpoint `/auth/demo-login` por padrao, liberando demo apenas com `PUBLIC_DEMO_LOGIN_ENABLED=true` em ambiente nao produtivo.
 - Ajustados os E2E para autenticar pelo formulario, sem botao de administrador demo.
 - Agendado o workflow `Supabase Encrypted Backup` diariamente as 06:00 UTC apenas na `main`, mantendo acionamento manual com confirmacao.
 - Aumentada a retencao do artifact criptografado do backup para 7 dias.

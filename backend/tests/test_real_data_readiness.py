@@ -78,6 +78,14 @@ def test_production_mode_blocks_missing_readiness(monkeypatch: pytest.MonkeyPatc
 
 def test_demo_login_blocked_in_production_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_MODE", "production")
+    monkeypatch.setenv("PUBLIC_DEMO_LOGIN_ENABLED", "true")
+    response = client.post("/auth/demo-login", json={"role": "admin"})
+    assert response.status_code == 403
+
+
+def test_demo_login_blocked_by_default_even_in_demo_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.delenv("PUBLIC_DEMO_LOGIN_ENABLED", raising=False)
     response = client.post("/auth/demo-login", json={"role": "admin"})
     assert response.status_code == 403
 

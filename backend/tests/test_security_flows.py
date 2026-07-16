@@ -133,11 +133,19 @@ def test_login_rate_limit_blocks_repeated_attempts() -> None:
 def test_demo_login_is_limited_to_demo_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     init_db()
     monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("PUBLIC_DEMO_LOGIN_ENABLED", "true")
     allowed = client.post("/auth/demo-login", json={"role": "admin"})
     assert allowed.status_code == 200
 
     client.cookies.clear()
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("PUBLIC_DEMO_LOGIN_ENABLED", "false")
+    blocked_by_default = client.post("/auth/demo-login", json={"role": "admin"})
+    assert blocked_by_default.status_code == 403
+
+    client.cookies.clear()
     monkeypatch.setenv("APP_MODE", "internal")
+    monkeypatch.setenv("PUBLIC_DEMO_LOGIN_ENABLED", "true")
     blocked = client.post("/auth/demo-login", json={"role": "admin"})
     assert blocked.status_code == 403
     monkeypatch.setenv("APP_MODE", "demo")
