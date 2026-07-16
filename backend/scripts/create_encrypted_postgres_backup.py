@@ -16,6 +16,8 @@ from sqlalchemy import create_engine, text
 
 BACKUP_FORMAT_VERSION = "postgres-logical-fernet-v1"
 DEFAULT_OUTPUT_DIR = Path("backup-artifact")
+CRM_DUMP_SCHEMAS = ("public",)
+MANAGED_SUPABASE_SCHEMAS = ("auth", "storage", "vault", "realtime", "extensions")
 LATEST_MIGRATION_QUERY = """
 SELECT version
 FROM schema_migrations
@@ -27,6 +29,12 @@ SELECT COUNT(*)
 FROM information_schema.tables
 WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE'
+"""
+EXTENSION_METADATA_QUERY = """
+SELECT e.extname, e.extversion, n.nspname AS schema_name
+FROM pg_extension e
+JOIN pg_namespace n ON n.oid = e.extnamespace
+ORDER BY e.extname
 """
 PG_DUMP_TIMEOUT_SECONDS = 120
 MINIMUM_DUMP_FREE_SPACE_BYTES = 32 * 1024 * 1024
@@ -43,6 +51,12 @@ SAFE_ERROR_CATEGORIES = {
     "DISK_SPACE_LOW",
     "TIMEOUT",
     "DATABASE_DUMP_ERROR",
+    "SCHEMA_PERMISSION_DENIED",
+    "TABLE_PERMISSION_DENIED",
+    "SEQUENCE_PERMISSION_DENIED",
+    "MANAGED_SCHEMA_ERROR",
+    "MANAGED_EXTENSION_ERROR",
+    "INVALID_DATABASE_OBJECT",
     "ENCRYPTION_FAILED",
     "DRIVER_NOT_AVAILABLE",
     "UNKNOWN_SAFE_ERROR",
@@ -61,6 +75,12 @@ DIAGNOSTIC_CODES = {
     "DISK_SPACE_LOW": "PGDUMP_DISK_SPACE_LOW",
     "TIMEOUT": "PGDUMP_TIMEOUT",
     "DATABASE_DUMP_ERROR": "PGDUMP_DATABASE_DUMP_ERROR",
+    "SCHEMA_PERMISSION_DENIED": "PGDUMP_SCHEMA_PERMISSION_DENIED",
+    "TABLE_PERMISSION_DENIED": "PGDUMP_TABLE_PERMISSION_DENIED",
+    "SEQUENCE_PERMISSION_DENIED": "PGDUMP_SEQUENCE_PERMISSION_DENIED",
+    "MANAGED_SCHEMA_ERROR": "PGDUMP_MANAGED_SCHEMA_ERROR",
+    "MANAGED_EXTENSION_ERROR": "PGDUMP_MANAGED_EXTENSION_ERROR",
+    "INVALID_DATABASE_OBJECT": "PGDUMP_INVALID_DATABASE_OBJECT",
     "DRIVER_NOT_AVAILABLE": "PGDUMP_DRIVER_NOT_AVAILABLE",
     "ENCRYPTION_FAILED": "BACKUP_ENCRYPTION_FAILED",
     "UNKNOWN_SAFE_ERROR": "PGDUMP_UNKNOWN_SAFE_ERROR",
@@ -88,6 +108,10 @@ class SafePgDumpError(RuntimeError):
     output_nonempty: bool | None = None
     encryption_started: bool = False
     upload_started: bool = False
+    sqlstate: str = "indisponivel"
+    object_type: str = "indisponivel"
+    schema: str = "indisponivel"
+    error_class: str = "indisponivel"
 
     @property
     def diagnostic_code(self) -> str:
@@ -105,6 +129,8 @@ class SafePgDumpError(RuntimeError):
             f"arquivo_saida_nao_vazio={output_nonempty}; "
             f"criptografia_iniciada={'sim' if self.encryption_started else 'nao'}; "
             f"upload_iniciado={'sim' if self.upload_started else 'nao'}; "
+            f"sqlstate={self.sqlstate}; tipo_objeto={self.object_type}; "
+            f"schema={self.schema}; classe_erro={self.error_class}; "
             f"recomendacao={self.recommendation}"
         )
 
@@ -180,6 +206,64 @@ def pg_dump_major(version_text: str) -> int | None:
     return None
 
 
+def sanitize_identifier(identifier: str | None) -> str:
+    if not identifier:
+        return "indisponivel"
+    cleaned = identifier.strip().strip('"').strip("'").lower()
+    if cleaned in {*CRM_DUMP_SCHEMAS, *MANAGED_SUPABASE_SCHEMAS}:
+        return cleaned
+    if cleaned.replace("_", "").isalnum() and len(cleaned) <= 63:
+        return "identificador_sanitizado"
+    return "indisponivel"
+
+
+def safe_pg_dump_details(stderr: str) -> dict[str, str]:
+    normalized = stderr.lower()
+    sqlstate = "indisponivel"
+    for token in normalized.replace("(", " ").replace(")", " ").replace(":", " ").split():
+        if len(token) == 5 and token.isalnum() and any(char.isdigit() for char in token):
+            sqlstate = token.upper()
+            break
+
+    schema = "indisponivel"
+    for marker in ("schema ", "schema \""):
+        if marker in normalized:
+            candidate = normalized.split(marker, 1)[1].split()[0]
+            schema = sanitize_identifier(candidate)
+            break
+
+    object_type = "indisponivel"
+    if "permission denied for schema" in normalized:
+        object_type = "schema"
+    elif "permission denied for table" in normalized:
+        object_type = "table"
+    elif "permission denied for sequence" in normalized:
+        object_type = "sequence"
+    elif "extension" in normalized:
+        object_type = "extension"
+    elif "function" in normalized:
+        object_type = "function"
+    elif "trigger" in normalized:
+        object_type = "trigger"
+
+    error_class = "database_dump_error"
+    if "permission denied" in normalized:
+        error_class = "permission_denied"
+    elif "does not exist" in normalized or "could not find" in normalized or "invalid" in normalized:
+        error_class = "invalid_object"
+    elif "timeout" in normalized or "timed out" in normalized:
+        error_class = "timeout"
+    elif "extension" in normalized:
+        error_class = "managed_extension"
+
+    return {
+        "sqlstate": sqlstate,
+        "object_type": object_type,
+        "schema": schema,
+        "error_class": error_class,
+    }
+
+
 def safe_server_major(database_url: str) -> int | None:
     try:
         engine = create_engine(sqlalchemy_database_url(database_url))
@@ -207,6 +291,7 @@ def safe_server_major(database_url: str) -> int | None:
 
 def classify_pg_dump_error(stderr: str, exit_code: int | None) -> str:
     normalized = stderr.lower()
+    details = safe_pg_dump_details(stderr)
     if "server version" in normalized and "pg_dump version" in normalized:
         return "PG_DUMP_VERSION_MISMATCH"
     if "could not translate host name" in normalized or "temporary failure in name resolution" in normalized:
@@ -221,6 +306,14 @@ def classify_pg_dump_error(stderr: str, exit_code: int | None) -> str:
         return "SSL_FAILED"
     if "authentication failed" in normalized or "password authentication failed" in normalized:
         return "AUTHENTICATION_FAILED"
+    if "permission denied for schema" in normalized:
+        if details["schema"] in MANAGED_SUPABASE_SCHEMAS:
+            return "MANAGED_SCHEMA_ERROR"
+        return "SCHEMA_PERMISSION_DENIED"
+    if "permission denied for table" in normalized:
+        return "TABLE_PERMISSION_DENIED"
+    if "permission denied for sequence" in normalized:
+        return "SEQUENCE_PERMISSION_DENIED"
     if "permission denied" in normalized or "must be owner" in normalized or "permission for" in normalized:
         return "PERMISSION_DENIED"
     if "could not translate host name" in normalized or "could not connect" in normalized or "connection refused" in normalized:
@@ -237,6 +330,10 @@ def classify_pg_dump_error(stderr: str, exit_code: int | None) -> str:
     )
     if any(marker in normalized for marker in output_error_markers):
         return "OUTPUT_FILE_ERROR"
+    if "extension" in normalized and details["schema"] in MANAGED_SUPABASE_SCHEMAS:
+        return "MANAGED_EXTENSION_ERROR"
+    if "does not exist" in normalized or "could not find" in normalized or "invalid" in normalized:
+        return "INVALID_DATABASE_OBJECT"
     if exit_code:
         return "DATABASE_DUMP_ERROR"
     return "UNKNOWN_SAFE_ERROR"
@@ -256,6 +353,12 @@ def safe_recommendation(category: str) -> str:
         "DISK_SPACE_LOW": "Libere espaco no runner antes de gerar novo dump.",
         "TIMEOUT": "Tente novamente e avalie tamanho do banco ou timeout operacional.",
         "DATABASE_DUMP_ERROR": "Revise objetos e extensoes do banco com logs sanitizados.",
+        "SCHEMA_PERMISSION_DENIED": "Revise permissao de USAGE no schema do CRM ou limite o dump ao schema exportavel.",
+        "TABLE_PERMISSION_DENIED": "Revise permissao SELECT da tabela essencial do CRM sem ampliar acesso do frontend.",
+        "SEQUENCE_PERMISSION_DENIED": "Revise permissao USAGE/SELECT em sequencias do CRM.",
+        "MANAGED_SCHEMA_ERROR": "Exporte explicitamente apenas schemas do CRM e deixe schemas gerenciados para o provedor.",
+        "MANAGED_EXTENSION_ERROR": "Documente a extensao gerenciada no manifesto e nao exporte objetos internos do provedor.",
+        "INVALID_DATABASE_OBJECT": "Revise objeto invalido ou referencia quebrada com diagnostico sanitizado.",
         "DRIVER_NOT_AVAILABLE": "Use o driver psycopg 3 ja previsto no projeto para conexoes SQLAlchemy.",
         "ENCRYPTION_FAILED": "Revise a etapa de criptografia com dados ficticios antes de nova tentativa.",
     }.get(category, "Revise a falha com logs sanitizados e sem secrets.")
@@ -329,6 +432,15 @@ def collect_metadata(database_url: str) -> dict:
             latest_migration = conn.execute(text(LATEST_MIGRATION_QUERY)).scalar()
             table_count = conn.execute(text(TABLE_COUNT_QUERY)).scalar()
             server_major = safe_server_major(database_url)
+            extensions = [
+                {
+                    "name": row[0],
+                    "version": row[1],
+                    "schema": sanitize_identifier(row[2]),
+                    "managed_by_provider": sanitize_identifier(row[2]) in MANAGED_SUPABASE_SCHEMAS,
+                }
+                for row in conn.execute(text(EXTENSION_METADATA_QUERY)).fetchall()
+            ]
     except SafePgDumpError:
         raise
     except Exception as exc:
@@ -343,6 +455,7 @@ def collect_metadata(database_url: str) -> dict:
         "latest_migration": latest_migration or "unknown",
         "table_count": int(table_count or 0),
         "server_major": server_major,
+        "extensions": extensions,
     }
 
 
@@ -352,7 +465,9 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
         "pg_dump",
         "--format=custom",
         "--no-owner",
-        "--no-acl",
+        "--no-privileges",
+        "--schema",
+        CRM_DUMP_SCHEMAS[0],
         "--file",
         str(dump_path),
     ]
@@ -390,7 +505,9 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
             output_nonempty=output_nonempty,
         ) from exc
     if result.returncode != 0:
-        category = classify_pg_dump_error(result.stderr or "", result.returncode)
+        stderr = result.stderr or ""
+        category = classify_pg_dump_error(stderr, result.returncode)
+        details = safe_pg_dump_details(stderr)
         output_created, output_nonempty = output_status(dump_path)
         raise SafePgDumpError(
             category,
@@ -401,6 +518,10 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
             binary_found=True,
             output_created=output_created,
             output_nonempty=output_nonempty,
+            sqlstate=details["sqlstate"],
+            object_type=details["object_type"],
+            schema=details["schema"],
+            error_class=details["error_class"],
         )
     output_created, output_nonempty = output_status(dump_path)
     if not output_created or not output_nonempty:
@@ -515,6 +636,14 @@ def create_encrypted_backup(
                 "table_count": int(metadata.get("table_count", 0)),
                 "server_major": metadata.get("server_major"),
                 "pg_dump_major": preflight.get("pg_dump_major"),
+                "dump_schemas": list(CRM_DUMP_SCHEMAS),
+                "managed_schemas_excluded": list(MANAGED_SUPABASE_SCHEMAS),
+                "extensions": metadata.get("extensions", []),
+                "restore_notes": [
+                    "Dump contem objetos e dados do schema public do CRM.",
+                    "Schemas gerenciados do Supabase devem ser recriados pelo provedor.",
+                    "Validar restauracao em PostgreSQL isolado antes de qualquer uso real.",
+                ],
                 "storage_provider": "not_configured",
                 "contains_credentials": False,
                 "contains_customer_content": False,

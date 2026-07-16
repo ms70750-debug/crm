@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-15 - Escopo seguro do pg_dump de producao
+
+### Corrigido
+- Limitado o `pg_dump` criptografado ao schema `public`, comprovado como schema do CRM pelas migrations e modelos.
+- Adicionado diagnostico sanitizado para SQLSTATE, tipo de objeto, schema e classe de erro sem imprimir stderr bruto.
+- Documentado no manifesto os schemas gerenciados pelo Supabase excluidos do dump e as extensoes encontradas.
+
+### Mantido
+- Nenhum novo backup real foi executado, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-15 - Saida vazia do pg_dump no backup
 
 ### Corrigido
