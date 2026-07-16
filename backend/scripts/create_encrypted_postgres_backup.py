@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,7 @@ WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE'
 """
 PG_DUMP_TIMEOUT_SECONDS = 120
+MINIMUM_DUMP_FREE_SPACE_BYTES = 32 * 1024 * 1024
 SAFE_ERROR_CATEGORIES = {
     "PG_DUMP_NOT_FOUND",
     "PG_DUMP_VERSION_MISMATCH",
@@ -38,6 +40,7 @@ SAFE_ERROR_CATEGORIES = {
     "PERMISSION_DENIED",
     "INVALID_ARGUMENT",
     "OUTPUT_FILE_ERROR",
+    "DISK_SPACE_LOW",
     "TIMEOUT",
     "DATABASE_DUMP_ERROR",
     "ENCRYPTION_FAILED",
@@ -55,6 +58,7 @@ DIAGNOSTIC_CODES = {
     "PERMISSION_DENIED": "PGDUMP_PERMISSION_DENIED",
     "INVALID_ARGUMENT": "PGDUMP_INVALID_ARGUMENT",
     "OUTPUT_FILE_ERROR": "PGDUMP_OUTPUT_FILE_ERROR",
+    "DISK_SPACE_LOW": "PGDUMP_DISK_SPACE_LOW",
     "TIMEOUT": "PGDUMP_TIMEOUT",
     "DATABASE_DUMP_ERROR": "PGDUMP_DATABASE_DUMP_ERROR",
     "DRIVER_NOT_AVAILABLE": "PGDUMP_DRIVER_NOT_AVAILABLE",
@@ -223,7 +227,15 @@ def classify_pg_dump_error(stderr: str, exit_code: int | None) -> str:
         return "CONNECTION_FAILED"
     if "unrecognized option" in normalized or "invalid option" in normalized or "too many command-line arguments" in normalized:
         return "INVALID_ARGUMENT"
-    if "could not open output file" in normalized or "no such file or directory" in normalized or "is a directory" in normalized:
+    output_error_markers = (
+        "could not open output file",
+        "could not open file",
+        "could not create file",
+        "could not write to output file",
+        "error opening output file",
+        "is a directory",
+    )
+    if any(marker in normalized for marker in output_error_markers):
         return "OUTPUT_FILE_ERROR"
     if exit_code:
         return "DATABASE_DUMP_ERROR"
@@ -241,6 +253,7 @@ def safe_recommendation(category: str) -> str:
         "PERMISSION_DENIED": "Revise permissoes do usuario de backup sem ampliar acesso do frontend.",
         "INVALID_ARGUMENT": "Revise argumentos seguros do pg_dump.",
         "OUTPUT_FILE_ERROR": "Revise diretorio temporario e permissoes de escrita do runner.",
+        "DISK_SPACE_LOW": "Libere espaco no runner antes de gerar novo dump.",
         "TIMEOUT": "Tente novamente e avalie tamanho do banco ou timeout operacional.",
         "DATABASE_DUMP_ERROR": "Revise objetos e extensoes do banco com logs sanitizados.",
         "DRIVER_NOT_AVAILABLE": "Use o driver psycopg 3 ja previsto no projeto para conexoes SQLAlchemy.",
@@ -252,6 +265,61 @@ def output_status(path: Path) -> tuple[bool, bool]:
     if not path.exists() or path.is_dir():
         return False, False
     return True, path.stat().st_size > 0
+
+
+def prepare_dump_path(dump_path: Path) -> Path:
+    absolute_dump_path = dump_path.resolve()
+    if absolute_dump_path.exists() and absolute_dump_path.is_dir():
+        raise SafePgDumpError(
+            "OUTPUT_FILE_ERROR",
+            step="prepare-output",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
+            binary_found=True,
+            output_created=False,
+            output_nonempty=False,
+        )
+    try:
+        absolute_dump_path.parent.mkdir(parents=True, exist_ok=True)
+        if not absolute_dump_path.parent.is_dir():
+            raise OSError("output parent is not a directory")
+        probe_path = absolute_dump_path.parent / f".{absolute_dump_path.name}.write-test"
+        probe_path.write_bytes(b"ok")
+        probe_path.unlink(missing_ok=True)
+    except OSError as exc:
+        raise SafePgDumpError(
+            "OUTPUT_FILE_ERROR",
+            step="prepare-output",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
+            binary_found=True,
+            output_created=False,
+            output_nonempty=False,
+        ) from exc
+
+    try:
+        free_bytes = shutil.disk_usage(absolute_dump_path.parent).free
+    except OSError as exc:
+        raise SafePgDumpError(
+            "OUTPUT_FILE_ERROR",
+            step="prepare-output",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
+            binary_found=True,
+            output_created=False,
+            output_nonempty=False,
+        ) from exc
+    if free_bytes < MINIMUM_DUMP_FREE_SPACE_BYTES:
+        raise SafePgDumpError(
+            "DISK_SPACE_LOW",
+            step="prepare-output",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("DISK_SPACE_LOW"),
+            binary_found=True,
+            output_created=False,
+            output_nonempty=False,
+        )
+    return absolute_dump_path
 
 
 def collect_metadata(database_url: str) -> dict:
@@ -279,17 +347,7 @@ def collect_metadata(database_url: str) -> dict:
 
 
 def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEOUT_SECONDS) -> None:
-    if dump_path.exists() and dump_path.is_dir():
-        raise SafePgDumpError(
-            "OUTPUT_FILE_ERROR",
-            step="pg_dump",
-            pg_dump_version=pg_dump_version(),
-            recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
-            binary_found=True,
-            output_created=False,
-            output_nonempty=False,
-        )
-    dump_path.parent.mkdir(parents=True, exist_ok=True)
+    dump_path = prepare_dump_path(dump_path)
     command = [
         "pg_dump",
         "--format=custom",
@@ -340,6 +398,17 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
             exit_code=result.returncode,
             pg_dump_version=pg_dump_version(),
             recommendation=safe_recommendation(category),
+            binary_found=True,
+            output_created=output_created,
+            output_nonempty=output_nonempty,
+        )
+    output_created, output_nonempty = output_status(dump_path)
+    if not output_created or not output_nonempty:
+        raise SafePgDumpError(
+            "OUTPUT_FILE_ERROR",
+            step="validate-output",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("OUTPUT_FILE_ERROR"),
             binary_found=True,
             output_created=output_created,
             output_nonempty=output_nonempty,

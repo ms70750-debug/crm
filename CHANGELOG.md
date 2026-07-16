@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-15 - Saida vazia do pg_dump no backup
+
+### Corrigido
+- Validado o destino do dump antes do `pg_dump`, incluindo diretorio, escrita, espaco livre e caminho absoluto.
+- Separada falha real do `pg_dump` de arquivo vazio, evitando mascarar erro de banco como `PGDUMP_OUTPUT_FILE_ERROR`.
+- Bloqueada a continuidade para criptografia e upload quando o `pg_dump` termina sem gerar dump nao vazio.
+
+### Mantido
+- Nenhuma nova tentativa de backup foi executada, nenhuma restauracao foi executada, nenhum secret foi revelado e nenhuma publicacao foi realizada.
+
 ## 2026-07-15 - pg_dump 17 no workflow de backup
 
 ### Corrigido
