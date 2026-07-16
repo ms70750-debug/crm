@@ -116,6 +116,25 @@ def test_single_migration_blocks_reapply(migration_dir: Path, tmp_path: Path) ->
         single.run_single_migration(**kwargs)
 
 
+def test_single_migration_can_allow_already_applied_when_objects_exist(migration_dir: Path, tmp_path: Path) -> None:
+    db_url = f"sqlite:///{(tmp_path / 'single-already-applied.sqlite').as_posix()}"
+    kwargs = {
+        "migration_name": "2026_07_01_000_postgres_bootstrap_schema.sql",
+        "expected_previous": single.NONE_PREVIOUS,
+        "confirmation": single.CONFIRMATION_VALUE,
+        "direct_url": db_url,
+    }
+
+    single.run_single_migration(**kwargs)
+    single.run_single_migration(**kwargs, allow_already_applied=True)
+
+    engine = create_engine(db_url)
+    with engine.connect() as conn:
+        applied = conn.execute(text("SELECT version FROM schema_migrations")).fetchall()
+
+    assert applied == [("2026_07_01_000_postgres_bootstrap_schema.sql",)]
+
+
 def test_single_migration_blocks_checksum_drift(migration_dir: Path, tmp_path: Path) -> None:
     db_url = f"sqlite:///{(tmp_path / 'single-checksum.sqlite').as_posix()}"
     engine = create_engine(db_url)

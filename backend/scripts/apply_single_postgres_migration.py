@@ -158,7 +158,13 @@ def applied_migrations(conn: Connection) -> dict[str, str]:
     return {row[0]: row[1] for row in rows}
 
 
-def validate_order_and_reapply(conn: Connection, migration_name: str, expected_previous: str) -> None:
+def validate_order_and_reapply(
+    conn: Connection,
+    migration_name: str,
+    expected_previous: str,
+    *,
+    allow_already_applied: bool = False,
+) -> bool:
     applied = applied_migrations(conn)
     for applied_name, applied_checksum in applied.items():
         if applied_name in ALLOWED_MIGRATIONS:
@@ -167,15 +173,18 @@ def validate_order_and_reapply(conn: Connection, migration_name: str, expected_p
                 raise RuntimeError("Checksum divergente detectado em migration ja registrada.")
 
     if migration_name in applied:
+        if allow_already_applied:
+            return False
         raise RuntimeError("Migration ja aplicada. Reaplicacao bloqueada.")
 
     if expected_previous == NONE_PREVIOUS:
         if any(name in applied for name in ALLOWED_MIGRATIONS):
             raise RuntimeError("Ordem invalida: ja existem migrations aplicadas.")
-        return
+        return True
 
     if expected_previous not in applied:
         raise RuntimeError("Ordem invalida: migration anterior esperada nao esta registrada.")
+    return True
 
 
 def validate_expected_objects(conn: Connection, migration_name: str) -> None:
@@ -201,6 +210,7 @@ def run_single_migration(
     confirmation: str,
     direct_url: str,
     transaction_test: bool = False,
+    allow_already_applied: bool = False,
 ) -> None:
     validate_confirmation(confirmation)
     migration_path = validate_selection(migration_name, expected_previous)
@@ -213,8 +223,14 @@ def run_single_migration(
             transaction = conn.begin()
             try:
                 ensure_control_table(conn)
-                validate_order_and_reapply(conn, migration_name, expected_previous)
-                execute_sql_file(conn, migration_path)
+                should_apply = validate_order_and_reapply(
+                    conn,
+                    migration_name,
+                    expected_previous,
+                    allow_already_applied=allow_already_applied,
+                )
+                if should_apply:
+                    execute_sql_file(conn, migration_path)
             except Exception:
                 transaction.rollback()
                 raise
@@ -224,7 +240,16 @@ def run_single_migration(
 
     with engine.begin() as conn:
         ensure_control_table(conn)
-        validate_order_and_reapply(conn, migration_name, expected_previous)
+        should_apply = validate_order_and_reapply(
+            conn,
+            migration_name,
+            expected_previous,
+            allow_already_applied=allow_already_applied,
+        )
+        if not should_apply:
+            validate_expected_objects(conn, migration_name)
+            print(f"JA APLICADA COM SEGURANCA: {migration_name}")
+            return
         execute_sql_file(conn, migration_path)
         conn.execute(
             text("INSERT INTO schema_migrations (version, checksum) VALUES (:version, :checksum)"),
@@ -249,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-previous", required=True)
     parser.add_argument("--confirmation", required=True)
     parser.add_argument("--transaction-test", action="store_true")
+    parser.add_argument("--allow-already-applied", action="store_true")
     args = parser.parse_args(argv)
 
     if real_data_mode_enabled():
@@ -262,6 +288,7 @@ def main(argv: list[str] | None = None) -> int:
         confirmation=args.confirmation,
         direct_url=direct_url,
         transaction_test=args.transaction_test,
+        allow_already_applied=args.allow_already_applied,
     )
     return 0
 
