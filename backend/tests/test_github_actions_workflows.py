@@ -226,31 +226,28 @@ def test_supabase_encrypted_backup_workflow_is_manual_and_safe() -> None:
     assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
     assert "::add-mask::$DIRECT_URL" in content
     assert "::add-mask::$BACKUP_ENCRYPTION_KEY" in content
-    assert "postgresql-client-17" in content
-    assert 'echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"' in content
-    assert 'export PATH="/usr/lib/postgresql/17/bin:$PATH"' in content
-    assert "pg_dump --version" in content
-    assert "Safe pg_dump preflight" in content
-    assert "backup_preflight" in content
-    assert "versao principal do pg_dump" in content
-    assert "versao principal do servidor" in content
-    assert "compatibilidade" in content
+    assert "actions/setup-node@v4" in content
+    assert 'node-version: "24"' in content
+    assert "npm install --global supabase@2.109.1" in content
+    assert "supabase --version" in content
+    assert "Safe Supabase CLI preflight" in content
+    assert "create_supabase_cli_encrypted_backup.py" in content
     assert "actions/upload-artifact@v4" in content
     assert "retention-days: 1" in content
-    assert "*.dump.enc" in content
+    assert "*.tar.enc" in content
     assert "*.manifest.json" in content
     assert "*.sha256" in content
+    assert "backup-artifact/*.sql" not in content
 
 
-def test_supabase_encrypted_backup_workflow_prefers_postgres_17_pg_dump_before_preflight() -> None:
+def test_supabase_encrypted_backup_workflow_installs_cli_before_preflight() -> None:
     content = ENCRYPTED_BACKUP_WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    install_index = content.index("Install PostgreSQL client")
-    path_index = content.index('echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"')
-    version_index = content.index("pg_dump --version")
-    preflight_index = content.index("Safe pg_dump preflight")
+    install_index = content.index("Install Supabase CLI")
+    version_index = content.index("supabase --version")
+    preflight_index = content.index("Safe Supabase CLI preflight")
 
-    assert install_index < path_index < version_index < preflight_index
+    assert install_index < version_index < preflight_index
 
 
 def test_backup_restore_workflow_uses_temporary_postgres_and_no_supabase() -> None:

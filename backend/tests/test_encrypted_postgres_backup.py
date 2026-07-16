@@ -700,11 +700,11 @@ def test_workflow_blocks_invalid_or_empty_artifact_upload() -> None:
     content = ENCRYPTED_BACKUP_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "Verify artifact contents" in content
-    assert "backup-artifact/*.dump.enc" in content
+    assert "backup-artifact/*.tar.enc" in content
     assert "backup-artifact/*.manifest.json" in content
     assert "backup-artifact/*.sha256" in content
     assert "if-no-files-found: error" in content
-    assert "Dump aberto nao pode ser publicado como artifact." in content
+    assert "Arquivo aberto nao pode ser publicado como artifact." in content
 
 
 def test_preflight_version_mismatch_blocks_before_dump(tmp_path: Path) -> None:
