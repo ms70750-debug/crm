@@ -53,6 +53,17 @@ jobs:
       - name: Install backend dependencies
         run: python -m pip install -r backend/requirements.txt
 
+      - name: Ensure admin bootstrap migration
+        env:
+          DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
+          REAL_DATA_MODE: "false"
+        run: >
+          python backend/scripts/apply_single_postgres_migration.py
+          --migration 2026_07_15_first_admin_bootstrap.sql
+          --expected-previous 2026_07_12_backend_only_permissions.sql
+          --confirmation APLICAR-MIGRATION
+          --allow-already-applied
+
       - name: Create activation link artifact file
         run: python backend/scripts/create_first_admin_bootstrap.py --output admin-activation-link.txt
 

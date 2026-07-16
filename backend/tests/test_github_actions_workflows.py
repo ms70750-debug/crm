@@ -292,7 +292,13 @@ def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:
     assert "concurrency:" in content
     assert "SUPABASE_DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
     assert "::add-mask::$SUPABASE_DIRECT_URL" in content
+    assert "Ensure admin bootstrap migration" in content
+    assert "apply_single_postgres_migration.py" in content
+    assert "--migration 2026_07_15_first_admin_bootstrap.sql" in content
+    assert "--expected-previous 2026_07_12_backend_only_permissions.sql" in content
+    assert "--allow-already-applied" in content
     assert "create_first_admin_bootstrap.py" in content
+    assert content.index("apply_single_postgres_migration.py") < content.index("create_first_admin_bootstrap.py")
     assert "actions/upload-artifact@v4" in content
     assert "name: admin-activation-link" in content
     assert "admin-activation-link.txt" in content
