@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Recuperacao segura de login e senha
+
+### Corrigido
+- Substituido o `mailto:` da tela de login por fluxo real de solicitacao e redefinicao de senha.
+- Adicionados endpoints neutros `/auth/password-recovery/request`, `/auth/password-recovery/validate` e `/auth/password-recovery/confirm`.
+- Separada a finalidade dos tokens de ativacao administrativa e recuperacao de senha para impedir uso cruzado.
+- Redefinicao de senha passa a invalidar sessoes ativas e registrar auditoria sem token ou senha.
+
+### Mantido
+- Nenhum e-mail real e enviado pelo CRM, nenhum token aberto e persistido, nenhuma senha ou secret foi documentado e nenhuma publicacao foi realizada.
+
 ## 2026-07-18 - Homologacao controlada pos-merge do PR 30
 
 ### Validado

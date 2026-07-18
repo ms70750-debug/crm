@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -6,8 +8,29 @@ from app.config.environment import demo_mode_enabled, public_demo_login_enabled
 from app.services.readiness import production_mode_enabled
 from app.database.session import get_db
 from app.models import User
-from app.schemas.security import AdminBootstrapActivateRequest, AdminBootstrapValidateResponse, DemoLoginRequest, LoginRequest, LoginResponse, UserRead
-from app.services.admin_bootstrap import AdminBootstrapBlocked, AdminBootstrapError, activate_admin_bootstrap_token, validate_admin_bootstrap_token
+from app.schemas.security import (
+    AdminBootstrapActivateRequest,
+    AdminBootstrapValidateResponse,
+    DemoLoginRequest,
+    LoginRequest,
+    LoginResponse,
+    PasswordRecoveryConfirmRequest,
+    PasswordRecoveryConfirmResponse,
+    PasswordRecoveryRequest,
+    PasswordRecoveryRequestResponse,
+    PasswordRecoveryValidateResponse,
+    UserRead,
+)
+from app.services.admin_bootstrap import (
+    PASSWORD_RECOVERY_BASE_URL,
+    AdminBootstrapBlocked,
+    AdminBootstrapError,
+    activate_admin_bootstrap_token,
+    create_password_recovery_link,
+    reset_password_with_recovery_token,
+    validate_admin_bootstrap_token,
+    validate_password_recovery_token,
+)
 from app.services.security import (
     SESSION_COOKIE_NAME,
     check_rate_limit,
@@ -109,6 +132,49 @@ def activate_admin_bootstrap(payload: AdminBootstrapActivateRequest, request: Re
         "expires_at": demo_token_expiration(),
         "user": user_payload(user),
     }
+
+
+@router.post("/password-recovery/request", response_model=PasswordRecoveryRequestResponse)
+def request_password_recovery(payload: PasswordRecoveryRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "local"
+    email_key = (payload.email or "").strip().lower()[:140] or "blank"
+    check_rate_limit(f"password-recovery-request:{client_ip}:{email_key}", limit=5, window_seconds=300)
+    create_password_recovery_link(
+        db,
+        payload.email,
+        reset_base_url=os.environ.get("PASSWORD_RECOVERY_BASE_URL", PASSWORD_RECOVERY_BASE_URL),
+        created_by_source="api",
+    )
+    return {
+        "ok": True,
+        "message": "Se o e-mail estiver cadastrado e ativo, um link de redefinicao sera preparado para envio seguro.",
+    }
+
+
+@router.get("/password-recovery/validate", response_model=PasswordRecoveryValidateResponse)
+def validate_password_recovery(
+    request: Request,
+    token: str | None = Header(default=None, alias="X-Password-Recovery-Token"),
+    db: Session = Depends(get_db),
+):
+    client_ip = request.client.host if request.client else "local"
+    check_rate_limit(f"password-recovery-validate:{client_ip}", limit=8, window_seconds=60)
+    try:
+        record = validate_password_recovery_token(db, token or "")
+    except AdminBootstrapError:
+        return {"valid": False, "expires_at": None}
+    return {"valid": True, "expires_at": record.expires_at}
+
+
+@router.post("/password-recovery/confirm", response_model=PasswordRecoveryConfirmResponse)
+def confirm_password_recovery(payload: PasswordRecoveryConfirmRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "local"
+    check_rate_limit(f"password-recovery-confirm:{client_ip}", limit=5, window_seconds=300)
+    try:
+        reset_password_with_recovery_token(db, payload.token, payload.password, payload.password_confirmation)
+    except AdminBootstrapError as exc:
+        raise HTTPException(status_code=400, detail="Link invalido, expirado ou senha invalida") from exc
+    return {"ok": True}
 
 
 @router.get("/me", response_model=UserRead)
