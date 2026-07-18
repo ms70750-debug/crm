@@ -2,6 +2,17 @@
 
 Status: ADR 012 APROVADO para USO PROPRIO. Backup real criptografado validado no GitHub Actions em artifact protegido; restauracao real continua proibida sem ambiente isolado e aprovacao explicita.
 
+Ultima verificacao por metadados em 2026-07-18:
+
+- Workflow: `Supabase Encrypted Backup`.
+- Run ID: `29636132186`.
+- Acionamento: `schedule`.
+- Branch/commit: `main` em `78b03f44552740e8e9364dc664afabe147c0d951`.
+- Resultado: sucesso.
+- Artifact: `supabase-encrypted-backup`.
+- Retencao efetiva: 7 dias, com expiracao indicada em `2026-07-25T07:40:49Z`.
+- Classificacao: valido por metadados; nao houve download, descriptografia ou restore real.
+
 ## Escopo Atual
 
 O projeto possui scripts auxiliares para backup/restauracao ficticia local, usados em testes automatizados com banco temporario, e workflow operacional de backup criptografado do Supabase via CLI oficial.

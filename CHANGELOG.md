@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Preparacao expressa para publicacao controlada
+
+### Documentado
+- Registrada a retomada expressa de pre-publicacao com `main` validada no hash `78b03f44552740e8e9364dc664afabe147c0d951`.
+- Esclarecido que o deploy controlado permanece em modo demo, com Render/Vercel ja documentados e sem liberacao para dados reais.
+- Alinhada a documentacao de backup para deixar claro que o workflow ativo usa Supabase CLI, enquanto o preflight com `postgresql+psycopg://` permanece no script legado/testado.
+- Registrado por metadados o backup criptografado automatico `Supabase Encrypted Backup` do run `29636132186`, sem download, restore ou exposicao de secrets.
+
+### Mantido
+- Nenhuma publicacao foi realizada, nenhum novo backup foi executado, nenhuma restauracao real foi executada, nenhuma migration real foi aplicada e nenhum secret foi alterado ou revelado.
+
 ## 2026-07-15 - Ativacao segura do primeiro administrador
 
 ### Adicionado
