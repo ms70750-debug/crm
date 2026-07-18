@@ -50,7 +50,7 @@ def test_production_environment_rejects_missing_database_url(monkeypatch: pytest
         validate_environment()
 
 
-def test_production_sqlite_is_allowed_only_for_controlled_mvp(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_environment_rejects_sqlite_even_with_real_data_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
     monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
@@ -58,7 +58,8 @@ def test_production_sqlite_is_allowed_only_for_controlled_mvp(monkeypatch: pytes
     monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
     monkeypatch.setenv("REAL_DATA_MODE", "false")
 
-    validate_environment()
+    with pytest.raises(RuntimeError):
+        validate_environment()
 
 
 def test_real_data_mode_rejects_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -127,6 +128,8 @@ def test_healthz_reports_safe_database_and_version_metadata() -> None:
     assert body["status"] == "ok"
     assert body["database"] == "ok"
     assert body["version"]
+    assert body["auth_email"]["provider"] == "resend"
+    assert "secret_configured" in body["auth_email"]
     assert "DATABASE_URL" not in response.text
     assert "postgresql://" not in response.text
 

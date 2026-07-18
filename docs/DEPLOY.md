@@ -28,12 +28,12 @@ Limites preservados: nenhum dado real, nenhuma migration real, nenhuma restaurac
 Nao publicar automaticamente esta preparacao. O Render nao deve ser redeployado para dados reais e o Vercel nao deve receber configuracao real enquanto `REAL_DATA_MODE=false`.
 
 Separacao esperada:
-- Desenvolvimento: SQLite local, dados ficticios, `APP_MODE=demo`.
-- Homologacao: ambiente publicado atual, dados ficticios, integracoes simuladas.
+- Desenvolvimento/testes locais: SQLite local, dados ficticios, `APP_MODE=demo`.
+- Homologacao publicada: PostgreSQL gerenciado quando `APP_ENV=production`; dados ficticios e integracoes simuladas enquanto `REAL_DATA_MODE=false`.
 - Producao preparada: PostgreSQL gerenciado, secrets em painel seguro, `REAL_DATA_MODE=false` ate aprovacao final.
 
 Variaveis por metadados, sem valores:
-- Render/producao preparada: `APP_ENV`, `APP_MODE`, `PYTHON_VERSION`, `BBB_AUTH_SECRET`, `BBB_DATA_ENCRYPTION_KEY`, `CORS_ORIGINS`, `DATABASE_URL`, `REAL_DATA_MODE`, `EVOLUTION_API_MODE`, `APP_VERSION`.
+- Render/producao preparada: `APP_ENV`, `APP_MODE`, `PYTHON_VERSION`, `BBB_AUTH_SECRET`, `BBB_DATA_ENCRYPTION_KEY`, `CORS_ORIGINS`, `DATABASE_URL`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_RECYCLE_SECONDS`, `DB_POOL_TIMEOUT_SECONDS`, `REAL_DATA_MODE`, `EVOLUTION_API_MODE`, `APP_VERSION`, `AUTH_EMAIL_ENABLED`, `AUTH_EMAIL_MODE`, `AUTH_EMAIL_FROM`, `APP_PUBLIC_URL`, `RESEND_API_KEY`.
 - GitHub Actions: `SUPABASE_DIRECT_URL`, `BACKUP_ENCRYPTION_KEY`, `POSTGRES_RESTORE_URL`.
 - Vercel: `VITE_API_URL`, `VITE_APP_MODE`.
 - Monitoramento: `MONITORING_ALERTS_ENABLED`, `MONITORING_CONTACT_CHANNEL`.
@@ -81,7 +81,7 @@ Essa verificacao sustenta aprovacao para publicacao controlada/homologacao com d
 ## Bloqueios atuais
 - Autenticacao atual e adequada apenas para MVP controlado.
 - Falta hardening completo de producao real.
-- SQLite local nao e banco de producao.
+- SQLite local nao e banco de producao e deve ser rejeitado em `APP_ENV=production`.
 - Integracoes externas estao bloqueadas por design.
 - Dados reais de clientes nao estao liberados.
 - `APP_MODE` deve permanecer `demo`.
@@ -120,10 +120,21 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `BBB_AUTH_SECRET`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
+- `DB_POOL_SIZE`
+- `DB_MAX_OVERFLOW`
+- `DB_POOL_RECYCLE_SECONDS`
+- `DB_POOL_TIMEOUT_SECONDS`
 - `REAL_DATA_MODE`
 - `EVOLUTION_API_MODE`
+- `AUTH_EMAIL_ENABLED`
+- `AUTH_EMAIL_MODE`
+- `AUTH_EMAIL_FROM`
+- `APP_PUBLIC_URL`
+- `RESEND_API_KEY`
 
 `BBB_DATA_ENCRYPTION_KEY` e obrigatoria para `APP_MODE=production`/dados reais e recomendada para qualquer ensaio de hardening, mas nao e exigida pelo runtime demo controlado com `APP_MODE=demo` e `REAL_DATA_MODE=false`.
+
+`AUTH_EMAIL_ENABLED=false` e `AUTH_EMAIL_MODE=simulate` devem permanecer ate o dominio/remetente do Resend estarem validados. `RESEND_API_KEY` nunca deve ser versionada ou colada no chat.
 
 ### Frontend Vercel
 - `VITE_API_URL`
@@ -152,7 +163,7 @@ Para `APP_MODE=production`, o backend deve bloquear a inicializacao se qualquer 
 
 ## PostgreSQL para producao real
 
-Producao real com dados de clientes exige PostgreSQL gerenciado. SQLite permanece apenas para desenvolvimento, testes locais e MVP controlado.
+Producao real e qualquer backend publicado com `APP_ENV=production` exigem PostgreSQL gerenciado. SQLite permanece apenas para desenvolvimento e testes locais.
 
 Para preparar PostgreSQL:
 1. Criar um banco PostgreSQL gerenciado no provedor seguro escolhido.
@@ -160,7 +171,8 @@ Para preparar PostgreSQL:
 3. Nunca colar `DATABASE_URL` real no chat.
 4. Nunca commitar `.env`.
 5. Manter `REAL_DATA_MODE=false` ate concluir criptografia em repouso, autenticacao segura, backup/restore, monitoramento e revisao LGPD.
-6. Apos configurar `DATABASE_URL`, redeployar o backend.
+6. Confirmar SSL obrigatorio (`sslmode=require`) e pool compativel com o plano.
+7. Apos configurar `DATABASE_URL`, redeployar o backend.
 
 Smoke test apos configurar PostgreSQL:
 - `GET /healthz`
@@ -206,6 +218,23 @@ Antes de apontar o Render para Supabase:
 7. Testar `GET /healthz` e login demo com dados ficticios.
 
 O script de migrations PostgreSQL usa `backend/migrations/postgres/*.sql`, exige `DIRECT_URL`, mascara a URL nos logs sem exibir usuario, host, senha ou path completo, e permanece bloqueado com `REAL_DATA_MODE=true`.
+
+## Resend transacional
+
+O CRM prepara envio transacional apenas para ativacao administrativa e recuperacao de senha.
+
+Variaveis por nome:
+- `AUTH_EMAIL_ENABLED`
+- `AUTH_EMAIL_MODE`
+- `AUTH_EMAIL_FROM`
+- `APP_PUBLIC_URL`
+- `RESEND_API_KEY`
+
+Modo seguro padrao:
+- `AUTH_EMAIL_ENABLED=false`
+- `AUTH_EMAIL_MODE=simulate`
+
+Para habilitar envio real, validar conta, dominio/remetente e chave no provedor. Nao usar para comunicacao comercial, WhatsApp, SMS ou clientes. Erros do provedor nao devem revelar se a conta existe.
 
 ## Dry-run Supabase via GitHub Actions
 

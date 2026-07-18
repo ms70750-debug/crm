@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Integracao do PR 32 com autenticacao persistente
+
+### Alterado
+- Integrada a preparacao de producao real do PR 32 com a correcao de login/recuperacao do PR 33.
+- Ambiente `APP_ENV=production` passa a exigir `DATABASE_URL` PostgreSQL, bloqueando SQLite local como fallback de producao.
+- `render.yaml` deixa `DATABASE_URL` como secret externo e adiciona metadados de pool PostgreSQL e e-mail transacional.
+- Adicionado servico de e-mail transacional Resend com `AUTH_EMAIL_MODE=simulate` por padrao para ativacao administrativa e recuperacao de senha.
+
+### Mantido
+- Nenhum Supabase real foi criado nesta sessao, nenhuma migration real foi aplicada, nenhum restore real foi executado, nenhum e-mail real foi enviado e `REAL_DATA_MODE=false` permanece obrigatorio.
+
 ## 2026-07-18 - Preparacao tecnica para producao real
 
 ### Adicionado
@@ -11,6 +22,17 @@
 
 ### Mantido
 - Dados reais, comunicacao real, publicacao, backup real, restore real e migrations em provedor continuam bloqueados ate aprovacao final.
+
+## 2026-07-18 - Recuperacao segura de login e senha
+
+### Corrigido
+- Substituido o `mailto:` da tela de login por fluxo real de solicitacao e redefinicao de senha.
+- Adicionados endpoints neutros `/auth/password-recovery/request`, `/auth/password-recovery/validate` e `/auth/password-recovery/confirm`.
+- Separada a finalidade dos tokens de ativacao administrativa e recuperacao de senha para impedir uso cruzado.
+- Redefinicao de senha passa a invalidar sessoes ativas e registrar auditoria sem token ou senha.
+
+### Mantido
+- Nenhum e-mail real e enviado pelo CRM, nenhum token aberto e persistido, nenhuma senha ou secret foi documentado e nenhuma publicacao foi realizada.
 
 ## 2026-07-18 - Homologacao controlada pos-merge do PR 30
 

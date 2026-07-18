@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from app.database import init_db
+from app.database.session import normalize_database_url
 
 
 MIGRATIONS_ROOT = Path(__file__).resolve().parents[1] / "migrations"
@@ -79,8 +80,22 @@ def test_production_postgres_does_not_auto_bootstrap_schema(monkeypatch) -> None
     assert init_db.should_auto_bootstrap_schema() is False
 
 
-def test_sqlite_still_auto_bootstraps_controlled_schema(monkeypatch) -> None:
-    monkeypatch.setenv("APP_ENV", "production")
+def test_sqlite_still_auto_bootstraps_local_controlled_schema(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "local")
     monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
 
     assert init_db.should_auto_bootstrap_schema() is True
+
+
+def test_sqlite_does_not_auto_bootstrap_in_production_environment(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
+
+    assert init_db.should_auto_bootstrap_schema() is False
+
+
+def test_postgres_database_url_uses_psycopg_and_requires_ssl() -> None:
+    normalized = normalize_database_url("postgres://user:password@db.example.test:5432/app")
+
+    assert normalized.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in normalized

@@ -10,7 +10,7 @@ Proposto para aprovacao final. Preparacao tecnica permitida; ativacao com dados 
 O CRM BBB CONSIG esta homologado como `USO_PROPRIO - MVP CONTROLADO`, com SQLite em ambiente de demonstracao e dados ficticios. O uso real por correspondente e equipe interna exige banco gerenciado, backup/restore testado, seguranca, LGPD tecnica, monitoramento e autorizacao explicita do dono.
 
 ## Situacao atual com SQLite
-SQLite permanece adequado para desenvolvimento, testes locais e homologacao controlada. Ele nao e adequado para operacao diaria com dados pessoais, concorrencia, auditoria robusta e recuperacao formal.
+SQLite permanece adequado para desenvolvimento e testes locais. Ele nao e adequado para ambiente publicado com `APP_ENV=production`, mesmo com `REAL_DATA_MODE=false`, porque autenticacao, tokens e sessoes administrativas precisam persistir entre cold starts e deployments.
 
 ## Necessidade de PostgreSQL gerenciado
 PostgreSQL gerenciado e necessario para confiabilidade operacional, isolamento de credenciais, backup externo, controle de conexoes, SSL, migrations formais e rollback por snapshot.
@@ -26,8 +26,11 @@ Supabase PostgreSQL, por ja estar previsto na documentacao, nos workflows e nos 
 ## Decisao
 Preparar PostgreSQL/Supabase como banco alvo de producao real, mantendo `REAL_DATA_MODE=false` ate a autorizacao final. Migrations devem ser aplicadas somente por fluxo formal, com URL direta em secret seguro e sem seed de demonstracao.
 
+Ambiente `APP_ENV=production` deve falhar com seguranca se `DATABASE_URL` nao for PostgreSQL. A aplicacao normaliza PostgreSQL para `postgresql+psycopg://`, exige SSL e usa pool controlado.
+
 ## Impacto
 - Producao real passa a depender de `DATABASE_URL` PostgreSQL no backend.
+- Homologacao publicada futura com `APP_ENV=production` tambem depende de PostgreSQL persistente.
 - Migrations PostgreSQL ficam em `backend/migrations/postgres`.
 - Dados demo nao sao migrados automaticamente.
 - Frontend continua consumindo somente a API do backend.

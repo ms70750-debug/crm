@@ -166,3 +166,9 @@ O provedor externo ainda nao foi escolhido nem configurado. Opcoes futuras devem
 - Nao testar restore com dados reais nesta etapa.
 - Nao armazenar dump aberto como artifact permanente.
 - Nao configurar armazenamento externo real sem nova aprovacao.
+
+## Restore isolado PostgreSQL
+
+Antes de dados reais, o restore deve ser validado em banco PostgreSQL descartavel e isolado, nunca no banco principal. O teste deve aplicar migrations, inserir somente dados sinteticos, gerar backup criptografado, validar checksum, restaurar em segundo banco isolado e confirmar login/autenticacao apos restore.
+
+Sem acesso Supabase autenticado ou `POSTGRES_RESTORE_URL` seguro, o teste externo permanece pendente e deve ser registrado como bloqueio manual, sem simular aprovacao.

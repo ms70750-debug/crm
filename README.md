@@ -24,6 +24,7 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - Em 2026-07-18, a preparacao expressa confirmou testes locais, build, E2E e backup criptografado existente por metadados.
 - Em 2026-07-18, o PR #30 foi mergeado e a homologacao controlada foi validada publicamente sem dados reais, restore real, migration real, integracao real ou novo backup real.
 - Em 2026-07-18, iniciou-se a preparacao tecnica para producao real de uso proprio, mantendo `REAL_DATA_MODE=false` e sem ativacao real.
+- Em ambiente publicado de producao controlada, `DATABASE_URL` deve apontar para PostgreSQL persistente; SQLite fica restrito a desenvolvimento/testes locais.
 
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.
@@ -45,6 +46,11 @@ Rotas principais:
 - `GET /dashboard/resumo`
 - `POST /auth/login`
 - `POST /auth/demo-login`
+- `POST /auth/password-recovery/request`
+- `GET /auth/password-recovery/validate`
+- `POST /auth/password-recovery/confirm`
+- `GET /auth/admin-bootstrap/validate`
+- `POST /auth/admin-bootstrap/activate`
 - `POST /auth/logout`
 - CRUD em `/leads`, `/clientes`, `/propostas` e `/tarefas`
 - `GET /consultas/inss/{cpf}`
@@ -121,9 +127,12 @@ npm run build
 - Aviso visivel de ambiente de demonstracao para impedir uso de dados reais.
 
 ## Banco de dados
-O SQLite e criado automaticamente no startup do backend em `backend/app.db`. A migration inicial versionada esta em `backend/migrations/2026_06_30_initial_schema.sql`.
+O SQLite e criado automaticamente no startup do backend local em `backend/app.db`. A migration inicial versionada esta em `backend/migrations/2026_06_30_initial_schema.sql`.
 
-SQLite permanece como padrao local/controlado. Ele nao e recomendado para producao real com multiplos usuarios e dados sensiveis. O caminho futuro documentado e PostgreSQL via `DATABASE_URL`, com revisao de migrations e seguranca antes de publicar dados reais.
+SQLite permanece apenas como padrao local/teste. Em `APP_ENV=production`, o backend deve falhar se `DATABASE_URL` nao for PostgreSQL persistente. O caminho definitivo documentado e PostgreSQL/Supabase via `DATABASE_URL`, com `DIRECT_URL` separado para migrations/admin e `REAL_DATA_MODE=false` ate aprovacao final.
+
+## E-mail transacional
+O envio transacional esta preparado com Resend para dois usos: ativacao administrativa e recuperacao de senha. Por padrao, `AUTH_EMAIL_ENABLED=false` e `AUTH_EMAIL_MODE=simulate`; assim nenhum e-mail real e enviado sem configuracao explicita de `RESEND_API_KEY`, `AUTH_EMAIL_FROM` e dominio/remetente validado.
 
 ## Referencias analisadas
 As referencias publicas foram baixadas em `referencias/` para inspiracao visual e conceitual. O sistema implementado e proprio, com dados ficticios e sem copia direta.

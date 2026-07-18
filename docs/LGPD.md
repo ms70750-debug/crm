@@ -26,6 +26,9 @@ CPF, telefone, email, beneficio, dados bancarios, observacoes com dados pessoais
 ## Pendencias Para Uso Real
 
 - Provisionar chave real fora do Git.
+- Provisionar PostgreSQL persistente fora do Git e validar restore isolado.
+- Manter `REAL_DATA_MODE=false` ate aprovacao final.
+- Validar provedor transacional apenas para ativacao/recuperacao, sem comunicacao comercial.
 - Definir politica de retencao.
 - Testar backup/restore externo.
 - Fazer auditoria LGPD final.

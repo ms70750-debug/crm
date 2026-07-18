@@ -6,7 +6,6 @@ import { Panel } from "../components/CrudShell";
 import { PageHeader } from "../components/PageHeader";
 
 const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === "true";
-const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL ?? "";
 const demoUsers = [
   ["Administrador", "admin"],
   ["Supervisor", "supervisor"],
@@ -76,9 +75,9 @@ export function Login() {
               <button className="btn" type="submit" disabled={loading}>
                 <LockKeyhole size={16} /> {loading ? "Entrando..." : "Entrar"}
               </button>
-              <a className="text-sm text-lime hover:underline" href={`mailto:${supportEmail}?subject=Recuperacao%20de%20senha%20CRM`}>
+              <button className="w-fit text-sm text-lime hover:underline" type="button" onClick={() => navigate("/recuperar-senha")}>
                 Recuperar senha
-              </a>
+              </button>
             </form>
           </Panel>
           {demoModeEnabled && (

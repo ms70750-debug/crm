@@ -25,6 +25,30 @@ class AdminBootstrapActivateRequest(BaseModel):
     password_confirmation: str
 
 
+class PasswordRecoveryRequest(BaseModel):
+    email: str
+
+
+class PasswordRecoveryRequestResponse(BaseModel):
+    ok: bool = True
+    message: str
+
+
+class PasswordRecoveryValidateResponse(BaseModel):
+    valid: bool
+    expires_at: datetime | None = None
+
+
+class PasswordRecoveryConfirmRequest(BaseModel):
+    token: str
+    password: str
+    password_confirmation: str
+
+
+class PasswordRecoveryConfirmResponse(BaseModel):
+    ok: bool = True
+
+
 class UserRead(ORMModel):
     id: int
     nome: str

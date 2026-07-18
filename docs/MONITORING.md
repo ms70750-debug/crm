@@ -4,6 +4,7 @@ Status: preparado em documentacao e health check seguro. Nao houve contratacao d
 
 ## Backend
 - `GET /healthz` deve retornar status do servico, versao, ambiente seguro e status do banco sem revelar secrets.
+- O health tambem pode retornar metadados booleanos do e-mail transacional, sem exibir remetente, chave ou dominio sensivel.
 - Render deve monitorar `/healthz`.
 - Logs devem permanecer sanitizados, sem CPF, conta, agencia, endereco, token ou URL de banco.
 - Falhas de autenticacao repetidas devem ser investigadas por audit log e rate limit.
@@ -13,6 +14,10 @@ Status: preparado em documentacao e health check seguro. Nao houve contratacao d
 - PostgreSQL real deve usar SSL obrigatorio, pool controlado e limites de conexao adequados ao plano.
 - Alertas desejados: conexoes elevadas, indisponibilidade, armazenamento, lentidao e erro de migration.
 - Banco isolado de restore nunca deve ficar publico.
+
+## E-mail transacional
+- Enquanto `AUTH_EMAIL_MODE=simulate`, nenhum alerta de entrega real e esperado.
+- Ao habilitar Resend, monitorar falhas de envio de ativacao e recuperacao sem registrar e-mail completo, token ou link.
 
 ## Frontend
 - Vercel deve monitorar disponibilidade do frontend.

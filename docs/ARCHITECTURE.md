@@ -120,3 +120,11 @@ A sessao atual usa cookie HttpOnly. Em producao controlada o cookie deve ser `Se
 
 ## Render e cold start
 O health check publicado respondeu apos nova tentativa durante a auditoria. Esse comportamento e compatavel com cold start/latencia de servico gerenciado. Nao houve alteracao de plano ou infraestrutura nesta recuperacao.
+
+## Persistencia e e-mail transacional
+
+Em `APP_ENV=production`, o backend deve usar PostgreSQL gerenciado por `DATABASE_URL`; SQLite fica restrito a desenvolvimento/testes locais. A conexao PostgreSQL e normalizada para o driver `psycopg`, exige SSL e usa pool pequeno com `pool_pre_ping` para reduzir falhas de conexao em provedores gerenciados.
+
+Migrations/admin continuam separados do runtime por `DIRECT_URL`. Seeds demo nao devem ser executados em producao PostgreSQL.
+
+O envio transacional fica isolado em Resend, com `AUTH_EMAIL_MODE=simulate` por padrao. Os usos autorizados sao somente ativacao administrativa e recuperacao de senha; comunicacao comercial, WhatsApp e SMS continuam fora do escopo.

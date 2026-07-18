@@ -12,6 +12,8 @@ import { INSS } from "./pages/INSS";
 import { LeadDetail } from "./pages/LeadDetail";
 import { Leads } from "./pages/Leads";
 import { Login } from "./pages/Login";
+import { PasswordRecoveryRequest } from "./pages/PasswordRecoveryRequest";
+import { PasswordRecoveryReset } from "./pages/PasswordRecoveryReset";
 import { Proposals } from "./pages/Proposals";
 import { Tasks } from "./pages/Tasks";
 import { Trainings } from "./pages/Trainings";
@@ -23,6 +25,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/recuperar-senha" element={<PasswordRecoveryRequest />} />
+        <Route path="/redefinir-senha" element={<PasswordRecoveryReset />} />
         <Route path="/ativar-admin" element={<AdminActivation />} />
         <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
         <Route path="/leads" element={<ProtectedPage><Leads /></ProtectedPage>} />

@@ -18,7 +18,7 @@ def is_sqlite_database() -> bool:
 
 def should_auto_bootstrap_schema() -> bool:
     app_env = os.environ.get("APP_ENV", "local").strip().lower()
-    return is_sqlite_database() or app_env not in PRODUCTION_ENV_VALUES
+    return app_env not in PRODUCTION_ENV_VALUES
 
 
 def apply_migrations() -> None:

@@ -9,6 +9,7 @@ from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.routes import auth, clients, consents, dashboard, leads, proposals, simulations, tasks, whatsapp
+from app.services.auth_email import auth_email_health
 from app.services.security import check_rate_limit
 
 APP_VERSION = os.environ.get("APP_VERSION", "0.1.0")
@@ -71,6 +72,7 @@ def healthz():
         "service": "BBB Consig CRM API",
         "version": APP_VERSION,
         "database": db_status,
+        "auth_email": auth_email_health(),
         "environment": os.environ.get("APP_MODE", "demo"),
     }
 

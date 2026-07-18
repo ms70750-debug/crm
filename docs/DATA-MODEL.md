@@ -107,7 +107,7 @@ Esses campos nao liberam dados reais automaticamente. Eles apenas criam compatib
 
 `auth_sessions` armazena somente hash do `sid`, usuario, `created_at`, `expires_at`, `revoked_at` e motivo de revogacao. O token completo nao deve ser persistido em banco ou logs.
 
-`admin_bootstrap_tokens` armazena somente hash SHA-256 do token de ativacao, e-mail normalizado, proposito, expiracao, uso, origem segura e identificador da execucao GitHub quando disponivel. O token aberto nunca deve ser persistido. Tokens expiram em ate 60 minutos, sao de uso unico e ficam restritos ao fluxo de primeiro administrador real/recuperacao administrativa do mesmo e-mail.
+`admin_bootstrap_tokens` armazena somente hash SHA-256 do token, e-mail normalizado, proposito, expiracao, uso, origem segura e identificador da execucao GitHub quando disponivel. O token aberto nunca deve ser persistido. Tokens expiram, sao de uso unico e ficam restritos ao proposito registrado: `first_admin_activation` para ativacao do primeiro administrador real ou `password_recovery` para redefinicao de senha de usuario ativo.
 
 Todas as tabelas possuem `id`, `created_at` e `updated_at`. Campos legados como `data_criacao` e `criado_em` permanecem para compatibilidade do MVP.
 
@@ -302,3 +302,9 @@ erDiagram
     string checksum
   }
 ```
+
+## Persistencia por ambiente
+
+SQLite e usado somente em desenvolvimento/testes locais. Ambientes com `APP_ENV=production` devem usar PostgreSQL persistente; ausencia de `DATABASE_URL` PostgreSQL ou uso de SQLite deve bloquear a inicializacao.
+
+Tabelas de autenticacao (`users`, `auth_sessions`, `admin_bootstrap_tokens` e `audit_logs`) precisam existir no PostgreSQL antes de ativar administrador real. Tokens guardam apenas hash e proposito, nunca o valor aberto.
