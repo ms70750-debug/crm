@@ -5,6 +5,8 @@ ROOT = Path(__file__).resolve().parents[2]
 LOGIN_PAGE = ROOT / "frontend" / "src" / "pages" / "Login.tsx"
 LAYOUT_COMPONENT = ROOT / "frontend" / "src" / "components" / "Layout.tsx"
 ADMIN_ACTIVATION_PAGE = ROOT / "frontend" / "src" / "pages" / "AdminActivation.tsx"
+PASSWORD_RECOVERY_REQUEST_PAGE = ROOT / "frontend" / "src" / "pages" / "PasswordRecoveryRequest.tsx"
+PASSWORD_RECOVERY_RESET_PAGE = ROOT / "frontend" / "src" / "pages" / "PasswordRecoveryReset.tsx"
 APP_ROUTES = ROOT / "frontend" / "src" / "App.tsx"
 AUTH_CONTEXT = ROOT / "frontend" / "src" / "auth" / "AuthContext.tsx"
 API_LIB = ROOT / "frontend" / "src" / "lib" / "api.ts"
@@ -20,6 +22,8 @@ def test_public_login_hides_demo_shortcuts_without_explicit_flag() -> None:
     assert 'demoModeEnabled ? "grid gap-5 lg:grid-cols-[1fr_1.1fr]"' in content
     assert "admin@bbbconsig.demo" not in content
     assert "BbbConsig@2026" not in content
+    assert "mailto:" not in content
+    assert 'navigate("/recuperar-senha")' in content
 
 
 def test_layout_hides_demo_badges_without_explicit_flag() -> None:
@@ -44,6 +48,27 @@ def test_admin_activation_page_removes_token_from_url_and_does_not_store_it() ->
     assert "/auth/admin-bootstrap/activate" in auth_context
     assert "X-Admin-Bootstrap-Token" in content
     assert "/validate?token=" not in content
+
+
+def test_password_recovery_pages_use_real_routes_without_storing_tokens() -> None:
+    request_page = PASSWORD_RECOVERY_REQUEST_PAGE.read_text(encoding="utf-8")
+    reset_page = PASSWORD_RECOVERY_RESET_PAGE.read_text(encoding="utf-8")
+    routes = APP_ROUTES.read_text(encoding="utf-8")
+
+    assert 'path="/recuperar-senha"' in routes
+    assert 'path="/redefinir-senha"' in routes
+    assert "/auth/password-recovery/request" in request_page
+    assert "/auth/password-recovery/validate" in reset_page
+    assert "/auth/password-recovery/confirm" in reset_page
+    assert "window.history.replaceState" in reset_page
+    assert "X-Password-Recovery-Token" in reset_page
+    assert "localStorage" not in request_page
+    assert "sessionStorage" not in request_page
+    assert "localStorage" not in reset_page
+    assert "sessionStorage" not in reset_page
+    assert "console." not in request_page
+    assert "console." not in reset_page
+    assert "/validate?token=" not in reset_page
 
 
 def test_frontend_auth_token_is_memory_only() -> None:
