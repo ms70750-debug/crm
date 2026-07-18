@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-07-18 - Identidade visual BBB no CRM
+
+### Alterado
+- Aplicada a identidade visual oficial da BBB Consig ao frontend, com base clara, azul institucional, apoio emerald, cinzas grafite e ativos locais do dominio oficial.
+- Atualizados layout, navegacao, login, cards, tabelas, formularios, badges, graficos e estados de feedback para o novo sistema visual.
+- Mantidas rotas, contratos de API, regras de autenticacao, modo demo e bloqueios contra dados reais.
+
+### Mantido
+- Backend, banco de dados, migrations, Supabase, Render, Vercel, secrets, backups reais, merges e publicacao nao foram alterados.
+
 ## 2026-07-18 - Restore descartavel PostgreSQL 17 no CI
 
 ### Adicionado

@@ -34,7 +34,7 @@ export function LeadDetail() {
         <Link className="btn-secondary" to="/leads"><ArrowLeft size={16} /> Voltar</Link>
       </div>
       <PageHeader title={lead?.nome ?? "Detalhe do lead"} subtitle="Historico, timeline e acoes da esteira comercial." />
-      {detail.error && <Panel className="mb-4 text-red-300">{detail.error}</Panel>}
+      {detail.error && <Panel className="mb-4 text-red-700">{detail.error}</Panel>}
       {!lead ? (
         <Panel>Carregando lead...</Panel>
       ) : (
@@ -61,15 +61,15 @@ export function LeadDetail() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <StatusBadge value={lead.status} />
-                {isOverdue(lead.proximo_contato) && <span className="badge border-red-400/40 text-red-300">Contato atrasado</span>}
+                {isOverdue(lead.proximo_contato) && <span className="badge border-red-200 bg-red-50 text-red-700">Contato atrasado</span>}
               </div>
               <div>
-                <p className="text-xs text-slate-400">Proximo contato</p>
+                <p className="text-xs text-slate-500">Proximo contato</p>
                 <strong>{lead.proximo_contato || "-"}</strong>
               </div>
               <div>
-                <p className="mb-1 text-xs text-slate-400">Observacoes operacionais</p>
-                <p className="rounded-md border border-line bg-white/5 p-3 text-sm text-slate-300">{lead.observacoes || "Sem observacoes."}</p>
+                <p className="mb-1 text-xs text-slate-500">Observacoes operacionais</p>
+                <p className="subtle-card text-sm text-slate-600">{lead.observacoes || "Sem observacoes."}</p>
               </div>
               <div className="grid gap-2">
                 <button className="btn" onClick={convertLead}><UserCheck size={16} /> Converter em cliente</button>
@@ -94,20 +94,20 @@ export function LeadDetail() {
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md border border-line bg-white/5 p-3"><p className="text-xs text-slate-400">{label}</p><strong>{value}</strong></div>;
+  return <div className="subtle-card"><p className="text-xs text-slate-500">{label}</p><strong>{value}</strong></div>;
 }
 
 function Timeline({ items }: { items: LeadTimelineEvent[] }) {
   return (
     <div className="grid gap-3">
-      {items.length === 0 && <p className="text-sm text-slate-400">Nenhum registro ainda.</p>}
+      {items.length === 0 && <p className="text-sm text-slate-500">Nenhum registro ainda.</p>}
       {items.map((item, index) => (
-        <div key={`${item.tipo}-${index}`} className="rounded-md border border-line bg-white/5 p-3">
+        <div key={`${item.tipo}-${index}`} className="subtle-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <strong>{item.titulo}</strong>
             <span className="badge">{item.tipo}</span>
           </div>
-          <p className="mt-1 text-sm text-slate-300">{item.descricao}</p>
+          <p className="mt-1 text-sm text-slate-600">{item.descricao}</p>
           {item.data && <p className="mt-2 text-xs text-slate-500">{item.data}</p>}
         </div>
       ))}

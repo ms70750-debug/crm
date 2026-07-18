@@ -37,16 +37,16 @@ export function PasswordRecoveryRequest() {
       <PageHeader title="Recuperar senha" subtitle="Prepare um link seguro para redefinir o acesso ao CRM BBB Consig." />
       <Panel>
         <form className="grid gap-3" onSubmit={submit}>
-          <label className="text-sm text-slate-400">
+          <label className="text-sm text-slate-500">
             E-mail
             <input className="input mt-1" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </label>
-          {message && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{message}</div>}
-          {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+          {message && <div className="alert-success">{message}</div>}
+          {error && <div className="alert-error">{error}</div>}
           <button className="btn" type="submit" disabled={loading}>
             <MailCheck size={16} /> {loading ? "Preparando..." : "Preparar recuperacao"}
           </button>
-          <button className="w-fit text-sm text-slate-400 hover:text-lime" type="button" onClick={() => navigate("/login")}>
+          <button className="w-fit text-sm font-semibold text-slate-500 hover:text-lime" type="button" onClick={() => navigate("/login")}>
             Voltar ao login
           </button>
         </form>

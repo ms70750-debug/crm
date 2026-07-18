@@ -22,12 +22,12 @@ export function Dashboard() {
   return (
     <>
       <PageHeader title="Dashboard" subtitle="Resumo executivo da operacao, proximos contatos e esteira comercial." />
-      {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
+      {error && <Panel className="mb-4 text-red-700">{error}</Panel>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cards.map(([key, label, Icon]) => (
           <Panel key={key}>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">{label}</span>
+              <span className="text-sm text-slate-500">{label}</span>
               <Icon className="text-lime" size={20} />
             </div>
             <div className="mt-3 text-3xl font-semibold">
@@ -42,11 +42,11 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.propostas_por_status ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="status" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
-                <Bar dataKey="total" fill="#c7ff45" radius={[6, 6, 0, 0]} />
+                <CartesianGrid stroke="#dbe5f2" />
+                <XAxis dataKey="status" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe5f2", color: "#0f2143" }} />
+                <Bar dataKey="total" fill="#0b5ed7" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -56,11 +56,11 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.leads_por_status ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="status" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
-                <Bar dataKey="total" fill="#4ade80" radius={[6, 6, 0, 0]} />
+                <CartesianGrid stroke="#dbe5f2" />
+                <XAxis dataKey="status" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe5f2", color: "#0f2143" }} />
+                <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -70,10 +70,10 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.leads_por_origem ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="origem" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
+                <CartesianGrid stroke="#dbe5f2" />
+                <XAxis dataKey="origem" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe5f2", color: "#0f2143" }} />
                 <Bar dataKey="total" fill="#38bdf8" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -83,12 +83,12 @@ export function Dashboard() {
           <h3 className="mb-4 flex items-center gap-2 font-semibold"><CalendarClock size={18} /> Proximos contatos</h3>
           <div className="grid gap-3">
             {(data?.proximos_contatos ?? []).map((lead) => (
-              <div key={lead.id} className="rounded-md border border-line bg-white/5 p-3">
+              <div key={lead.id} className="subtle-card">
                 <div className="flex items-center justify-between gap-2">
                   <strong>{lead.nome}</strong>
                   <StatusBadge value={lead.status} />
                 </div>
-                <p className="mt-1 text-sm text-slate-400">{lead.telefone} - {lead.proximo_contato}</p>
+                <p className="mt-1 text-sm text-slate-500">{lead.telefone} - {lead.proximo_contato}</p>
               </div>
             ))}
           </div>

@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
-import { BarChart3, BookOpen, Bot, ClipboardList, LayoutDashboard, LogOut, MessageCircle, Search, Settings, Users, WalletCards } from "lucide-react";
+import { BarChart3, BookOpen, ClipboardList, LayoutDashboard, LogOut, MessageCircle, Search, Settings, ShieldCheck, Users, WalletCards } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import type { Perfil } from "../types";
+import { BrandLogo } from "./BrandLogo";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "supervisor", "operador", "parceiro"] },
@@ -26,13 +27,10 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="panel sticky top-0 z-20 flex h-auto flex-col rounded-none border-l-0 border-t-0 lg:h-screen">
-        <div className="flex items-center gap-3 border-b border-line p-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-lime text-black">
-            <Bot size={22} />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-lime">BBB Consig</div>
-            <div className="text-lg font-bold tracking-wide">CRM</div>
+        <div className="border-b border-line p-5">
+          <BrandLogo />
+          <div className="mt-4 flex items-center gap-2 rounded-md bg-[#eef5ff] px-3 py-2 text-xs font-medium text-lime">
+            <ShieldCheck size={15} /> Operacao interna segura
           </div>
         </div>
         <nav className="grid gap-1 p-3">
@@ -43,8 +41,8 @@ export function Layout({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition ${
-                    isActive ? "bg-lime text-black" : "text-slate-300 hover:bg-white/5 hover:text-lime"
+                  `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${
+                    isActive ? "bg-lime text-white shadow-[0_10px_24px_rgba(11,94,215,0.18)]" : "text-slate-600 hover:bg-[#eef5ff] hover:text-lime"
                   }`
                 }
               >
@@ -56,15 +54,15 @@ export function Layout({ children }: { children: ReactNode }) {
         </nav>
       </aside>
       <main className="min-w-0">
-        <header className="sticky top-0 z-10 border-b border-line bg-ink/85 px-5 py-4 backdrop-blur">
+        <header className="sticky top-0 z-10 border-b border-line bg-white/90 px-5 py-4 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-lime">Operacao consignado</p>
-              <h1 className="text-xl font-semibold">BBB Consig CRM</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime">Operacao consignado</p>
+              <h1 className="text-xl font-semibold text-ink">BBB Consig CRM</h1>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {demoModeEnabled && <div className="badge border-lime/30 text-lime">Evolution API em simulacao</div>}
-              {demoModeEnabled && <div className="badge border-yellow-400/40 text-yellow-200">Ambiente demo: nao insira dados reais</div>}
+              {demoModeEnabled && <div className="badge border-amber-200 bg-amber-50 text-amber-700">Ambiente demo: nao insira dados reais</div>}
               {user && <div className="badge">{user.nome} - {roleLabel(user.role)}</div>}
               <button
                 className="btn-secondary py-1 text-xs"

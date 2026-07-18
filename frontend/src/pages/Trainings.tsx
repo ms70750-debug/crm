@@ -17,12 +17,12 @@ export function Trainings() {
       </div>
       <Panel className="mt-5">
         <h3 className="mb-3 font-semibold">Base de conhecimento</h3>
-        <p className="text-sm leading-6 text-slate-300">A primeira versao organiza a operacao em quatro etapas: captacao, enriquecimento, simulacao e contrato. O objetivo e reduzir esquecimentos, padronizar atendimento e manter toda acao registrada antes de qualquer integracao real.</p>
+        <p className="text-sm leading-6 text-slate-600">A primeira versao organiza a operacao em quatro etapas: captacao, enriquecimento, simulacao e contrato. O objetivo e reduzir esquecimentos, padronizar atendimento e manter toda acao registrada antes de qualquer integracao real.</p>
       </Panel>
     </>
   );
 }
 
 function List({ items }: { items: string[] }) {
-  return <div className="grid gap-3">{items.map((item) => <div className="rounded-md border border-line bg-white/5 p-3 text-sm" key={item}>{item}</div>)}</div>;
+  return <div className="grid gap-3">{items.map((item) => <div className="subtle-card text-sm" key={item}>{item}</div>)}</div>;
 }

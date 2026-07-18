@@ -51,7 +51,7 @@ export function Tasks() {
   return (
     <>
       <PageHeader title="Tarefas" subtitle="Pendencias operacionais, prioridades e proximos passos do time." />
-      {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
+      {error && <Panel className="mb-4 text-red-700">{error}</Panel>}
       <CrudShell>
         <Panel>
           <h3 className="mb-4 font-semibold">Nova tarefa</h3>
@@ -72,9 +72,9 @@ export function Tasks() {
           </div>
           <div className="grid gap-3">
             {(data ?? []).map((task) => (
-              <div key={task.id} className="rounded-md border border-line bg-white/5 p-3">
+              <div key={task.id} className="subtle-card">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div><strong>{task.titulo}</strong><p className="text-sm text-slate-400">{task.responsavel} - vence {task.data_vencimento ?? "-"}</p></div>
+                  <div><strong>{task.titulo}</strong><p className="text-sm text-slate-500">{task.responsavel} - vence {task.data_vencimento ?? "-"}</p></div>
                   <div className="flex items-center gap-2"><StatusBadge value={task.status} /><span className="badge">{task.prioridade}</span>{task.status !== "Concluida" && <button className="btn-secondary" onClick={() => complete(task.id)}>Concluir</button>}{(user?.role === "admin" || user?.role === "supervisor") && <button className="btn-secondary" onClick={() => deleteTask(task.id)}>Excluir</button>}</div>
                 </div>
               </div>

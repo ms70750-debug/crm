@@ -24,6 +24,7 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - Em 2026-07-18, a preparacao expressa confirmou testes locais, build, E2E e backup criptografado existente por metadados.
 - Em 2026-07-18, o PR #30 foi mergeado e a homologacao controlada foi validada publicamente sem dados reais, restore real, migration real, integracao real ou novo backup real.
 - Em 2026-07-18, iniciou-se a preparacao tecnica para producao real de uso proprio, mantendo `REAL_DATA_MODE=false` e sem ativacao real.
+- Em 2026-07-18, o frontend recebeu uma proposta de redesign alinhada ao site oficial da BBB Consig, sem alterar backend, banco, dados reais ou publicacao.
 - Em ambiente publicado de producao controlada, `DATABASE_URL` deve apontar para PostgreSQL persistente; SQLite fica restrito a desenvolvimento/testes locais.
 
 ## Stack
@@ -125,6 +126,9 @@ npm run build
 - Treinamentos com aulas, checklist, prompts e base inicial.
 - Administracao com usuarios ficticios e Evolution API em simulacao.
 - Aviso visivel de ambiente de demonstracao para impedir uso de dados reais.
+
+## Identidade visual
+O frontend usa uma identidade clara inspirada no site oficial da BBB Consig, com azul institucional, apoio emerald, grafite para texto e superficies brancas/off-white. Os ativos de marca usados no CRM ficam locais em `frontend/public/brand/`, sem dependencia remota em runtime.
 
 ## Banco de dados
 O SQLite e criado automaticamente no startup do backend local em `backend/app.db`. A migration inicial versionada esta em `backend/migrations/2026_06_30_initial_schema.sql`.
