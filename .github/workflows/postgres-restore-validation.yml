@@ -65,6 +65,7 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           docker run --rm --network host \
+            --user "$(id -u):$(id -g)" \
             -v "$PWD:$PWD" -w "$PWD" \
             -e PGPASSWORD="${PGPASSWORD:-}" \
             -e PGDATABASE="${PGDATABASE:-}" \
@@ -74,6 +75,7 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           docker run --rm --network host \
+            --user "$(id -u):$(id -g)" \
             -v "$PWD:$PWD" -w "$PWD" \
             -e PGPASSWORD="${PGPASSWORD:-}" \
             postgres:17 pg_restore "$@"
