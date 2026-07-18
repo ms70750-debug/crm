@@ -10,8 +10,9 @@ from app.services.privacy import mask_cpf
 from app.services.security import log_audit
 
 
-def simulate_product(db: Session, produto: str, cpf: str, customer_id: int | None = None) -> dict:
+def simulate_product(db: Session, produto: str, cpf: str, customer_id: int | None = None, actor_user_id: int | None = None) -> dict:
     rule = PRODUCT_RULES[produto]
+    rule_version = rule.get("rule_version", "demo-v1")
     if produto == "INSS":
         result = {
             "cpf": mask_cpf(cpf),
@@ -35,20 +36,36 @@ def simulate_product(db: Session, produto: str, cpf: str, customer_id: int | Non
             "regra_aplicada": rule,
         }
     input_payload = {"cpf": mask_cpf(cpf), "produto": produto, "customer_id": customer_id}
-    snapshot_payload = {"input": input_payload, "rule": rule, "result": result, "timestamp": datetime.utcnow().isoformat()}
+    snapshot_payload = {
+        "input": input_payload,
+        "rule": rule,
+        "rule_version": rule_version,
+        "actor_user_id": actor_user_id,
+        "result": result,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
     payload_hash = hashlib.sha256(json.dumps(snapshot_payload, sort_keys=True).encode()).hexdigest()
     simulation = Simulation(
         customer_id=customer_id,
         cpf_masked=mask_cpf(cpf),
         produto=produto,
         rule_id=rule["rule_id"],
+        rule_version=rule_version,
+        created_by_user_id=actor_user_id,
         input_json=json.dumps(input_payload, ensure_ascii=False),
         result_json=json.dumps(result, ensure_ascii=False),
         payload_hash=payload_hash,
     )
     db.add(simulation)
     db.flush()
-    log_audit(db, "simulation_created", "simulation", simulation.id, metadata={"cpf": cpf, "produto": produto, "rule_id": rule["rule_id"]})
+    log_audit(
+        db,
+        "simulation_created",
+        "simulation",
+        simulation.id,
+        actor_user_id=actor_user_id,
+        metadata={"cpf": cpf, "produto": produto, "rule_id": rule["rule_id"], "rule_version": rule_version},
+    )
     db.commit()
-    result["snapshot"] = {"id": simulation.id, "payload_hash": payload_hash, "rule_id": rule["rule_id"]}
+    result["snapshot"] = {"id": simulation.id, "payload_hash": payload_hash, "rule_id": rule["rule_id"], "rule_version": rule_version}
     return result

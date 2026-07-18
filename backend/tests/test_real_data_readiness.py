@@ -134,6 +134,7 @@ def test_consent_requires_active_record_and_opt_out_blocks_message() -> None:
     consent = client.post("/consents", headers=headers, json={"customer_id": client_id, "channel": "whatsapp", "purpose": "simulacao", "source": "pytest"})
     assert consent.status_code == 201
     assert consent.json()["purpose"] == "simulacao"
+    assert consent.json()["terms_version"] == "minuta-lgpd-v1"
     sent = client.post("/whatsapp/simular-envio", headers=headers, json={"destinatario_tipo": "cliente", "destinatario_id": client_id, "modelo": "primeiro_contato", "mensagem": "Mensagem ficticia."})
     assert sent.status_code == 201
     revoked = client.post(f"/consents/{consent.json()['id']}/revoke", headers=headers)
@@ -201,6 +202,37 @@ def test_auth_session_migration_applies_to_temp_sqlite_and_reverts_from_snapshot
     db_path.write_bytes(snapshot.read_bytes())
     with sqlite3.connect(db_path) as conn:
         assert conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='auth_sessions'").fetchone() is None
+
+
+def test_production_readiness_metadata_migration_applies_to_temp_sqlite_and_has_postgres_rollback(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[2]
+    sqlite_migration = root / "backend" / "migrations" / "sqlite" / "2026_07_18_production_readiness_metadata.sql"
+    postgres_migration = root / "backend" / "migrations" / "postgres" / "2026_07_18_production_readiness_metadata.sql"
+    rollback_migration = root / "backend" / "migrations" / "postgres" / "rollback" / "2026_07_18_production_readiness_metadata_down.sql"
+    assert sqlite_migration.exists()
+    assert postgres_migration.exists()
+    assert rollback_migration.exists()
+    assert "terms_version" in postgres_migration.read_text(encoding="utf-8")
+    assert "DROP COLUMN IF EXISTS terms_version" in rollback_migration.read_text(encoding="utf-8")
+
+    db_path = tmp_path / "production-readiness-metadata.sqlite"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE consents (id INTEGER PRIMARY KEY)")
+        conn.execute("CREATE TABLE simulations (id INTEGER PRIMARY KEY)")
+    snapshot = tmp_path / "before-production-readiness-metadata.sqlite"
+    snapshot.write_bytes(db_path.read_bytes())
+
+    _apply_sql_file(db_path, sqlite_migration)
+    with sqlite3.connect(db_path) as conn:
+        consent_columns = {row[1] for row in conn.execute("PRAGMA table_info(consents)").fetchall()}
+        simulation_columns = {row[1] for row in conn.execute("PRAGMA table_info(simulations)").fetchall()}
+        assert "terms_version" in consent_columns
+        assert {"rule_version", "created_by_user_id"}.issubset(simulation_columns)
+
+    db_path.write_bytes(snapshot.read_bytes())
+    with sqlite3.connect(db_path) as conn:
+        reverted_columns = {row[1] for row in conn.execute("PRAGMA table_info(consents)").fetchall()}
+    assert "terms_version" not in reverted_columns
 
 
 def test_fictitious_backup_and_restore(tmp_path: Path) -> None:

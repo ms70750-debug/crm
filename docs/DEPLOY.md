@@ -23,6 +23,27 @@ Validacoes locais pos-merge:
 
 Limites preservados: nenhum dado real, nenhuma migration real, nenhuma restauracao real, nenhuma integracao real e nenhum novo backup real foram executados.
 
+## Preparacao para producao real USO_PROPRIO - 2026-07-18
+
+Nao publicar automaticamente esta preparacao. O Render nao deve ser redeployado para dados reais e o Vercel nao deve receber configuracao real enquanto `REAL_DATA_MODE=false`.
+
+Separacao esperada:
+- Desenvolvimento: SQLite local, dados ficticios, `APP_MODE=demo`.
+- Homologacao: ambiente publicado atual, dados ficticios, integracoes simuladas.
+- Producao preparada: PostgreSQL gerenciado, secrets em painel seguro, `REAL_DATA_MODE=false` ate aprovacao final.
+
+Variaveis por metadados, sem valores:
+- Render/producao preparada: `APP_ENV`, `APP_MODE`, `PYTHON_VERSION`, `BBB_AUTH_SECRET`, `BBB_DATA_ENCRYPTION_KEY`, `CORS_ORIGINS`, `DATABASE_URL`, `REAL_DATA_MODE`, `EVOLUTION_API_MODE`, `APP_VERSION`.
+- GitHub Actions: `SUPABASE_DIRECT_URL`, `BACKUP_ENCRYPTION_KEY`, `POSTGRES_RESTORE_URL`.
+- Vercel: `VITE_API_URL`, `VITE_APP_MODE`.
+- Monitoramento: `MONITORING_ALERTS_ENABLED`, `MONITORING_CONTACT_CHANNEL`.
+
+Efeito da ausencia:
+- Sem `DATABASE_URL` PostgreSQL, producao real deve bloquear.
+- Sem chave de criptografia, dados pessoais nao podem ser gravados.
+- Sem backup configurado e restore isolado aprovado, ativacao real deve bloquear.
+- Sem `CORS_ORIGINS` restrito ao frontend, API nao deve operar em modo real.
+
 ## Deploy controlado MVP - 2026-07-02
 
 Status atual: online e validado para homologacao com dados ficticios.
@@ -38,7 +59,7 @@ Health check publico: `https://crm-2340.onrender.com/healthz`
 
 Resposta esperada:
 ```json
-{"status":"ok","service":"BBB Consig CRM API"}
+{"status":"ok","service":"BBB Consig CRM API","version":"0.1.0","database":"ok","environment":"demo"}
 ```
 
 Login demo: validado com sucesso no ambiente Vercel.

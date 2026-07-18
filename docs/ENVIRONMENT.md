@@ -14,6 +14,10 @@ Nunca versionar `.env` real. Use `.env.example` e configure valores no painel do
 | `DATABASE_URL` | vazio no exemplo | Sim em deploy | Runtime da API. Em Supabase, usar a URL do pooler transaction-mode. SQLite local e MVP controlado continuam permitidos. |
 | `DIRECT_URL` | vazio no exemplo | Nao para runtime | Uso exclusivo de migrations/admin. Em Supabase, usar a URL do pooler session-mode. |
 | `REAL_DATA_MODE` | `false` | Sim em deploy | Manter `false` ate concluir PostgreSQL, criptografia, autenticacao segura, backup/restore, monitoramento e revisao LGPD. |
+| `APP_VERSION` | `0.1.0` | Opcional | Identificacao segura no health check, sem secrets. |
+| `POSTGRES_RESTORE_URL` | vazio | Somente restore isolado | URL de banco descartavel para teste de restauracao. Nunca usar banco principal. |
+| `MONITORING_ALERTS_ENABLED` | `false` | Opcional | Indica se alertas externos ja foram configurados no provedor. |
+| `MONITORING_CONTACT_CHANNEL` | vazio | Opcional | Canal operacional de alerta, sem tokens ou credenciais. |
 | `EVOLUTION_API_MODE` | `simulation` | Sim | Manter `simulation` nesta fase. |
 | `EVOLUTION_API_URL` | vazio | Nao | Nao configurar envio real agora. |
 | `EVOLUTION_API_TOKEN` | vazio | Nao | Nunca commitar tokens. |

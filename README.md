@@ -9,6 +9,8 @@ NAO AUTORIZADO PARA DADOS REAIS ATE APROVACAO FINAL.
 
 Classificacao atual: **USO_PROPRIO - MVP CONTROLADO**.
 
+Classificacao usada para preparacao de producao real: **USO_PROPRIO**. O repositorio nao esta declarado como SaaS e nao possui multi-tenancy; qualquer mudanca para SaaS exige ADR proprio, isolamento por organizacao, billing, termos e aprovacao comercial.
+
 Este projeto ainda nao esta liberado para operacao real com dados pessoais de clientes. Uso atual permitido apenas para teste controlado com dados ficticios.
 
 - Publico esperado agora: dono da operacao e equipe interna restrita.
@@ -21,6 +23,7 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - A fundacao tecnica de readiness ja existe para revisao, mas nao ativa uso com dados reais, WhatsApp real ou publicacao sem aprovacao explicita.
 - Em 2026-07-18, a preparacao expressa confirmou testes locais, build, E2E e backup criptografado existente por metadados.
 - Em 2026-07-18, o PR #30 foi mergeado e a homologacao controlada foi validada publicamente sem dados reais, restore real, migration real, integracao real ou novo backup real.
+- Em 2026-07-18, iniciou-se a preparacao tecnica para producao real de uso proprio, mantendo `REAL_DATA_MODE=false` e sem ativacao real.
 
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.
@@ -90,6 +93,8 @@ Ultima validacao de homologacao controlada: `2026-07-18`, `main` em `17a79f970f4
 - Frontend Vercel: veja `docs/DEPLOY-VERCEL.md`.
 - Variaveis de ambiente: veja `docs/ENVIRONMENT.md`.
 - Checklist pre-deploy: veja `docs/PRE-DEPLOY-CHECKLIST.md`.
+- Checklist de ativacao real: veja `docs/PRODUCTION-REAL-CHECKLIST.md`.
+- Monitoramento: veja `docs/MONITORING.md`.
 - Rotina de manutencao: veja `docs/MAINTENANCE.md`.
 
 Comando de start do backend em provedor:

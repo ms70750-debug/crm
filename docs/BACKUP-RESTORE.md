@@ -13,6 +13,26 @@ Ultima verificacao por metadados em 2026-07-18:
 - Retencao efetiva: 7 dias, com expiracao indicada em `2026-07-25T07:40:49Z`.
 - Classificacao: valido por metadados; nao houve download, descriptografia ou restore real.
 
+## Politica minima para uso proprio real
+
+- Frequencia: diaria.
+- Criptografia: antes de qualquer upload.
+- Checksum: obrigatorio para pacote criptografado e manifesto.
+- Retencao: diaria minima de 7 dias, com recomendacao de copias semanais/mensais conforme capacidade.
+- Duplicidade: workflow com concurrency sem cancelamento para evitar sobreposicao.
+- Artifact: nunca incluir `.sql`, `.tar` ou dump aberto.
+- Logs: secrets mascarados e erros sanitizados.
+- Restore: somente em banco isolado ate autorizacao formal.
+
+## Recuperacao
+
+1. Confirmar incidente e congelar alteracoes quando necessario.
+2. Selecionar backup criptografado aprovado.
+3. Validar checksum.
+4. Restaurar primeiro em banco isolado.
+5. Validar tabelas, constraints, indices, login sintetico, cliente ficticio, audit log e soft delete.
+6. Solicitar autorizacao explicita antes de qualquer restauracao no banco principal.
+
 ## Escopo Atual
 
 O projeto possui scripts auxiliares para backup/restauracao ficticia local, usados em testes automatizados com banco temporario, e workflow operacional de backup criptografado do Supabase via CLI oficial.

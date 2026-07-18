@@ -34,6 +34,17 @@ Para USO PROPRIO, o Supabase deve operar em arquitetura `BACKEND-ONLY`.
 ## Readiness para dados reais
 O backend possui verificacao de prontidao para `APP_MODE=production`. Esse modo permanece bloqueado ate existirem `DATABASE_URL`, `BBB_DATA_ENCRYPTION_KEY`, `BBB_AUTH_SECRET` forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
 
+## Preparacao para producao real USO_PROPRIO
+
+A arquitetura alvo para dados reais continua backend-only:
+- Frontend Vercel conversa apenas com a API FastAPI.
+- API FastAPI acessa PostgreSQL gerenciado via `DATABASE_URL`.
+- Supabase nao deve ser usado diretamente pelo frontend.
+- Migrations administrativas usam `DIRECT_URL`/`SUPABASE_DIRECT_URL` apenas em secret seguro.
+- Restore isolado usa `POSTGRES_RESTORE_URL` e nunca aponta para o banco principal.
+
+O health check `/healthz` deve validar a conexao do banco com `SELECT 1` e retornar somente status, versao, ambiente e nome do servico, sem URL, usuario, host ou senha.
+
 ## Protecao de dados
 Campos sensiveis devem usar envelope criptografado versionado com Fernet (`cryptography`) e hash deterministico separado para CPF. A chave `BBB_DATA_ENCRYPTION_KEY` deve existir somente em ambiente seguro e nunca no Git.
 

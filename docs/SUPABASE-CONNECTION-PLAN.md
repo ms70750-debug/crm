@@ -6,6 +6,8 @@ Projeto Supabase identificado pelo dono: Projeto ms70750-debug.
 
 Classificacao do CRM: USO PROPRIO. Dados reais continuam proibidos ate auditoria final, backup/restore externo validado, credenciais seguras e aprovacao explicita do dono.
 
+Atualizacao 2026-07-18: a preparacao tecnica continua usando Supabase como PostgreSQL gerenciado preferencial. Nesta tarefa nao foi criado projeto novo nem alterado secret, pois nao havia conector/credencial segura disponivel sem acao pessoal. O caminho permanece GitHub Actions/manual confirmado, com `REAL_DATA_MODE=false`.
+
 ## Escopo
 
 Este plano prepara a conexao futura do CRM BBB CONSIG com o projeto Supabase ja criado. Ele nao conecta banco real, nao aplica migrations, nao altera Render/Vercel, nao publica e nao solicita valores secretos no chat.

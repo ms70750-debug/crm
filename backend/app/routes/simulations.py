@@ -12,10 +12,10 @@ router = APIRouter(prefix="/consultas", tags=["consultas"])
 @router.get("/inss/{cpf}")
 def simulate_inss(cpf: str, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     assert_demo_cpf_allowed(cpf)
-    return simulate_product(db, "INSS", cpf)
+    return simulate_product(db, "INSS", cpf, actor_user_id=user.id)
 
 
 @router.get("/fgts/{cpf}")
 def simulate_fgts(cpf: str, db: Session = Depends(get_db), user=Depends(require_roles("admin", "supervisor", "operador"))):
     assert_demo_cpf_allowed(cpf)
-    return simulate_product(db, "FGTS", cpf)
+    return simulate_product(db, "FGTS", cpf, actor_user_id=user.id)

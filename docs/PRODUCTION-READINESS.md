@@ -4,6 +4,19 @@ Status: ADRs 009 a 013 APROVADOS para USO PROPRIO. O sistema nao esta autorizado
 
 Os ADRs de PostgreSQL, criptografia, autenticacao de producao, backup/restauracao e retencao LGPD foram aprovados pelo dono em 2026-07-12. Essa aprovacao nao autoriza publicacao, uso de dados reais, integracoes reais, SaaS ou merge automatico do PR no 10.
 
+## Atualizacao 2026-07-18 - producao real USO_PROPRIO
+
+Preparacao tecnica em branch segura:
+- PostgreSQL/Supabase permanece provedor alvo.
+- `REAL_DATA_MODE` deve continuar `false` ate aprovacao final.
+- Migrations novas sao aditivas e versionadas.
+- Consentimento registra versao do termo.
+- Simulacao registra versao da regra e usuario executor quando autenticado.
+- `/healthz` passa a validar o banco sem revelar detalhes sensiveis.
+- Restore real isolado em Supabase segue pendente por exigir acesso seguro ao provedor.
+
+Essa atualizacao prepara aprovacao futura, mas nao ativa producao real.
+
 ## Checklist
 
 | Area | Condicao | Status |

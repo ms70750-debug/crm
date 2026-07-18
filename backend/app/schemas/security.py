@@ -47,6 +47,7 @@ class ConsentCreate(BaseModel):
     purpose: str = "comunicacao"
     granted: bool = True
     source: str = "demo"
+    terms_version: str = "minuta-lgpd-v1"
 
 
 class ConsentRead(ConsentCreate, ORMModel):

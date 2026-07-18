@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-18 - Preparacao tecnica para producao real
+
+### Adicionado
+- Criado ADR `docs/adr/009-postgresql-producao-real.md` para formalizar PostgreSQL/Supabase como caminho de producao real em `USO_PROPRIO`.
+- Adicionados metadados de readiness: versao de termo em consentimentos e versao/usuario tecnico em snapshots de simulacao.
+- Adicionadas migrations aditivas `2026_07_18_production_readiness_metadata` para SQLite controlado e PostgreSQL, com rollback PostgreSQL.
+- Criados `docs/MONITORING.md`, `docs/PRODUCTION-REAL-CHECKLIST.md` e `docs/audit/RESTORE-TEST_2026-07-18.md`.
+- Atualizado `/healthz` para validar banco e expor somente metadados seguros.
+
+### Mantido
+- Dados reais, comunicacao real, publicacao, backup real, restore real e migrations em provedor continuam bloqueados ate aprovacao final.
+
 ## 2026-07-18 - Homologacao controlada pos-merge do PR 30
 
 ### Validado

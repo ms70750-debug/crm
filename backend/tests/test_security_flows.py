@@ -11,7 +11,7 @@ from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.main import app
-from app.models import AuditLog, AuthSession, Client
+from app.models import AuditLog, AuthSession, Client, Consent, Simulation
 from app.services.privacy import is_valid_cpf
 
 
@@ -117,6 +117,24 @@ def test_login_rejects_invalid_password() -> None:
     init_db()
     response = client.post("/auth/login", json={"email": "admin@bbbconsig.demo", "password": "senha-errada"})
     assert response.status_code == 401
+
+
+def test_healthz_reports_safe_database_and_version_metadata() -> None:
+    init_db()
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["database"] == "ok"
+    assert body["version"]
+    assert "DATABASE_URL" not in response.text
+    assert "postgresql://" not in response.text
+
+
+def test_global_rate_limit_blocks_excessive_requests() -> None:
+    init_db()
+    responses = [client.get("/auth/me") for _ in range(301)]
+    assert responses[-1].status_code == 429
 
 
 def test_login_rate_limit_blocks_repeated_attempts() -> None:
@@ -388,6 +406,7 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     consent = client.post("/consents", headers=headers, json={"customer_id": body["id"], "channel": "whatsapp", "source": "pytest"})
     assert consent.status_code == 201
     assert consent.json()["granted"] is True
+    assert consent.json()["terms_version"] == "minuta-lgpd-v1"
 
     sent = client.post(
         "/whatsapp/simular-envio",
@@ -401,6 +420,7 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     assert simulation.status_code == 200
     assert "snapshot" in simulation.json()
     assert "regra_aplicada" in simulation.json()
+    assert simulation.json()["snapshot"]["rule_version"] == "demo-v1"
 
     deleted = client.delete(f"/clientes/{body['id']}", headers=headers)
     assert deleted.status_code == 200
@@ -415,3 +435,10 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
         audit = db.scalar(select(AuditLog).where(AuditLog.action == "whatsapp_simulation_created").order_by(AuditLog.id.desc()))
         assert audit is not None
         assert cpf not in (audit.metadata_json or "")
+        stored_consent = db.scalar(select(Consent).where(Consent.customer_id == body["id"]).order_by(Consent.id.desc()))
+        assert stored_consent is not None
+        assert stored_consent.terms_version == "minuta-lgpd-v1"
+        stored_simulation = db.scalar(select(Simulation).where(Simulation.cpf_masked == simulation.json()["cpf"]).order_by(Simulation.id.desc()))
+        assert stored_simulation is not None
+        assert stored_simulation.rule_version == "demo-v1"
+        assert stored_simulation.created_by_user_id is not None

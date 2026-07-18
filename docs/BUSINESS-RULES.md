@@ -53,3 +53,9 @@ Campos de criptografia, readiness, backup e restauracao administrativa sao prepa
 
 ## BR-018 Restauracao administrativa
 Restauracao de registro com soft delete deve ser restrita a admin/supervisor, auditada e usada somente em fluxo controlado.
+
+## BR-019 Versao do termo de consentimento
+Todo consentimento deve registrar a versao do termo/minuta apresentada ao cliente. Textos juridicos devem ser revisados por profissional habilitado antes de uso real.
+
+## BR-020 Versao da regra de simulacao
+Toda simulacao deve registrar `rule_id`, `rule_version`, usuario executor quando autenticado e hash do snapshot. Regras demonstrativas nao geram proposta real sem validacao comercial.
