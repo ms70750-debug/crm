@@ -122,6 +122,7 @@ jobs:
       - name: Create encrypted backup
         run: |
           set -euo pipefail
+          mkdir -p restore-work
           python - <<'PY' > restore-metrics/key.env
           from cryptography.fernet import Fernet
           print("BACKUP_ENCRYPTION_KEY=" + Fernet.generate_key().decode("utf-8"))
@@ -130,7 +131,7 @@ jobs:
           echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
           echo "backup_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> restore-metrics/timing.env
           start=$(date +%s)
-          DIRECT_URL="$SOURCE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" python backend/scripts/create_encrypted_postgres_backup.py --output-dir restore-artifact
+          TMPDIR="$PWD/restore-work" DIRECT_URL="$SOURCE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" python backend/scripts/create_encrypted_postgres_backup.py --output-dir restore-artifact
           end=$(date +%s)
           echo "backup_duration_seconds=$((end-start))" >> restore-metrics/timing.env
           test -z "$(find restore-artifact -name '*.dump' -print -quit)"
@@ -183,7 +184,7 @@ jobs:
         if: always()
         run: |
           set +e
-          rm -rf restore-artifact restore-metrics .ci-bin
+          rm -rf restore-artifact restore-metrics restore-work .ci-bin
           export PGPASSWORD="$DB_PASSWORD"
           docker run --rm --network host -e PGPASSWORD postgres:17 \
             psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
