@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-07-18 - Preparacao sem acesso a Locaweb
+
+### Validado
+- Criada e enviada a branch de seguranca `safety/pre-advance-without-dns-pr32-2026-07-18` apontando para o head atual do PR #32.
+- PR #32 reconfirmado aberto, nao draft, mergeavel e com GitHub Action `PostgreSQL Backend Only Validation` aprovada.
+- Supabase principal `crm-bbb-consig-prod` reconfirmado ativo, PostgreSQL 17.6, SSL ligado, schema `public` vazio e advisors sem lints.
+- Frontend publico atual e backend `/healthz` responderam 200, sem alterar producao.
+- Vercel autenticado confirmou preview do PR #32 em `READY` no commit atual.
+
+### Preparado
+- Checklist final atualizado para explicitar DNS na Locaweb, chave Resend restrita, backup pre-migration, restore descartavel, merge, Render com PostgreSQL, validacao Vercel, primeiro administrador e um unico e-mail de ativacao.
+- Resend permanece validado apenas em modo `simulate`, com `AUTH_EMAIL_ENABLED=false`.
+
+### Mantido
+- Nenhum merge, nenhuma publicacao, nenhuma migration real, nenhum backup real, nenhum restore real, nenhum administrador real, nenhum e-mail real e nenhum dado real foram executados.
+
 ## 2026-07-18 - Tentativa segura de go-live do PR 32
 
 ### Validado

@@ -2,7 +2,7 @@
 
 ## Status
 
-Pendente por acesso externo. Nenhum banco Supabase foi criado ou alterado nesta sessao.
+Bloqueado com seguranca para restore real. O Supabase principal foi validado por leitura, mas nenhum banco foi alterado nesta sessao.
 
 ## Escopo aprovado
 
@@ -22,15 +22,20 @@ O teste deve usar somente banco PostgreSQL descartavel e isolado, com dados sint
 10. Validar login apos restore.
 11. Limpar ambientes descartaveis.
 
-## Resultado desta tarefa
+## Resultado atualizado em 2026-07-18
 
-- Supabase localizado: nao, sem conector/acesso autenticado nesta sessao.
-- Projeto criado: nao.
+- Supabase localizado: sim, por conector autenticado.
+- Projeto principal confirmado: `crm-bbb-consig-prod`.
+- PostgreSQL: 17.6, saudavel, SSL ligado.
+- Schema `public`: vazio antes das migrations da aplicacao.
+- Advisors: sem lints retornados pelo conector.
+- Projeto criado: nao nesta tarefa.
 - Plano pago criado: nao.
 - Migration real aplicada: nao.
 - Backup real executado: nao.
 - Restore real executado: nao.
 - Dados reais usados: nao.
+- Motivo do bloqueio: ambiente local sem `psql`/`pg_dump`/`pg_restore`/Docker disponivel e conector Supabase sem recurso de backup/export criptografado ou restore descartavel sem custo/confirmacao externa.
 
 ## RPO/RTO
 
@@ -39,4 +44,4 @@ O teste deve usar somente banco PostgreSQL descartavel e isolado, com dados sint
 
 ## Acao manual inevitavel
 
-Provisionar ou disponibilizar acesso seguro a um projeto Supabase PostgreSQL isolado, com `DIRECT_URL`/`POSTGRES_RESTORE_URL` em secret store, sem expor valores no chat ou no Git.
+Disponibilizar execucao segura do workflow `PostgreSQL Backup Restore Test` com artifact de backup criptografado valido, `BACKUP_ENCRYPTION_KEY` em secret store e PostgreSQL temporario do CI. Nunca usar o Supabase principal como destino do restore.
