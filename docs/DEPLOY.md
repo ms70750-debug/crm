@@ -23,6 +23,20 @@ Resposta esperada:
 
 Login demo: validado com sucesso no ambiente Vercel.
 
+## Retomada expressa de pre-publicacao - 2026-07-18
+
+Estado verificado sem alterar provedores, secrets, banco ou workflow:
+
+- Branch principal validada em `78b03f44552740e8e9364dc664afabe147c0d951`.
+- Backend local: suite completa aprovada.
+- Frontend: `npm ci`, `npm audit --audit-level=moderate` e `npm run build` aprovados.
+- E2E local: fluxos principais aprovados; ativacao admin permanece ignorada quando `ADMIN_ACTIVATION_LINK` nao esta configurado.
+- Backend Render: `/healthz` respondeu apos nova tentativa, comportamento compativel com cold start.
+- Frontend Vercel: `/login` respondeu 200.
+- Backup real criptografado existente foi confirmado por metadados do GitHub Actions; nenhum novo backup ou restore foi executado.
+
+Essa verificacao sustenta aprovacao para publicacao controlada/homologacao com dados ficticios. Nao sustenta producao real com dados pessoais.
+
 ## Bloqueios atuais
 - Autenticacao atual e adequada apenas para MVP controlado.
 - Falta hardening completo de producao real.
@@ -63,11 +77,12 @@ Somente configure valores no painel seguro do provedor. Nao cole segredos no cha
 - `APP_MODE`
 - `PYTHON_VERSION`
 - `BBB_AUTH_SECRET`
-- `BBB_DATA_ENCRYPTION_KEY`
 - `CORS_ORIGINS`
 - `DATABASE_URL`
 - `REAL_DATA_MODE`
 - `EVOLUTION_API_MODE`
+
+`BBB_DATA_ENCRYPTION_KEY` e obrigatoria para `APP_MODE=production`/dados reais e recomendada para qualquer ensaio de hardening, mas nao e exigida pelo runtime demo controlado com `APP_MODE=demo` e `REAL_DATA_MODE=false`.
 
 ### Frontend Vercel
 - `VITE_API_URL`
@@ -240,3 +255,13 @@ Antes de qualquer uso com dados reais, implementar e validar:
 - Backup e restore testados.
 - Monitoramento e alertas.
 - Revisao LGPD final.
+
+## Reversao controlada
+
+Se a publicacao controlada falhar:
+
+1. Nao inserir dados reais.
+2. Restaurar no provedor o ultimo deploy estavel da `main` validada.
+3. Manter `APP_MODE=demo`, `REAL_DATA_MODE=false` e `EVOLUTION_API_MODE=simulation`.
+4. Conferir `GET /healthz` no backend e `/login` no frontend.
+5. Registrar o incidente sem incluir secrets, URL real de banco ou dados pessoais.

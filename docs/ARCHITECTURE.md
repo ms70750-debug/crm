@@ -46,11 +46,13 @@ Em PostgreSQL/Supabase futuro, o fluxo permanece: frontend -> backend -> banco. 
 
 A fundacao de backup externo segue arquitetura operacional separada da aplicacao:
 
-- GitHub Actions manual executa `pg_dump` usando secret seguro.
-- O dump aberto existe apenas em diretorio temporario do job.
-- O arquivo e criptografado antes de virar artifact.
+- O workflow ativo `Supabase Encrypted Backup` usa Supabase CLI oficial em GitHub Actions, nao o script legado direto de `pg_dump`.
+- O Supabase CLI gera arquivos temporarios de roles, schema e dados; eles sao empacotados e criptografados antes do upload do artifact.
+- O artifact publicado deve conter somente pacote `.tar.enc`, manifesto sanitizado e checksum externo.
+- Arquivos SQL abertos existem apenas no runner temporario e nao devem ser enviados como artifact.
 - Manifesto e checksums nao contem credenciais nem conteudo de cliente.
-- Restore e testado somente em PostgreSQL temporario.
+- O codigo legado de backup/preflight com SQLAlchemy normaliza URLs para `postgresql+psycopg://` e permanece coberto por testes, mas nao e o mecanismo ativo do workflow atual.
+- Restore real continua proibido sem ambiente isolado e aprovacao explicita.
 - Armazenamento externo real ainda nao esta ativado.
 
 ## Modo demo obrigatorio
