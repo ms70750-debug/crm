@@ -2,6 +2,17 @@
 
 Status: preparado em documentacao e health check seguro. Nao houve contratacao de servico externo nem alteracao de provedor.
 
+## Tentativa de go-live - 2026-07-18
+
+Monitoramento externo real nao foi alterado nesta tentativa. Vercel foi validado por conector autenticado e o backend publico respondeu `/healthz` 200, mas Render nao teve conector/CLI/sessao autenticada disponivel para configurar health check, logs, variaveis de producao ou rollback operacional.
+
+Antes de liberar `REAL_DATA_MODE=true`, confirmar no painel seguro:
+- health check do Render apontando para `/healthz`;
+- alerta de falha de deploy e indisponibilidade;
+- alerta do workflow de backup;
+- logs sanitizados sem CPF, e-mail completo, token ou URL de banco;
+- responsavel por incidente e canal de contato.
+
 ## Backend
 - `GET /healthz` deve retornar status do servico, versao, ambiente seguro e status do banco sem revelar secrets.
 - O health tambem pode retornar metadados booleanos do e-mail transacional, sem exibir remetente, chave ou dominio sensivel.

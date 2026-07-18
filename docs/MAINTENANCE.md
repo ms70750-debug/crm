@@ -27,3 +27,14 @@ Este calendario vale para o MVP controlado e deve ser revisado antes de producao
 
 ## Bloqueio permanente
 Este projeto ainda nao esta liberado para operacao real com dados pessoais de clientes. Uso atual permitido apenas para teste controlado com dados ficticios.
+
+## Go-live bloqueado em 2026-07-18
+
+Antes de nova tentativa de producao real:
+- confirmar acesso seguro ao Render, Resend e GitHub Actions secrets;
+- criar backup pre-migration criptografado;
+- validar restore em PostgreSQL descartavel;
+- aplicar migrations somente depois do backup;
+- publicar backend/frontend somente apos testes verdes;
+- criar apenas um administrador real, sem senha gerada pelo sistema;
+- habilitar `REAL_DATA_MODE=true` somente quando nenhum critico permanecer.

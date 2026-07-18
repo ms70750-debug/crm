@@ -2,6 +2,16 @@
 
 Status: ADR 012 APROVADO para USO PROPRIO. Backup real criptografado validado no GitHub Actions em artifact protegido; restauracao real continua proibida sem ambiente isolado e aprovacao explicita.
 
+## Tentativa de go-live - 2026-07-18
+
+O go-live real do PR #32 foi bloqueado antes das migrations porque nao havia caminho automatizavel seguro para criar backup pre-migration criptografado do Supabase principal e validar restore em PostgreSQL descartavel nesta sessao.
+
+Garantias preservadas:
+- nenhum restore foi executado no Supabase principal;
+- nenhuma migration real foi aplicada;
+- nenhum arquivo aberto de dump foi criado;
+- nenhum segredo ou URL completa de banco foi registrado.
+
 Ultima verificacao por metadados em 2026-07-18:
 
 - Workflow: `Supabase Encrypted Backup`.

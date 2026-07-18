@@ -3,6 +3,16 @@
 ## Status
 Deploy controlado/teste online validado. Producao real com dados de clientes continua bloqueada.
 
+## Tentativa de go-live real - 2026-07-18
+
+Status: bloqueado com seguranca antes de qualquer merge, migration real, deploy ou habilitacao de dados reais.
+
+- Checkpoints criados: `safety/pre-go-live-pr32-2026-07-18`, `pre-go-live-pr32-2026-07-18` e `safety/pr32-before-final-go-live-2026-07-18`.
+- PR #32 validado localmente: backend 194 testes, frontend build/audit OK e E2E 2 aprovados com 1 skip controlado.
+- Supabase principal validado por leitura: PostgreSQL 17.6, SSL ligado, `public` vazio e advisors sem lints.
+- Vercel autenticado confirmou preview do PR #32 pronto e producao ainda na `main` anterior.
+- Go-live segue bloqueado ate configurar Render, Resend, GitHub Actions secrets, backup pre-migration criptografado e restore descartavel.
+
 ## Homologacao controlada pos-merge - 2026-07-18
 
 Status: validado para uso restrito com dados ficticios.

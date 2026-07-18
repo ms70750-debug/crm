@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-18 - Tentativa segura de go-live do PR 32
+
+### Validado
+- Criados e enviados os checkpoints `safety/pre-go-live-pr32-2026-07-18`, `pre-go-live-pr32-2026-07-18` e `safety/pr32-before-final-go-live-2026-07-18`.
+- PR #32 confirmado aberto, nao draft, mergeavel e com head `fd705e841d1ecc57f07417e626502fa1ce60fc23`.
+- Backend completo aprovado com 194 testes, frontend aprovado com `npm ci`, `npm audit --audit-level=moderate` e build, E2E local aprovado com 2 testes e 1 skip controlado.
+- Supabase principal `crm-bbb-consig-prod` confirmado ativo, PostgreSQL 17.6, SSL ligado, schema `public` vazio e advisors sem lints.
+- Vercel autenticado confirmou preview do PR #32 pronto e producao ainda na `main` anterior.
+
+### Bloqueado
+- Go-live real nao foi executado porque backup pre-migration criptografado, restore descartavel, configuracao Render, validacao Resend e GitHub Actions secrets nao puderam ser concluidos com os acessos disponiveis nesta sessao.
+- Nenhuma migration real foi aplicada, nenhum backup real foi criado, nenhum restore real foi executado, nenhum e-mail real foi enviado, nenhum administrador real foi criado, nenhum deploy foi acionado e `REAL_DATA_MODE` nao foi habilitado.
+
 ## 2026-07-18 - Integracao do PR 32 com autenticacao persistente
 
 ### Alterado

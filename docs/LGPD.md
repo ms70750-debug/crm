@@ -2,6 +2,17 @@
 
 Status: ADRs 009 a 013 APROVADOS para USO PROPRIO. Dados reais continuam proibidos ate auditoria LGPD final e aprovacao explicita do dono.
 
+## Tentativa de go-live - 2026-07-18
+
+A autorizacao de producao real foi recebida, mas a liberacao de dados reais foi bloqueada porque permanecem pendentes backup pre-migration criptografado, restore descartavel aprovado, configuracao segura de Render, validacao Resend e monitoramento operacional.
+
+Durante a tentativa:
+- nenhum cliente real foi criado;
+- nenhum administrador real foi criado;
+- nenhum e-mail real foi enviado;
+- `REAL_DATA_MODE` permaneceu desabilitado;
+- nenhuma URL completa de banco, token, cookie, senha ou link de ativacao foi registrado.
+
 ## Principios Aplicados
 
 - Minimizar coleta.
