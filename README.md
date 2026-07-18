@@ -19,7 +19,8 @@ Este projeto ainda nao esta liberado para operacao real com dados pessoais de cl
 - No modo demo, CPFs matematicamente validos sao bloqueados em cadastros e simulacoes para reduzir risco de uso indevido.
 - Producao real fica condicionada aos ADRs de hardening, PostgreSQL, backup/restore, monitoramento, criptografia em repouso, autenticacao segura e auditoria final.
 - A fundacao tecnica de readiness ja existe para revisao, mas nao ativa uso com dados reais, WhatsApp real ou publicacao sem aprovacao explicita.
-- Em 2026-07-18, a preparacao expressa confirmou testes locais, build, E2E e backup criptografado existente por metadados, sem executar nova publicacao.
+- Em 2026-07-18, a preparacao expressa confirmou testes locais, build, E2E e backup criptografado existente por metadados.
+- Em 2026-07-18, o PR #30 foi mergeado e a homologacao controlada foi validada publicamente sem dados reais, restore real, migration real, integracao real ou novo backup real.
 
 ## Stack
 - Frontend: React, TypeScript, Vite, React Router, Tailwind CSS, Lucide React, Recharts, React Hook Form e Zod.
@@ -82,6 +83,8 @@ Ambiente publicado somente para homologacao com dados ficticios ou anonimizados:
 - Health check: `https://crm-2340.onrender.com/healthz`
 
 O uso com dados reais continua proibido nesta fase.
+
+Ultima validacao de homologacao controlada: `2026-07-18`, `main` em `17a79f970f4721625f8143c47192c67425ec85e5`, com checkpoint de seguranca `pre-homologacao-pr-30-2026-07-18`.
 
 - Backend Render: veja `docs/DEPLOY-RENDER.md`.
 - Frontend Vercel: veja `docs/DEPLOY-VERCEL.md`.
