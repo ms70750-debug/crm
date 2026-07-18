@@ -3,6 +3,26 @@
 ## Status
 Deploy controlado/teste online validado. Producao real com dados de clientes continua bloqueada.
 
+## Homologacao controlada pos-merge - 2026-07-18
+
+Status: validado para uso restrito com dados ficticios.
+
+- PR mergeado: #30.
+- Hash antigo da `main`: `78b03f44552740e8e9364dc664afabe147c0d951`.
+- Hash novo da `main`: `17a79f970f4721625f8143c47192c67425ec85e5`.
+- Checkpoint de seguranca: branch `safety/pre-homologacao-pr-30-2026-07-18` e tag `pre-homologacao-pr-30-2026-07-18`.
+- Frontend Vercel: `https://crm-sepia-beta.vercel.app` respondeu 200.
+- Backend Render: `https://crm-2340.onrender.com/healthz` respondeu 200 com `{"status":"ok","service":"BBB Consig CRM API"}`.
+- Smoke seguro: CORS permitido para o frontend, login/logout com usuario demo ficticio aprovados.
+
+Validacoes locais pos-merge:
+- Backend completo: 181 testes aprovados.
+- Backup/restore ficticio e normalizacao/configuracao: 79 testes aprovados.
+- Frontend: `npm audit --audit-level=moderate` sem vulnerabilidades e `npm run build` aprovado.
+- E2E: aprovado, com ativacao admin ignorada quando `ADMIN_ACTIVATION_LINK` nao esta configurado.
+
+Limites preservados: nenhum dado real, nenhuma migration real, nenhuma restauracao real, nenhuma integracao real e nenhum novo backup real foram executados.
+
 ## Deploy controlado MVP - 2026-07-02
 
 Status atual: online e validado para homologacao com dados ficticios.

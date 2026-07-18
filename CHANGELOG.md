@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Homologacao controlada pos-merge do PR 30
+
+### Validado
+- Merge do PR #30 concluido na `main` em `17a79f970f4721625f8143c47192c67425ec85e5`, com checkpoint previo em `78b03f44552740e8e9364dc664afabe147c0d951`.
+- Criados branch e tag de seguranca `safety/pre-homologacao-pr-30-2026-07-18` e `pre-homologacao-pr-30-2026-07-18`.
+- Backend local, suite focada de backup/restore ficticio, build frontend, audit e E2E foram reexecutados apos o merge.
+- Homologacao publica validada em `https://crm-sepia-beta.vercel.app` e `https://crm-2340.onrender.com/healthz`.
+
+### Mantido
+- Nenhum dado real foi usado, nenhuma migration real foi aplicada, nenhuma restauracao real foi executada, nenhum disparo real de integracao foi feito e nenhum novo backup real foi iniciado.
+
 ## 2026-07-18 - Preparacao expressa para publicacao controlada
 
 ### Documentado
