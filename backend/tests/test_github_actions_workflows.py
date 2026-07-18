@@ -10,6 +10,7 @@ PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.ym
 POSTGRES_BACKEND_ONLY_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backend-only-validation.yml"
 ENCRYPTED_BACKUP_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-encrypted-backup.yml"
 BACKUP_RESTORE_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backup-restore-test.yml"
+POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-restore-validation.yml"
 CREATE_FIRST_ADMIN_WORKFLOW_PATH = WORKFLOWS_DIR / "create-first-admin.yml"
 
 
@@ -275,6 +276,41 @@ def test_backup_restore_workflow_uses_temporary_postgres_and_no_supabase() -> No
     assert "actions/upload-artifact" not in content
     assert "printenv" not in content
     assert "env |" not in content
+
+
+def test_postgres_restore_validation_workflow_uses_disposable_postgres_17() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: PostgreSQL Backup and Restore Validation" in content
+    assert "pull_request:" in content
+    assert "workflow_dispatch:" in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 20" in content
+    assert "postgres:17" in content
+    assert "crm_restore_source" in content
+    assert "crm_restore_target" in content
+    assert "apply_postgres_migrations.py --apply" in content
+    assert "ci_postgres_restore_validation.py seed-source" in content
+    assert "create_encrypted_postgres_backup.py" in content
+    assert "verify_encrypted_backup_restore.py" in content
+    assert "ci_postgres_restore_validation.py validate-restore" in content
+
+
+def test_postgres_restore_validation_workflow_uses_no_real_secrets_or_external_database() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "SUPABASE_DIRECT_URL" not in content
+    assert "secrets." not in content
+    assert "postgresql://" not in content
+    assert "postgres://" not in content
+    assert "AUTH_EMAIL_ENABLED: \"false\"" in content
+    assert "AUTH_EMAIL_MODE: simulate" in content
+    assert "REAL_DATA_MODE: \"false\"" in content
+    assert "actions/upload-artifact" not in content
+    assert "printenv" not in content
+    assert "env |" not in content
+    assert "::add-mask::$SOURCE_URL" in content
+    assert "::add-mask::$RESTORE_URL" in content
 
 
 def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:

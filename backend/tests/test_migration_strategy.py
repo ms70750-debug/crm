@@ -55,6 +55,19 @@ def test_postgres_backend_only_permissions_runs_after_readiness() -> None:
     )
 
 
+def test_postgres_official_migration_chain_includes_admin_and_readiness_metadata() -> None:
+    from scripts.apply_postgres_migrations import load_postgres_migrations
+
+    names = [path.name for path in load_postgres_migrations()]
+
+    assert names.index("2026_07_12_backend_only_permissions.sql") < names.index(
+        "2026_07_15_first_admin_bootstrap.sql"
+    )
+    assert names.index("2026_07_15_first_admin_bootstrap.sql") < names.index(
+        "2026_07_18_production_readiness_metadata.sql"
+    )
+
+
 def test_postgres_bootstrap_creates_base_tables_used_by_later_migrations() -> None:
     bootstrap = MIGRATIONS_ROOT / "postgres" / "2026_07_01_000_postgres_bootstrap_schema.sql"
     content = bootstrap.read_text(encoding="utf-8").lower()

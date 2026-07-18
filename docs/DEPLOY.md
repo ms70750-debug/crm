@@ -13,6 +13,8 @@ Status: bloqueado com seguranca antes de qualquer merge, migration real, deploy 
 - Vercel autenticado confirmou preview do PR #32 pronto e producao ainda na `main` anterior.
 - Go-live segue bloqueado ate configurar Render, Resend, GitHub Actions secrets, backup pre-migration criptografado e restore descartavel.
 
+Atualizacao tecnica do PR #32: foi preparado o workflow `PostgreSQL Backup and Restore Validation` para aprovar restore em PostgreSQL 17 descartavel no GitHub Actions, sem usar Supabase principal, secrets reais, dados reais ou ferramentas instaladas no computador local. Mesmo com esse teste aprovado, a ativacao real continua bloqueada ate DNS/Resend, secrets dos paineis, conexao controlada Render-Supabase e autorizacao final.
+
 ## Homologacao controlada pos-merge - 2026-07-18
 
 Status: validado para uso restrito com dados ficticios.

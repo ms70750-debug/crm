@@ -12,11 +12,12 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import create_engine, text
 
 try:
-    from create_encrypted_postgres_backup import sha256_file
+    from create_encrypted_postgres_backup import postgres_client_database_url, sha256_file
 except ModuleNotFoundError:
-    from scripts.create_encrypted_postgres_backup import sha256_file
+    from scripts.create_encrypted_postgres_backup import postgres_client_database_url, sha256_file
 
 EXPECTED_TABLES = (
+    "admin_bootstrap_tokens",
     "audit_logs",
     "auth_sessions",
     "backup_audit_logs",
@@ -99,7 +100,7 @@ def run_pg_restore(database_url: str, dump_path: Path) -> None:
         "--exit-on-error",
         "--no-owner",
         "--dbname",
-        database_url,
+        postgres_client_database_url(database_url),
         str(dump_path),
     ]
     try:
@@ -155,8 +156,8 @@ def validate_restore(database_url: str) -> RestoreVerification:
             raise RuntimeError(f"Tabelas ausentes no restore: {sorted(missing)}")
 
         migration_count = int(conn.execute(text("SELECT COUNT(*) FROM schema_migrations")).scalar() or 0)
-        if migration_count < 5:
-            raise RuntimeError("Restore incompleto: menos de 5 migrations registradas.")
+        if migration_count < 7:
+            raise RuntimeError("Restore incompleto: menos de 7 migrations registradas.")
 
         index_count = int(
             conn.execute(
@@ -185,7 +186,7 @@ def validate_restore(database_url: str) -> RestoreVerification:
         if index_count <= 0 or constraint_count <= 0:
             raise RuntimeError("Restore incompleto: indices ou constraints ausentes.")
 
-        for table in ("auth_sessions", "audit_logs", "consents", "simulations"):
+        for table in ("admin_bootstrap_tokens", "auth_sessions", "audit_logs", "consents", "simulations"):
             if table not in tables:
                 raise RuntimeError(f"Componente critico ausente: {table}")
 

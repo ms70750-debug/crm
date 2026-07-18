@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-18 - Restore descartavel PostgreSQL 17 no CI
+
+### Adicionado
+- Criado workflow `PostgreSQL Backup and Restore Validation` para PRs, usando PostgreSQL 17 descartavel no GitHub Actions.
+- Adicionado script `backend/scripts/ci_postgres_restore_validation.py` para criar dados sinteticos e validar origem/restauracao sem Supabase, secrets reais ou dados pessoais.
+- O workflow aplica as migrations oficiais, gera backup com `pg_dump` 17, calcula checksum, criptografa com chave efemera, remove o dump aberto, restaura com `pg_restore` 17 e valida o backend no banco restaurado.
+
+### Corrigido
+- O aplicador oficial PostgreSQL agora inclui as migrations recentes de primeiro admin e metadados de readiness, alem de registrar `checksum` e `applied_at` em `schema_migrations`.
+- Scripts de backup/restore convertem `postgresql+psycopg://` para URL nativa apenas ao chamar ferramentas cliente PostgreSQL, mantendo SQLAlchemy no driver `psycopg`.
+
+### Mantido
+- Nenhum Supabase principal foi alterado, nenhum merge foi feito, nenhuma publicacao foi executada, nenhum secret real foi usado e `AUTH_EMAIL_MODE=simulate`/`REAL_DATA_MODE=false` permanecem obrigatorios.
+
 ## 2026-07-18 - Preparacao sem acesso a Locaweb
 
 ### Validado

@@ -181,4 +181,42 @@ O provedor externo ainda nao foi escolhido nem configurado. Opcoes futuras devem
 
 Antes de dados reais, o restore deve ser validado em banco PostgreSQL descartavel e isolado, nunca no banco principal. O teste deve aplicar migrations, inserir somente dados sinteticos, gerar backup criptografado, validar checksum, restaurar em segundo banco isolado e confirmar login/autenticacao apos restore.
 
-Sem acesso Supabase autenticado ou `POSTGRES_RESTORE_URL` seguro, o teste externo permanece pendente e deve ser registrado como bloqueio manual, sem simular aprovacao.
+### GitHub Actions descartavel
+
+O workflow `PostgreSQL Backup and Restore Validation` executa essa validacao sem depender de Docker, `psql`, `pg_dump` ou `pg_restore` no computador local. O ambiente de teste e o runner do GitHub Actions.
+
+Fluxo seguro:
+1. Inicia PostgreSQL 17 descartavel como service container.
+2. Cria os bancos `crm_restore_source` e `crm_restore_target`.
+3. Aplica as migrations oficiais em `backend/migrations/postgres`.
+4. Cria somente dados sinteticos com dominio `example.test`.
+5. Valida origem, login, consentimento, audit log, simulacao e soft delete.
+6. Gera dump custom com `pg_dump` 17.
+7. Calcula checksum SHA-256.
+8. Criptografa com chave Fernet efemera criada dentro do job.
+9. Remove o dump aberto antes de qualquer etapa seguinte.
+10. Restaura em segundo banco descartavel com `pg_restore` 17.
+11. Valida schema, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
+12. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
+
+O workflow nao usa `SUPABASE_DIRECT_URL`, `POSTGRES_RESTORE_URL` real, `BACKUP_ENCRYPTION_KEY` real, `secrets.*`, upload de artifact ou conexao externa de banco. A chave efemera nunca deve ser impressa e nao deve sair do job.
+
+### Metricas
+
+O job publica no summary apenas metadados sanitizados:
+- duracao do backup;
+- duracao do restore;
+- duracao da validacao;
+- RPO esperado ate o ultimo dado sintetico criado antes do dump;
+- RTO observado como restore mais validacao no job;
+- tamanho do arquivo criptografado.
+
+Nao registrar conteudo do banco, dump aberto, URL completa ou credencial.
+
+### Repeticao
+
+Para repetir manualmente, abrir GitHub Actions, selecionar `PostgreSQL Backup and Restore Validation` e executar `workflow_dispatch` na branch do PR. O teste tambem roda em `pull_request` para `main`.
+
+### Falha
+
+Se o workflow falhar, nao aplicar migrations reais, nao conectar Render ao Supabase e nao ativar dados reais. Corrigir apenas a causa comprovada, sem mais de tres tentativas no mesmo ponto. Se houver dump aberto residual, secret exposto ou conexao externa inesperada, tratar como bloqueio de seguranca.

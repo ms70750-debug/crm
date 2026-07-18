@@ -180,6 +180,16 @@ def sqlalchemy_database_url(database_url: str) -> str:
     return database_url
 
 
+def postgres_client_database_url(database_url: str) -> str:
+    if database_url.startswith("postgresql+psycopg://"):
+        return "postgresql://" + database_url.removeprefix("postgresql+psycopg://")
+    if database_url.startswith("postgresql+psycopg2://"):
+        return "postgresql://" + database_url.removeprefix("postgresql+psycopg2://")
+    if database_url.startswith("postgres://"):
+        return "postgresql://" + database_url.removeprefix("postgres://")
+    return database_url
+
+
 def safe_completed_process(args: list[str], env: dict[str, str] | None = None, timeout: int = 15) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(args, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, timeout=timeout)
@@ -472,7 +482,7 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
         str(dump_path),
     ]
     process_env = os.environ.copy()
-    process_env["PGDATABASE"] = database_url
+    process_env["PGDATABASE"] = postgres_client_database_url(database_url)
     try:
         result = subprocess.run(
             command,

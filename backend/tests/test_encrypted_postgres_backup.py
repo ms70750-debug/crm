@@ -27,7 +27,7 @@ def _dump_runner(_: str, dump_path: Path) -> None:
 def _metadata_loader(_: str) -> dict:
     return {
         "latest_migration": "2026_07_12_backend_only_permissions.sql",
-        "table_count": 12,
+        "table_count": 13,
         "server_major": 16,
         "extensions": [{"name": "pgcrypto", "version": "1.3", "schema": "extensions", "managed_by_provider": True}],
     }
@@ -62,7 +62,7 @@ def test_create_encrypted_backup_creates_safe_artifacts_and_removes_plaintext(tm
     manifest = json.loads(result.manifest.read_text(encoding="utf-8"))
     assert manifest["format_version"] == backup.BACKUP_FORMAT_VERSION
     assert manifest["latest_migration"] == "2026_07_12_backend_only_permissions.sql"
-    assert manifest["table_count"] == 12
+    assert manifest["table_count"] == 13
     assert manifest["dump_schemas"] == ["public"]
     assert "auth" in manifest["managed_schemas_excluded"]
     assert manifest["extensions"][0]["name"] == "pgcrypto"
@@ -141,8 +141,8 @@ def test_restore_validates_checksums_and_removes_plaintext(tmp_path: Path, monke
         return restore.RestoreVerification(
             restored=True,
             plaintext_removed=False,
-            table_count=12,
-            migration_count=5,
+            table_count=13,
+            migration_count=7,
             index_count=41,
             constraint_count=90,
             row_counts={"clientes": 0},
@@ -160,7 +160,7 @@ def test_restore_validates_checksums_and_removes_plaintext(tmp_path: Path, monke
 
     assert verification.restored is True
     assert verification.plaintext_removed is True
-    assert verification.table_count == 12
+    assert verification.table_count == 13
     assert calls == [
         "roles:postgresql://postgres:test@localhost:5432/temp",
         "restore:postgresql://postgres:test@localhost:5432/temp",
@@ -227,6 +227,19 @@ def test_restore_blocks_supabase_direct_url(monkeypatch: pytest.MonkeyPatch) -> 
 )
 def test_sqlalchemy_database_url_uses_psycopg_driver(input_url: str, expected: str) -> None:
     assert backup.sqlalchemy_database_url(input_url) == expected
+
+
+@pytest.mark.parametrize(
+    ("input_url", "expected"),
+    [
+        ("postgresql+psycopg://user:pass@example.test/db", "postgresql://user:pass@example.test/db"),
+        ("postgresql+psycopg2://user:pass@example.test/db", "postgresql://user:pass@example.test/db"),
+        ("postgres://user:pass@example.test/db", "postgresql://user:pass@example.test/db"),
+        ("postgresql://user:pass@example.test/db", "postgresql://user:pass@example.test/db"),
+    ],
+)
+def test_postgres_client_database_url_uses_native_scheme(input_url: str, expected: str) -> None:
+    assert backup.postgres_client_database_url(input_url) == expected
 
 
 def test_safe_server_major_uses_psycopg_not_psycopg2(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -444,6 +457,23 @@ def test_pg_dump_uses_absolute_path_for_relative_output(tmp_path: Path, monkeypa
     backup.run_pg_dump("postgresql://user:pass@example.test/db", Path("relative.dump"))
 
     assert recorded_output_paths == [tmp_path / "relative.dump"]
+
+
+def test_pg_dump_converts_sqlalchemy_url_for_client_tool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dict[str, str] | None] = []
+
+    def fake_run(args, **kwargs):
+        calls.append(kwargs.get("env"))
+        Path(args[args.index("--file") + 1]).write_bytes(b"PGDMP ficticio")
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    backup.run_pg_dump("postgresql+psycopg://user:pass@example.test/db", tmp_path / "safe.dump")
+
+    assert calls[0] is not None
+    assert calls[0]["PGDATABASE"] == "postgresql://user:pass@example.test/db"
 
 
 @pytest.mark.parametrize(
