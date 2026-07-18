@@ -33,7 +33,7 @@ export function INSS() {
               <Info label="Margem disponivel" value={formatMoney(result.margem_disponivel)} />
               <Info label="Banco pagamento" value={result.banco_pagamento} />
             </div>
-          ) : <p className="text-sm text-slate-400">Informe um CPF ficticio para simular.</p>}
+          ) : <p className="text-sm text-slate-500">Informe um CPF ficticio para simular.</p>}
         </Panel>
       </div>
     </>
@@ -41,5 +41,5 @@ export function INSS() {
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md border border-line bg-white/5 p-4"><p className="text-xs text-slate-400">{label}</p><strong>{value}</strong></div>;
+  return <div className="subtle-card p-4"><p className="text-xs text-slate-500">{label}</p><strong>{value}</strong></div>;
 }

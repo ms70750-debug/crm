@@ -79,8 +79,8 @@ export function Clients() {
             <select className="input" {...form.register("convenio")}><option>INSS</option><option>FGTS</option><option>SIAPE</option></select>
             <input className="input" placeholder="Banco de pagamento" {...form.register("banco_pagamento")} />
             <textarea className="input min-h-24" placeholder="Observacoes" {...form.register("observacoes")} />
-            {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-            {message && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{message}</div>}
+            {error && <div className="alert-error">{error}</div>}
+            {message && <div className="alert-success">{message}</div>}
             <button className="btn" type="submit">Criar cliente</button>
           </form>
         </Panel>
@@ -88,9 +88,9 @@ export function Clients() {
           <div className="overflow-x-auto">
             <h3 className="mb-4 font-semibold">Dados do cliente</h3>
             <table className="w-full min-w-[1040px]">
-              <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Contato</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">Observacoes</th><th className="table-cell">LGPD</th></tr></thead>
+              <thead className="text-slate-500"><tr><th className="table-cell">Cliente</th><th className="table-cell">Contato</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">Observacoes</th><th className="table-cell">LGPD</th></tr></thead>
               <tbody>{(data ?? []).map((client) => (
-                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">CPF {client.cpf}</div></td><td className="table-cell"><div>{client.telefone}</div><div className="text-xs text-slate-500">{client.email || "-"}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><span className="line-clamp-2 text-xs text-slate-400">{client.observacoes ?? "-"}</span></td><td className="table-cell"><div className="flex flex-wrap gap-2"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button><button className="btn-secondary py-1 text-xs" onClick={() => revokeConsent(client)}>Opt-out</button></div></td></tr>
+                <tr key={client.id}><td className="table-cell"><strong>{client.nome}</strong><div className="text-xs text-slate-500">CPF {client.cpf}</div></td><td className="table-cell"><div>{client.telefone}</div><div className="text-xs text-slate-500">{client.email || "-"}</div></td><td className="table-cell">{client.convenio}</td><td className="table-cell">{client.beneficio ?? "-"}</td><td className="table-cell">{client.banco_pagamento ?? "-"}</td><td className="table-cell"><span className="line-clamp-2 text-xs text-slate-500">{client.observacoes ?? "-"}</span></td><td className="table-cell"><div className="flex flex-wrap gap-2"><button className="btn-secondary py-1 text-xs" onClick={() => registerConsent(client)}>Opt-in WhatsApp</button><button className="btn-secondary py-1 text-xs" onClick={() => revokeConsent(client)}>Opt-out</button></div></td></tr>
               ))}</tbody>
             </table>
           </div>

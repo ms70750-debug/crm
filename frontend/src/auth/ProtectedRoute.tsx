@@ -8,7 +8,7 @@ export function ProtectedRoute({ children, roles }: { children: ReactNode; roles
   const location = useLocation();
 
   if (loading) {
-    return <div className="min-h-screen bg-ink p-6 text-sm text-slate-300">Carregando sessao...</div>;
+    return <div className="min-h-screen bg-surface p-6 text-sm text-slate-600">Carregando sessao...</div>;
   }
 
   if (!user) {

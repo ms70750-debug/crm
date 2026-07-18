@@ -63,19 +63,19 @@ export function PasswordRecoveryReset() {
     <div className="mx-auto max-w-xl p-5">
       <PageHeader title="Redefinir senha" subtitle="Defina uma nova senha para recuperar o acesso ao CRM BBB Consig." />
       <Panel>
-        {valid === null && <div className="text-sm text-slate-400">Validando link...</div>}
-        {valid === false && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">Link invalido ou expirado.</div>}
+        {valid === null && <div className="text-sm text-slate-500">Validando link...</div>}
+        {valid === false && <div className="alert-error">Link invalido ou expirado.</div>}
         {valid && (
           <form className="grid gap-3" onSubmit={submit}>
-            <label className="text-sm text-slate-400">
+            <label className="text-sm text-slate-500">
               Nova senha
               <input className="input mt-1" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </label>
-            <label className="text-sm text-slate-400">
+            <label className="text-sm text-slate-500">
               Confirmar senha
               <input className="input mt-1" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} />
             </label>
-            {message && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{message}</div>}
+            {message && <div className="alert-error">{message}</div>}
             <button className="btn" type="submit" disabled={loading}>
               <LockKeyhole size={16} /> {loading ? "Redefinindo..." : "Redefinir senha"}
             </button>

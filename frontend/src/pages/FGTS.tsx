@@ -31,7 +31,7 @@ export function FGTS() {
               <Info label="Valor liberado" value={formatMoney(result.valor_liberado)} />
               <Info label="Parcelas" value={`${result.parcelas_antecipaveis}`} />
             </div>
-          ) : <p className="text-sm text-slate-400">Informe um CPF ficticio para simular.</p>}
+          ) : <p className="text-sm text-slate-500">Informe um CPF ficticio para simular.</p>}
         </Panel>
       </div>
     </>
@@ -39,5 +39,5 @@ export function FGTS() {
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-md border border-line bg-white/5 p-4"><p className="text-xs text-slate-400">{label}</p><strong>{value}</strong></div>;
+  return <div className="subtle-card p-4"><p className="text-xs text-slate-500">{label}</p><strong>{value}</strong></div>;
 }

@@ -60,8 +60,8 @@ export function WhatsApp() {
             </select>
             <button className="btn-secondary" onClick={preview} disabled={!id}>Gerar previa</button>
             <textarea className="input min-h-40" value={mensagem} onChange={(e) => setMensagem(e.target.value)} />
-            {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-            {success && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{success}</div>}
+            {error && <div className="alert-error">{error}</div>}
+            {success && <div className="alert-success">{success}</div>}
             <button className="btn" onClick={register} disabled={!mensagem}>Registrar simulacao</button>
           </div>
         </Panel>
@@ -69,9 +69,9 @@ export function WhatsApp() {
           <h3 className="mb-4 font-semibold">Historico simulado</h3>
           <div className="grid gap-3">
             {(history.data ?? []).map((item) => (
-              <div key={item.id} className="rounded-md border border-line bg-white/5 p-3">
-                <div className="flex justify-between gap-3"><strong>{item.modelo}</strong><span className="badge text-lime">{item.status}</span></div>
-                <p className="mt-2 text-sm text-slate-300">{item.mensagem}</p>
+              <div key={item.id} className="subtle-card">
+                <div className="flex justify-between gap-3"><strong>{item.modelo}</strong><span className="badge border-emerald-200 bg-emerald-50 text-emerald-700">{item.status}</span></div>
+                <p className="mt-2 text-sm text-slate-600">{item.mensagem}</p>
                 <p className="mt-2 text-xs text-slate-500">{item.telefone}</p>
               </div>
             ))}

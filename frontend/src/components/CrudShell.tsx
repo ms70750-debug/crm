@@ -5,5 +5,5 @@ export function CrudShell({ children }: { children: ReactNode }) {
 }
 
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`panel rounded-lg p-4 ${className}`}>{children}</section>;
+  return <section className={`panel min-w-0 rounded-lg p-4 text-ink ${className}`}>{children}</section>;
 }

@@ -4,11 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#090b0d",
-        panel: "#101417",
-        line: "#263036",
-        lime: "#c7ff45",
-        mint: "#4ade80"
+        ink: "#0f2143",
+        panel: "#ffffff",
+        line: "#dbe5f2",
+        lime: "#0b5ed7",
+        mint: "#0a4fb4",
+        gold: "#f8c545",
+        graphite: "#263445",
+        surface: "#f8fbff"
       }
     },
   },

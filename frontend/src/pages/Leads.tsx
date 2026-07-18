@@ -80,7 +80,7 @@ export function Leads() {
   return (
     <>
       <PageHeader title="Leads" subtitle="Captacao, qualificacao e acompanhamento do pipeline comercial." />
-      {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
+      {error && <Panel className="mb-4 text-red-700">{error}</Panel>}
       <CrudShell>
         <Panel>
           <h3 className="mb-4 font-semibold">Novo lead</h3>
@@ -120,7 +120,7 @@ export function Leads() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1120px]">
-              <thead className="text-slate-400"><tr><th className="table-cell">Lead</th><th className="table-cell">Contato</th><th className="table-cell">Origem</th><th className="table-cell">Produto</th><th className="table-cell">Status</th><th className="table-cell">Prioridade</th><th className="table-cell">Responsavel</th><th className="table-cell">Proximo contato</th><th className="table-cell">Acoes</th></tr></thead>
+              <thead className="text-slate-500"><tr><th className="table-cell">Lead</th><th className="table-cell">Contato</th><th className="table-cell">Origem</th><th className="table-cell">Produto</th><th className="table-cell">Status</th><th className="table-cell">Prioridade</th><th className="table-cell">Responsavel</th><th className="table-cell">Proximo contato</th><th className="table-cell">Acoes</th></tr></thead>
               <tbody>{(data ?? []).map((lead) => (
                 <tr key={lead.id}>
                   <td className="table-cell"><strong>{lead.nome}</strong><div className="text-xs text-slate-500">CPF {lead.cpf}</div>{lead.observacoes && <div className="mt-1 max-w-72 truncate text-xs text-slate-500">{lead.observacoes}</div>}</td>
@@ -139,7 +139,7 @@ export function Leads() {
                   </td>
                   <td className="table-cell"><span className="badge">{lead.prioridade}</span></td>
                   <td className="table-cell">{lead.responsavel}</td>
-                  <td className="table-cell">{isOverdue(lead.proximo_contato) ? <span className="badge border-red-400/40 text-red-300">Atrasado - {lead.proximo_contato}</span> : lead.proximo_contato || "-"}</td>
+                  <td className="table-cell">{isOverdue(lead.proximo_contato) ? <span className="badge border-red-200 bg-red-50 text-red-700">Atrasado - {lead.proximo_contato}</span> : lead.proximo_contato || "-"}</td>
                   <td className="table-cell">
                     <div className="flex flex-wrap gap-2">
                       <Link className="btn-secondary" to={`/leads/${lead.id}`}>Detalhe</Link>
