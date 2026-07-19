@@ -68,8 +68,8 @@ def validate_environment() -> None:
         errors.append("CORS_ORIGINS ausente ou com placeholder")
     if not database_url:
         errors.append("DATABASE_URL ausente")
-    elif not is_postgresql_url(database_url):
-        errors.append("APP_ENV=production exige DATABASE_URL PostgreSQL persistente")
+    elif not is_postgresql_url(database_url) and (real_data_mode or mode not in DEMO_MODE_VALUES):
+        errors.append("APP_ENV=production exige DATABASE_URL PostgreSQL persistente fora do modo demo")
     if evolution_mode not in SIMULATION_MODE_VALUES:
         errors.append("EVOLUTION_API_MODE deve permanecer como simulation/simulate nesta fase")
     if real_data_mode:

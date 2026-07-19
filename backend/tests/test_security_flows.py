@@ -51,8 +51,21 @@ def test_production_environment_rejects_missing_database_url(monkeypatch: pytest
         validate_environment()
 
 
-def test_production_environment_rejects_sqlite_even_with_real_data_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_controlled_demo_environment_allows_sqlite_with_real_data_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./app.db")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
+    monkeypatch.setenv("REAL_DATA_MODE", "false")
+
+    validate_environment()
+
+
+def test_non_demo_production_environment_rejects_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_MODE", "internal")
     monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
     monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./app.db")
