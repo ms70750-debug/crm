@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-19 - Sincronizacao da main no PR 32
+
+### Alterado
+- Sincronizada a `main` atual (`e626e7e`) na branch `release/preparar-producao-real-2026-07-18` por merge comum, sem rebase e sem force push.
+- Incorporado o bootstrap de administrador principal por variaveis de ambiente da `main`, mantendo senha como valor externo (`sync: false`) e sem segredo no repositorio.
+- Mantido o bloqueio do PR 32 contra SQLite em producao, com `DATABASE_URL` externo no Render e `REAL_DATA_MODE=false`.
+- Preservado o visual BBB aprovado, a otimizacao de assets e o roteamento `/api` para login na preview de branch.
+
+### Validado
+- Conflitos resolvidos manualmente em `backend/tests/test_migration_strategy.py` e `render.yaml`.
+- Teste focado de migrations/admin aprovado antes de concluir o merge.
+
+### Mantido
+- Nenhum merge na `main`, nenhuma publicacao em producao, nenhuma migration real, nenhum Supabase, Render/Vercel de producao, Resend, DNS, secret, e-mail real, administrador real ou dado real foi alterado nesta sincronizacao.
+
 ## 2026-07-19 - Login funcional na preview do PR 32
 
 ### Corrigido

@@ -37,6 +37,12 @@ services:
         value: "simulate"
       - key: AUTH_EMAIL_FROM
         sync: false
+      - key: PRIMARY_ADMIN_EMAIL
+        value: "daiene@bbbemprestimos.com.br"
+      - key: PRIMARY_ADMIN_PASSWORD
+        sync: false
+      - key: PRIMARY_ADMIN_NAME
+        value: "Daiene"
       - key: APP_PUBLIC_URL
         value: "https://crm-sepia-beta.vercel.app"
       - key: RESEND_API_KEY
