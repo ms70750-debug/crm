@@ -137,6 +137,9 @@ O envio transacional esta preparado com Resend para dois usos: ativacao administ
 ## Referencias analisadas
 As referencias publicas foram baixadas em `referencias/` para inspiracao visual e conceitual. O sistema implementado e proprio, com dados ficticios e sem copia direta.
 
+## Identidade visual
+O frontend possui uma versao paralela com identidade visual inspirada no site oficial da BBB Emprestimos, documentada em `docs/UI-DESIGN-SYSTEM.md`. A aplicacao continua sendo um CRM operacional, sem virar pagina institucional, sem alterar backend, banco, endpoints ou autenticacao.
+
 ## Proximos passos recomendados
 1. Aprovar formalmente a publicacao controlada ou manter o ambiente atual sem mudancas.
 2. Homologar somente com dados ficticios.

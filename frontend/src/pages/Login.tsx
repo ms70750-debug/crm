@@ -2,8 +2,7 @@ import { type FormEvent, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { Panel } from "../components/CrudShell";
-import { PageHeader } from "../components/PageHeader";
+import { AuthShell } from "../components/AuthShell";
 
 const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === "true";
 const demoUsers = [
@@ -52,54 +51,51 @@ export function Login() {
   }
 
   return (
-    <>
-      <div className="mx-auto max-w-5xl p-5">
-        <PageHeader title="Login" subtitle="Acesso seguro ao CRM BBB Consig." />
+    <AuthShell title="Entrar no CRM" subtitle="Acesso administrativo para acompanhar leads, clientes, propostas e atividades da operacao consignado.">
         {demoModeEnabled && (
-          <div className="mb-5 rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">
+          <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-3 text-sm font-semibold text-[var(--bbb-orange)]">
             Ambiente de demonstracao. Nao insira dados reais de clientes.
           </div>
         )}
         <div className={demoModeEnabled ? "grid gap-5 lg:grid-cols-[1fr_1.1fr]" : "mx-auto grid max-w-xl gap-5"}>
-          <Panel>
-            <form className="grid gap-3" onSubmit={submit}>
-              <label className="text-sm text-slate-400">
+          <section>
+            <form className="grid gap-4" onSubmit={submit}>
+              <label className="text-sm font-semibold text-slate-700">
                 E-mail
-                <input className="input mt-1" value={email} onChange={(event) => setEmail(event.target.value)} />
+                <input className="input mt-1.5" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </label>
-              <label className="text-sm text-slate-400">
+              <label className="text-sm font-semibold text-slate-700">
                 Senha
-                <input className="input mt-1" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+                <input className="input mt-1.5" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} />
               </label>
-              {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-              <button className="btn" type="submit" disabled={loading}>
+              {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
+              <button className="btn w-full" type="submit" disabled={loading}>
                 <LockKeyhole size={16} /> {loading ? "Entrando..." : "Entrar"}
               </button>
-              <button className="w-fit text-sm text-lime hover:underline" type="button" onClick={() => navigate("/recuperar-senha")}>
+              <button className="w-fit text-sm font-bold text-[var(--bbb-blue)] hover:underline" type="button" onClick={() => navigate("/recuperar-senha")}>
                 Recuperar senha
               </button>
             </form>
-          </Panel>
+          </section>
           {demoModeEnabled && (
-            <Panel>
-              <h3 className="mb-4 font-semibold">Usuarios demo</h3>
+            <section className="rounded-3xl border border-[var(--bbb-line)] bg-[#f8fbff] p-4">
+              <h2 className="mb-4 text-base font-extrabold text-slate-950">Usuarios demo</h2>
               <div className="grid gap-3">
                 {demoUsers.map(([perfil, role]) => (
                   <button
-                    className="rounded-md border border-line bg-white/5 p-3 text-left transition hover:border-lime/60"
+                    className="rounded-2xl border border-[var(--bbb-line)] bg-white p-3 text-left transition hover:border-[var(--bbb-blue)] hover:shadow-[var(--bbb-shadow-panel)]"
                     key={role}
                     onClick={() => submitDemo(role)}
                     disabled={loading}
                   >
-                    <strong className="block">{perfil}</strong>
-                    <span className="block text-sm text-slate-400">Entrar em ambiente de demonstracao</span>
+                    <strong className="block text-slate-950">{perfil}</strong>
+                    <span className="block text-sm text-slate-600">Entrar em ambiente de demonstracao</span>
                   </button>
                 ))}
               </div>
-            </Panel>
+            </section>
           )}
         </div>
-      </div>
-    </>
+    </AuthShell>
   );
 }

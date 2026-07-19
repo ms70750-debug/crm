@@ -1,0 +1,35 @@
+export const bbbTheme = {
+  referenceSite: "https://www.bbbemprestimos.com.br/",
+  colors: {
+    ink: "#020617",
+    graphite: "#0f2143",
+    graphiteSoft: "#334155",
+    blue: "#0b5ed7",
+    blueDark: "#0a4fb4",
+    orange: "#f97316",
+    gold: "#f7c948",
+    offWhite: "#f8fbff",
+    surface: "#ffffff",
+    surfaceWarm: "#fff7ed",
+    line: "#dbe4f0",
+    success: "#15803d",
+    warning: "#b45309",
+    danger: "#b91c1c",
+    info: "#0369a1",
+  },
+  radius: {
+    sm: "8px",
+    md: "12px",
+    lg: "16px",
+    pill: "9999px",
+  },
+  shadow: {
+    panel: "0 18px 45px rgba(15, 33, 67, 0.10)",
+    raised: "0 22px 65px rgba(10, 79, 180, 0.16)",
+  },
+  typography: {
+    family: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    titleWeight: 800,
+    textWeight: 400,
+  },
+} as const;

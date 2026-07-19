@@ -68,7 +68,7 @@ export function Clients() {
       <PageHeader title="Clientes" subtitle="Cadastro, dados de beneficio e historico operacional simples." />
       <CrudShell>
         <Panel>
-          <h3 className="mb-4 font-semibold">Novo cliente</h3>
+          <h3 className="mb-4 section-title">Novo cliente</h3>
           <form className="grid gap-3" onSubmit={form.handleSubmit(submit)}>
             <input className="input" placeholder="Nome" {...form.register("nome")} />
             <input className="input" placeholder="CPF" {...form.register("cpf")} />
@@ -79,14 +79,14 @@ export function Clients() {
             <select className="input" {...form.register("convenio")}><option>INSS</option><option>FGTS</option><option>SIAPE</option></select>
             <input className="input" placeholder="Banco de pagamento" {...form.register("banco_pagamento")} />
             <textarea className="input min-h-24" placeholder="Observacoes" {...form.register("observacoes")} />
-            {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-            {message && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{message}</div>}
+            {error && <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
+            {message && <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{message}</div>}
             <button className="btn" type="submit">Criar cliente</button>
           </form>
         </Panel>
         <Panel>
           <div className="overflow-x-auto">
-            <h3 className="mb-4 font-semibold">Dados do cliente</h3>
+            <h3 className="mb-4 section-title">Dados do cliente</h3>
             <table className="w-full min-w-[1040px]">
               <thead className="text-slate-400"><tr><th className="table-cell">Cliente</th><th className="table-cell">Contato</th><th className="table-cell">Convenio</th><th className="table-cell">Beneficio</th><th className="table-cell">Banco</th><th className="table-cell">Observacoes</th><th className="table-cell">LGPD</th></tr></thead>
               <tbody>{(data ?? []).map((client) => (
