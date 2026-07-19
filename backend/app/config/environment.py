@@ -81,4 +81,7 @@ def validate_environment() -> None:
 
     for error in errors:
         logger.error("Configuracao de ambiente invalida: %s", error)
-    raise RuntimeError("Variaveis obrigatorias ausentes ou inseguras para producao controlada.")
+    raise RuntimeError(
+        "Variaveis obrigatorias ausentes ou inseguras para producao controlada: "
+        + "; ".join(errors)
+    )
