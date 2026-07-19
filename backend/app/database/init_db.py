@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from app.database.seed import ensure_primary_admin_from_env, seed_database
+from app.database.seed import seed_database
 from app.database.session import Base, DATABASE_URL, SessionLocal, engine
 from app import models  # noqa: F401
 
@@ -55,11 +55,6 @@ def apply_migrations() -> None:
 def init_db() -> None:
     if not should_auto_bootstrap_schema():
         logger.warning("Base.metadata.create_all nao e estrategia de producao real; inicializacao automatica de schema ignorada.")
-        db = SessionLocal()
-        try:
-            ensure_primary_admin_from_env(db)
-        finally:
-            db.close()
         return
 
     Base.metadata.create_all(bind=engine)
@@ -67,6 +62,5 @@ def init_db() -> None:
     db = SessionLocal()
     try:
         seed_database(db)
-        ensure_primary_admin_from_env(db)
     finally:
         db.close()
