@@ -57,40 +57,25 @@ jobs:
       - name: Install backend dependencies
         run: python -m pip install -r backend/requirements.txt
 
-      - name: Create PostgreSQL 17 client shims
+      - name: Install PostgreSQL 17 client
         run: |
           set -euo pipefail
-          mkdir -p .ci-bin
-          cat > .ci-bin/pg_dump <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          docker run --rm --network host \
-            --user "$(id -u):$(id -g)" \
-            -v "$PWD:$PWD" -w "$PWD" \
-            -e PGPASSWORD="${PGPASSWORD:-}" \
-            -e PGDATABASE="${PGDATABASE:-}" \
-            postgres:17 pg_dump "$@"
-          SH
-          cat > .ci-bin/pg_restore <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          docker run --rm --network host \
-            --user "$(id -u):$(id -g)" \
-            -v "$PWD:$PWD" -w "$PWD" \
-            -e PGPASSWORD="${PGPASSWORD:-}" \
-            postgres:17 pg_restore "$@"
-          SH
-          chmod +x .ci-bin/pg_dump .ci-bin/pg_restore
-          echo "$PWD/.ci-bin" >> "$GITHUB_PATH"
-          .ci-bin/pg_dump --version
-          .ci-bin/pg_restore --version
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client-17
+          psql --version
+          pg_dump --version
+          pg_restore --version
 
       - name: Prepare disposable databases
         run: |
           set -euo pipefail
           export PGPASSWORD="$DB_PASSWORD"
-          docker run --rm --network host -e PGPASSWORD postgres:17 \
-            psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
             -v ON_ERROR_STOP=1 \
             -c "CREATE DATABASE crm_restore_source;" \
             -c "CREATE DATABASE crm_restore_target;" \
@@ -120,6 +105,26 @@ jobs:
           mkdir -p restore-metrics
           DATABASE_URL="$SOURCE_DATABASE_URL" python backend/scripts/ci_postgres_restore_validation.py seed-source --metrics restore-metrics/source.json
           DATABASE_URL="$SOURCE_DATABASE_URL" python backend/scripts/ci_postgres_restore_validation.py validate-source
+
+      - name: PostgreSQL client preflight
+        run: |
+          set -Eeuo pipefail
+          export PGPASSWORD="$DB_PASSWORD"
+          psql --version
+          pg_dump --version
+          pg_restore --version
+          pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"
+          server_major="$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SHOW server_version_num" | cut -c1-2)"
+          current_db="$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT current_database()")"
+          pg_dump_major="$(pg_dump --version | awk '{print $3}' | cut -d. -f1)"
+          pg_restore_major="$(pg_restore --version | awk '{print $3}' | cut -d. -f1)"
+          test "$server_major" = "17"
+          test "$pg_dump_major" = "17"
+          test "$pg_restore_major" = "17"
+          test "$current_db" = "$SOURCE_DB"
+          mkdir -p restore-artifact restore-work
+          test -w restore-work
+          test -z "$(find restore-artifact restore-work -name '*.dump' -o -name '*.dump.enc' 2>/dev/null | head -n 1)"
 
       - name: Create encrypted backup
         run: |
@@ -186,10 +191,9 @@ jobs:
         if: always()
         run: |
           set +e
-          rm -rf restore-artifact restore-metrics restore-work .ci-bin
+          rm -rf restore-artifact restore-metrics restore-work
           export PGPASSWORD="$DB_PASSWORD"
-          docker run --rm --network host -e PGPASSWORD postgres:17 \
-            psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
             -c "DROP DATABASE IF EXISTS crm_restore_source WITH (FORCE);" \
             -c "DROP DATABASE IF EXISTS crm_restore_target WITH (FORCE);"
           residual="$(find . \( -name '*.dump' -o -name '*.dump.enc' -o -name 'key.env' \) -print -quit)"

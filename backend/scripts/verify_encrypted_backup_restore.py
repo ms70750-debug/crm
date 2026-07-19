@@ -12,9 +12,9 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import create_engine, text
 
 try:
-    from create_encrypted_postgres_backup import postgres_client_database_url, sha256_file
+    from create_encrypted_postgres_backup import postgres_client_environment, sha256_file
 except ModuleNotFoundError:
-    from scripts.create_encrypted_postgres_backup import postgres_client_database_url, sha256_file
+    from scripts.create_encrypted_postgres_backup import postgres_client_environment, sha256_file
 
 EXPECTED_TABLES = (
     "admin_bootstrap_tokens",
@@ -95,16 +95,17 @@ def ensure_validation_roles(database_url: str) -> None:
 
 
 def run_pg_restore(database_url: str, dump_path: Path) -> None:
+    process_env = postgres_client_environment(database_url)
     command = [
         "pg_restore",
         "--exit-on-error",
         "--no-owner",
         "--dbname",
-        postgres_client_database_url(database_url),
+        process_env["PGDATABASE"],
         str(dump_path),
     ]
     try:
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=process_env)
     except FileNotFoundError as exc:
         raise RuntimeError("pg_restore nao encontrado no ambiente.") from exc
     except subprocess.CalledProcessError as exc:

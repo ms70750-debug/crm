@@ -43,6 +43,37 @@ O teste deve usar somente banco PostgreSQL descartavel e isolado, com dados sint
 - Motivo do bloqueio anterior: ambiente local sem `psql`/`pg_dump`/`pg_restore`/Docker disponivel e conector Supabase sem recurso de backup/export criptografado ou restore descartavel sem custo/confirmacao externa.
 - Mitigacao: validacao deslocada para GitHub Actions, sem depender do computador local e sem tocar no Supabase principal.
 
+## Correcao pg_dump PR #32 - 2026-07-18
+
+### Diagnostico
+
+- Run analisado: `29662203443`.
+- Etapa com falha: `Create encrypted backup`.
+- Codigo de saida: `1`.
+- PostgreSQL descartavel: saudavel em `127.0.0.1:5432`.
+- Servidor: PostgreSQL 17.10.
+- Cliente anterior: `pg_dump` 17.10 em shim Docker `postgres:17`.
+- Banco de origem: `crm_restore_source`.
+- Evidencia sanitizada: `PGDUMP_INVALID_DATABASE_OBJECT`, arquivo de dump criado, dump vazio, criptografia nao iniciada, restore nao iniciado.
+- Causa raiz classificada: J/I - shim Docker/argumentos. O cliente era executado fora do runner e dependia de uma connection string inteira propagada por `PGDATABASE`, o que podia ser interpretado como nome de banco/objeto invalido e deixava o dump vazio.
+
+### Correcao
+
+- Modelo escolhido: Modelo A - cliente PostgreSQL 17 no runner.
+- Shims removidos: `pg_dump` e `pg_restore` em `.ci-bin`.
+- Cliente final: `postgresql-client-17` instalado via repositório PGDG controlado.
+- Execucao final: `psql`, `pg_isready`, `pg_dump` e `pg_restore` direto no runner, acessando o service container por `127.0.0.1` e porta `5432`.
+- Helper final: scripts convertem a URL SQLAlchemy para variaveis libpq separadas, sem connection string em argumento.
+- Teste de regressao: unitarios garantem que o workflow nao usa shims/Docker e que `pg_dump` recebe `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` e `PGSSLMODE` separados.
+
+### Limites
+
+- Nenhum Supabase principal foi usado.
+- Nenhum dado real foi usado.
+- Nenhum backup real foi executado.
+- Nenhum restore real foi executado.
+- Nenhum artifact aberto deve ser publicado.
+
 ## RPO/RTO
 
 - RPO esperado: ate o ultimo dado sintetico criado antes do `pg_dump`.

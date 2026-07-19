@@ -185,21 +185,36 @@ Antes de dados reais, o restore deve ser validado em banco PostgreSQL descartave
 
 O workflow `PostgreSQL Backup and Restore Validation` executa essa validacao sem depender de Docker, `psql`, `pg_dump` ou `pg_restore` no computador local. O ambiente de teste e o runner do GitHub Actions.
 
+Atualizacao de seguranca em 2026-07-18: as tres primeiras tentativas do PR #32 falharam no bloco `Create encrypted backup` porque o workflow usava shims Docker para `pg_dump`/`pg_restore`. O shim executava o cliente em outro processo/container e dependia de propagacao indireta da connection string via `PGDATABASE`, mascarando a falha como objeto/banco invalido e criando arquivo vazio. O modelo final aprovado para o PR #32 e o Modelo A: instalar `postgresql-client-17` no runner e executar `psql`, `pg_isready`, `pg_dump` e `pg_restore` diretamente contra `127.0.0.1:5432`.
+
+Antes do backup, o workflow agora valida:
+- `psql --version`;
+- `pg_dump --version`;
+- `pg_restore --version`;
+- `pg_isready` no banco sintetico de origem;
+- `SHOW server_version_num`;
+- `SELECT current_database()`;
+- cliente e servidor na versao principal 17;
+- diretorio de saida gravavel;
+- ausencia de dump residual.
+
 Fluxo seguro:
 1. Inicia PostgreSQL 17 descartavel como service container.
 2. Cria os bancos `crm_restore_source` e `crm_restore_target`.
 3. Aplica as migrations oficiais em `backend/migrations/postgres`.
 4. Cria somente dados sinteticos com dominio `example.test`.
 5. Valida origem, login, consentimento, audit log, simulacao e soft delete.
-6. Gera dump custom com `pg_dump` 17.
+6. Gera dump custom com `pg_dump` 17 instalado no runner, usando variaveis libpq separadas e sem connection string em argumento.
 7. Calcula checksum SHA-256.
 8. Criptografa com chave Fernet efemera criada dentro do job.
 9. Remove o dump aberto antes de qualquer etapa seguinte.
-10. Restaura em segundo banco descartavel com `pg_restore` 17.
+10. Restaura em segundo banco descartavel com `pg_restore` 17 instalado no runner.
 11. Valida schema, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
 12. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
 
 O workflow nao usa `SUPABASE_DIRECT_URL`, `POSTGRES_RESTORE_URL` real, `BACKUP_ENCRYPTION_KEY` real, `secrets.*`, upload de artifact ou conexao externa de banco. A chave efemera nunca deve ser impressa e nao deve sair do job.
+
+As ferramentas cliente recebem credenciais somente por ambiente do processo no GitHub Actions e nao imprimem host completo, senha, usuario ou URL completa. O dump aberto e removido mesmo em falha.
 
 ### Metricas
 

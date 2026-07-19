@@ -287,6 +287,11 @@ def test_postgres_restore_validation_workflow_uses_disposable_postgres_17() -> N
     assert "contents: read" in content
     assert "timeout-minutes: 20" in content
     assert "postgres:17" in content
+    assert "postgresql-client-17" in content
+    assert "PostgreSQL client preflight" in content
+    assert "pg_isready -h \"$DB_HOST\" -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$SOURCE_DB\"" in content
+    assert "test \"$pg_dump_major\" = \"17\"" in content
+    assert "test \"$pg_restore_major\" = \"17\"" in content
     assert "crm_restore_source" in content
     assert "crm_restore_target" in content
     assert "apply_postgres_migrations.py --apply" in content
@@ -311,6 +316,17 @@ def test_postgres_restore_validation_workflow_uses_no_real_secrets_or_external_d
     assert "env |" not in content
     assert "::add-mask::$SOURCE_URL" in content
     assert "::add-mask::$RESTORE_URL" in content
+
+
+def test_postgres_restore_validation_workflow_does_not_use_client_shims() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "Create PostgreSQL 17 client shims" not in content
+    assert ".ci-bin/pg_dump" not in content
+    assert ".ci-bin/pg_restore" not in content
+    assert "--network host" not in content
+    assert "docker run" not in content
+    assert 'PGDATABASE="${PGDATABASE:-}"' not in content
 
 
 def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:

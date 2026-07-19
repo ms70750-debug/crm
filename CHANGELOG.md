@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Correcao do pg_dump no restore descartavel PR 32
+
+### Corrigido
+- Removidos os shims Docker de `pg_dump` e `pg_restore` do workflow `PostgreSQL Backup and Restore Validation`.
+- O workflow passa a instalar o cliente PostgreSQL 17 no runner e executar `psql`, `pg_isready`, `pg_dump` e `pg_restore` diretamente contra o service container local.
+- O backup/restore agora separa a URL SQLAlchemy em variaveis libpq (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`) antes de chamar ferramentas cliente, evitando passar connection string inteira como nome de banco.
+- Adicionado preflight do cliente PostgreSQL antes do backup, validando versoes 17, disponibilidade, banco atual e diretorios de saida.
+
+### Mantido
+- Nenhum Supabase principal foi alterado, nenhum secret real foi usado, nenhuma publicacao ou merge foi executado, e os dados seguem sinteticos.
+
 ## 2026-07-18 - Restore descartavel PostgreSQL 17 no CI
 
 ### Adicionado
