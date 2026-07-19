@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -109,6 +112,42 @@ def test_sqlite_does_not_auto_bootstrap_in_production_environment(monkeypatch) -
     monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
 
     assert init_db.should_auto_bootstrap_schema() is False
+
+
+def test_controlled_demo_sqlite_bootstrap_creates_only_primary_admin(tmp_path: Path) -> None:
+    database_path = tmp_path / "render-demo.db"
+    script = """
+from app.database.init_db import init_db
+from app.database.session import SessionLocal
+from app.models import User
+
+init_db()
+with SessionLocal() as db:
+    users = db.query(User).all()
+    assert len(users) == 1
+    assert users[0].email == "owner@example.test"
+    assert users[0].role == "admin"
+"""
+    env = os.environ.copy()
+    env.update(
+        {
+            "PYTHONPATH": "backend",
+            "APP_ENV": "production",
+            "APP_MODE": "demo",
+            "REAL_DATA_MODE": "false",
+            "DATABASE_URL": f"sqlite:///{database_path.as_posix()}",
+            "BBB_AUTH_SECRET": "segredo-demo-forte-para-pytest",
+            "CORS_ORIGINS": "https://crm-sepia-beta.vercel.app",
+            "EVOLUTION_API_MODE": "simulation",
+            "PRIMARY_ADMIN_EMAIL": "owner@example.test",
+            "PRIMARY_ADMIN_PASSWORD": "Owner@2026",
+            "PRIMARY_ADMIN_NAME": "Owner",
+        }
+    )
+
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, env=env, check=False)
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_primary_admin_bootstrap_is_env_driven_without_committed_password() -> None:

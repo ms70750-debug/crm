@@ -21,6 +21,14 @@ def should_auto_bootstrap_schema() -> bool:
     return app_env not in PRODUCTION_ENV_VALUES
 
 
+def should_bootstrap_controlled_sqlite_demo() -> bool:
+    return (
+        is_sqlite_database()
+        and os.environ.get("APP_MODE", "demo").strip().lower() == "demo"
+        and os.environ.get("REAL_DATA_MODE", "false").strip().lower() not in {"1", "true", "yes", "sim"}
+    )
+
+
 def apply_migrations() -> None:
     migrations_root = Path(__file__).resolve().parents[2] / "migrations"
     migrations_dir = migrations_root / ("sqlite" if is_sqlite_database() else "postgres")
@@ -54,6 +62,16 @@ def apply_migrations() -> None:
 
 def init_db() -> None:
     if not should_auto_bootstrap_schema():
+        if should_bootstrap_controlled_sqlite_demo():
+            logger.warning("SQLite em demo controlado: criando schema sem importar usuarios demonstrativos.")
+            Base.metadata.create_all(bind=engine)
+            db = SessionLocal()
+            try:
+                ensure_primary_admin_from_env(db)
+            finally:
+                db.close()
+            return
+
         logger.warning("Base.metadata.create_all nao e estrategia de producao real; inicializacao automatica de schema ignorada.")
         db = SessionLocal()
         try:
