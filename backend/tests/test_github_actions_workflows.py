@@ -288,8 +288,14 @@ def test_postgres_restore_validation_workflow_uses_disposable_postgres_17() -> N
     assert "timeout-minutes: 20" in content
     assert "postgres:17" in content
     assert "postgresql-client-17" in content
+    assert "PG17_BIN=$PG17_BIN" in content
+    assert 'echo "$PG17_BIN" >> "$GITHUB_PATH"' in content
+    assert "PostgreSQL 17 binary preflight" in content
     assert "PostgreSQL client preflight" in content
-    assert "pg_isready -h \"$DB_HOST\" -p \"$DB_PORT\" -U \"$DB_USER\" -d \"$SOURCE_DB\"" in content
+    assert '"${PG17_BIN}/pg_isready" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"' in content
+    assert '"${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"' in content
+    assert 'PG_DUMP_BIN="${PG17_BIN}/pg_dump"' in content
+    assert 'PG_RESTORE_BIN="${PG17_BIN}/pg_restore"' in content
     assert "test \"$pg_dump_major\" = \"17\"" in content
     assert "test \"$pg_restore_major\" = \"17\"" in content
     assert "crm_restore_source" in content
@@ -327,6 +333,24 @@ def test_postgres_restore_validation_workflow_does_not_use_client_shims() -> Non
     assert "--network host" not in content
     assert "docker run" not in content
     assert 'PGDATABASE="${PGDATABASE:-}"' not in content
+
+
+def test_postgres_restore_validation_workflow_pins_postgres_17_binaries() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert 'PG17_BIN="$(dpkg -L postgresql-client-17' in content
+    assert 'test -x "$binary"' in content
+    assert 'real_path="$(readlink -f "$binary")"' in content
+    assert 'test "$major" = "17"' in content
+    assert '"${PG17_BIN}/psql" --version' in content
+    assert '"${PG17_BIN}/pg_dump" --version' in content
+    assert '"${PG17_BIN}/pg_restore" --version' in content
+    assert '"${PG17_BIN}/pg_isready" --version' in content
+    assert '\n          psql -h "$DB_HOST"' not in content
+    assert '\n          pg_dump --version' not in content
+    assert '\n          pg_restore --version' not in content
+    assert '\n          pg_isready -h "$DB_HOST"' not in content
+    assert "update-alternatives" not in content
 
 
 def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:

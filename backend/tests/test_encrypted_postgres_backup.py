@@ -347,6 +347,7 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
     backup.run_pg_dump("postgresql://secret-user:secret-pass@example.test/db", tmp_path / "safe.dump")
 
     command, env = calls[0]
+    assert command[0] == "pg_dump"
     assert "postgresql://secret-user:secret-pass@example.test/db" not in command
     assert env is not None
     assert env["PGHOST"] == "example.test"
@@ -362,6 +363,24 @@ def test_pg_dump_command_uses_environment_not_connection_argument(tmp_path: Path
     assert "--no-owner" in command
     assert "--no-privileges" in command
     assert "--no-acl" not in command
+
+
+def test_pg_dump_uses_configured_absolute_binary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+    configured_binary = "/usr/lib/postgresql/17/bin/pg_dump"
+
+    def fake_run(args, **_):
+        calls.append(args)
+        Path(args[args.index("--file") + 1]).write_bytes(b"PGDMP ficticio")
+        return CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setenv("PG_DUMP_BIN", configured_binary)
+    monkeypatch.setattr(backup.subprocess, "run", fake_run)
+    monkeypatch.setattr(backup, "pg_dump_version", lambda: "pg_dump (PostgreSQL) 17.0")
+
+    backup.run_pg_dump("postgresql://user:pass@example.test/db", tmp_path / "safe.dump")
+
+    assert calls[0][0] == configured_binary
 
 
 def test_pg_dump_creates_missing_output_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

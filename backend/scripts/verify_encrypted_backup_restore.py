@@ -35,6 +35,10 @@ DIRECT_ROLES = ("anon", "authenticated")
 VALIDATED_PRIVILEGES = ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER")
 
 
+def pg_restore_binary() -> str:
+    return os.environ.get("PG_RESTORE_BIN", "pg_restore")
+
+
 @dataclass(frozen=True)
 class RestoreVerification:
     restored: bool
@@ -97,7 +101,7 @@ def ensure_validation_roles(database_url: str) -> None:
 def run_pg_restore(database_url: str, dump_path: Path) -> None:
     process_env = postgres_client_environment(database_url)
     command = [
-        "pg_restore",
+        pg_restore_binary(),
         "--exit-on-error",
         "--no-owner",
         "--dbname",

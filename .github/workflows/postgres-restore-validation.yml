@@ -67,15 +67,64 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client-17
-          psql --version
-          pg_dump --version
-          pg_restore --version
+
+          echo "Diagnostico sanitizado de clientes PostgreSQL."
+          type -a psql || true
+          type -a pg_dump || true
+          type -a pg_restore || true
+          type -a pg_isready || true
+          command -v psql
+          command -v pg_dump
+          command -v pg_restore
+          readlink -f "$(command -v psql)"
+          readlink -f "$(command -v pg_dump)"
+          readlink -f "$(command -v pg_restore)"
+          dpkg -L postgresql-client-17
+
+          PG17_BIN="$(dpkg -L postgresql-client-17 | awk '/\/bin\/psql$/ { sub("/psql$", ""); print; exit }')"
+          test -n "$PG17_BIN"
+          echo "PG17_BIN=$PG17_BIN" >> "$GITHUB_ENV"
+          echo "$PG17_BIN" >> "$GITHUB_PATH"
+
+          for tool in psql pg_dump pg_restore pg_isready; do
+            binary="${PG17_BIN}/${tool}"
+            test -x "$binary"
+            real_path="$(readlink -f "$binary")"
+            case "$real_path" in
+              "$PG17_BIN"/*) ;;
+              *) echo "Binario fora do PG17_BIN: $tool"; exit 1 ;;
+            esac
+            version="$("$binary" --version)"
+            major="$(printf '%s' "$version" | awk '{print $3}' | cut -d. -f1)"
+            test "$major" = "17"
+            echo "$tool real: $real_path"
+            echo "$tool version: $version"
+          done
+
+      - name: PostgreSQL 17 binary preflight
+        run: |
+          set -Eeuo pipefail
+          export PATH="${PG17_BIN}:${PATH}"
+          for tool in psql pg_dump pg_restore pg_isready; do
+            binary="${PG17_BIN}/${tool}"
+            test -x "$binary"
+            real_path="$(readlink -f "$binary")"
+            case "$real_path" in
+              "$PG17_BIN"/*) ;;
+              *) echo "Binario fora do PG17_BIN: $tool"; exit 1 ;;
+            esac
+            version="$("$binary" --version)"
+            major="$(printf '%s' "$version" | awk '{print $3}' | cut -d. -f1)"
+            test "$major" = "17"
+            echo "$tool preflight real: $real_path"
+            echo "$tool preflight version: $version"
+          done
 
       - name: Prepare disposable databases
         run: |
           set -euo pipefail
           export PGPASSWORD="$DB_PASSWORD"
-          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+          "${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
             -v ON_ERROR_STOP=1 \
             -c "CREATE DATABASE crm_restore_source;" \
             -c "CREATE DATABASE crm_restore_target;" \
@@ -110,18 +159,27 @@ jobs:
         run: |
           set -Eeuo pipefail
           export PGPASSWORD="$DB_PASSWORD"
-          psql --version
-          pg_dump --version
-          pg_restore --version
-          pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"
-          server_major="$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SHOW server_version_num" | cut -c1-2)"
-          current_db="$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT current_database()")"
-          pg_dump_major="$(pg_dump --version | awk '{print $3}' | cut -d. -f1)"
-          pg_restore_major="$(pg_restore --version | awk '{print $3}' | cut -d. -f1)"
+          export PATH="${PG17_BIN}:${PATH}"
+          "${PG17_BIN}/psql" --version
+          "${PG17_BIN}/pg_dump" --version
+          "${PG17_BIN}/pg_restore" --version
+          "${PG17_BIN}/pg_isready" --version
+          "${PG17_BIN}/pg_isready" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"
+          server_major="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SHOW server_version_num" | cut -c1-2)"
+          server_version="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT version()")"
+          current_db="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT current_database()")"
+          expected_table_count="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")"
+          pg_dump_major="$("${PG17_BIN}/pg_dump" --version | awk '{print $3}' | cut -d. -f1)"
+          pg_restore_major="$("${PG17_BIN}/pg_restore" --version | awk '{print $3}' | cut -d. -f1)"
           test "$server_major" = "17"
           test "$pg_dump_major" = "17"
           test "$pg_restore_major" = "17"
           test "$current_db" = "$SOURCE_DB"
+          test "$expected_table_count" -ge 13
+          echo "Servidor PostgreSQL: $server_version"
+          echo "Banco sintetico: $current_db"
+          echo "Porta local mapeada: $DB_PORT"
+          echo "Tabelas publicas esperadas: $expected_table_count"
           mkdir -p restore-artifact restore-work
           test -w restore-work
           test -z "$(find restore-artifact restore-work -name '*.dump' -o -name '*.dump.enc' 2>/dev/null | head -n 1)"
@@ -138,7 +196,7 @@ jobs:
           echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
           echo "backup_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> restore-metrics/timing.env
           start=$(date +%s)
-          TMPDIR="$PWD/restore-work" DIRECT_URL="$SOURCE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" python backend/scripts/create_encrypted_postgres_backup.py --output-dir restore-artifact
+          TMPDIR="$PWD/restore-work" DIRECT_URL="$SOURCE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" PG_DUMP_BIN="${PG17_BIN}/pg_dump" python backend/scripts/create_encrypted_postgres_backup.py --output-dir restore-artifact
           end=$(date +%s)
           echo "backup_duration_seconds=$((end-start))" >> restore-metrics/timing.env
           test -z "$(find restore-artifact -name '*.dump' -print -quit)"
@@ -153,7 +211,7 @@ jobs:
           BACKUP_FILE="$(find restore-artifact -name '*.dump.enc' -print -quit)"
           MANIFEST_FILE="$(find restore-artifact -name '*.manifest.json' -print -quit)"
           start=$(date +%s)
-          POSTGRES_RESTORE_URL="$RESTORE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" python backend/scripts/verify_encrypted_backup_restore.py --backup "$BACKUP_FILE" --manifest "$MANIFEST_FILE"
+          POSTGRES_RESTORE_URL="$RESTORE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" PG_RESTORE_BIN="${PG17_BIN}/pg_restore" python backend/scripts/verify_encrypted_backup_restore.py --backup "$BACKUP_FILE" --manifest "$MANIFEST_FILE"
           end=$(date +%s)
           echo "restore_duration_seconds=$((end-start))" >> restore-metrics/timing.env
 
@@ -193,7 +251,7 @@ jobs:
           set +e
           rm -rf restore-artifact restore-metrics restore-work
           export PGPASSWORD="$DB_PASSWORD"
-          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+          "${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
             -c "DROP DATABASE IF EXISTS crm_restore_source WITH (FORCE);" \
             -c "DROP DATABASE IF EXISTS crm_restore_target WITH (FORCE);"
           residual="$(find . \( -name '*.dump' -o -name '*.dump.enc' -o -name 'key.env' \) -print -quit)"

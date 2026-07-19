@@ -233,9 +233,13 @@ def safe_completed_process(args: list[str], env: dict[str, str] | None = None, t
         raise SafePgDumpError("TIMEOUT", step=args[0]) from exc
 
 
+def pg_dump_binary() -> str:
+    return os.environ.get("PG_DUMP_BIN", "pg_dump")
+
+
 def pg_dump_version() -> str:
     try:
-        result = safe_completed_process(["pg_dump", "--version"], timeout=10)
+        result = safe_completed_process([pg_dump_binary(), "--version"], timeout=10)
     except SafePgDumpError:
         return "not_found"
     output = (result.stdout or result.stderr or "").strip()
@@ -506,7 +510,7 @@ def collect_metadata(database_url: str) -> dict:
 def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEOUT_SECONDS) -> None:
     dump_path = prepare_dump_path(dump_path)
     command = [
-        "pg_dump",
+        pg_dump_binary(),
         "--format=custom",
         "--no-owner",
         "--no-privileges",

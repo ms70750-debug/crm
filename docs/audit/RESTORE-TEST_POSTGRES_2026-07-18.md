@@ -74,6 +74,39 @@ O teste deve usar somente banco PostgreSQL descartavel e isolado, com dados sint
 - Nenhum restore real foi executado.
 - Nenhum artifact aberto deve ser publicado.
 
+## Fixacao dos clientes PostgreSQL 17 PR #32 - 2026-07-18
+
+### Diagnostico
+
+- Run analisado: `29668273614`.
+- Etapa com falha: `PostgreSQL client preflight`.
+- Falha ocorreu antes do backup, antes da criptografia e antes do restore.
+- Servidor descartavel: PostgreSQL 17.10.
+- `psql` resolvido: 17.10.
+- `pg_dump` resolvido pelo nome generico: 16.14.
+- `pg_restore` resolvido pelo nome generico: 16.14.
+- Causa raiz: resolucao de PATH/wrapper no runner Ubuntu, nao conexao, migrations ou dados sinteticos.
+
+### Correcao
+
+- `PG17_BIN` passa a ser descoberto por `dpkg -L postgresql-client-17`.
+- Os caminhos reais sao validados com `readlink -f` e devem resolver dentro de `PG17_BIN`.
+- Operacoes criticas usam caminhos absolutos:
+  - `${PG17_BIN}/psql`;
+  - `${PG17_BIN}/pg_isready`;
+  - `${PG17_BIN}/pg_dump`;
+  - `${PG17_BIN}/pg_restore`.
+- O workflow adiciona `PG17_BIN` ao `PATH` somente como apoio, sem depender de wrapper generico ou `update-alternatives`.
+- Os scripts de backup/restore aceitam `PG_DUMP_BIN` e `PG_RESTORE_BIN` para executar os binarios fixados.
+
+### Limites preservados
+
+- Nenhum Supabase principal foi alterado.
+- Nenhum backup real foi executado.
+- Nenhum restore real foi executado.
+- Nenhum dado pessoal foi usado.
+- Nenhum secret real foi registrado.
+
 ## RPO/RTO
 
 - RPO esperado: ate o ultimo dado sintetico criado antes do `pg_dump`.

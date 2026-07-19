@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-18 - Fixacao dos binarios PostgreSQL 17 no restore PR 32
+
+### Corrigido
+- O workflow `PostgreSQL Backup and Restore Validation` agora descobre `PG17_BIN` pelo pacote `postgresql-client-17` e chama `psql`, `pg_isready`, `pg_dump` e `pg_restore` por caminho absoluto.
+- O preflight falha se qualquer binario critico nao existir, resolver fora de `PG17_BIN` ou retornar versao principal diferente de 17.
+- Os scripts de backup e restore aceitam `PG_DUMP_BIN` e `PG_RESTORE_BIN`, permitindo que o workflow use exclusivamente os clientes PostgreSQL 17 fixados.
+- Testes estaticos e unitarios passaram a barrar regressao para `pg_dump`/`pg_restore` genericos.
+
+### Mantido
+- Nenhum merge, publicacao, backup real, restore real, Supabase principal, Render, Vercel, Resend, DNS ou dado real foi alterado.
+
 ## 2026-07-18 - Correcao do pg_dump no restore descartavel PR 32
 
 ### Corrigido

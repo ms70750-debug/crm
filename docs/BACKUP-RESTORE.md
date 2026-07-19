@@ -187,6 +187,8 @@ O workflow `PostgreSQL Backup and Restore Validation` executa essa validacao sem
 
 Atualizacao de seguranca em 2026-07-18: as tres primeiras tentativas do PR #32 falharam no bloco `Create encrypted backup` porque o workflow usava shims Docker para `pg_dump`/`pg_restore`. O shim executava o cliente em outro processo/container e dependia de propagacao indireta da connection string via `PGDATABASE`, mascarando a falha como objeto/banco invalido e criando arquivo vazio. O modelo final aprovado para o PR #32 e o Modelo A: instalar `postgresql-client-17` no runner e executar `psql`, `pg_isready`, `pg_dump` e `pg_restore` diretamente contra `127.0.0.1:5432`.
 
+Atualizacao complementar em 2026-07-18: a tentativa seguinte comprovou que o pacote `postgresql-client-17` estava instalado, mas a resolucao generica do runner ainda escolhia `pg_dump` e `pg_restore` 16.14 enquanto `psql` era 17.10. O workflow passou a descobrir `PG17_BIN` por `dpkg -L postgresql-client-17`, validar os caminhos reais com `readlink -f` e executar operacoes criticas somente por caminho absoluto, como `${PG17_BIN}/pg_dump` e `${PG17_BIN}/pg_restore`.
+
 Antes do backup, o workflow agora valida:
 - `psql --version`;
 - `pg_dump --version`;
@@ -195,6 +197,7 @@ Antes do backup, o workflow agora valida:
 - `SHOW server_version_num`;
 - `SELECT current_database()`;
 - cliente e servidor na versao principal 17;
+- caminho real dos quatro clientes dentro de `PG17_BIN`;
 - diretorio de saida gravavel;
 - ausencia de dump residual.
 
@@ -204,11 +207,11 @@ Fluxo seguro:
 3. Aplica as migrations oficiais em `backend/migrations/postgres`.
 4. Cria somente dados sinteticos com dominio `example.test`.
 5. Valida origem, login, consentimento, audit log, simulacao e soft delete.
-6. Gera dump custom com `pg_dump` 17 instalado no runner, usando variaveis libpq separadas e sem connection string em argumento.
+6. Gera dump custom com `${PG17_BIN}/pg_dump` 17 instalado no runner, usando variaveis libpq separadas e sem connection string em argumento.
 7. Calcula checksum SHA-256.
 8. Criptografa com chave Fernet efemera criada dentro do job.
 9. Remove o dump aberto antes de qualquer etapa seguinte.
-10. Restaura em segundo banco descartavel com `pg_restore` 17 instalado no runner.
+10. Restaura em segundo banco descartavel com `${PG17_BIN}/pg_restore` 17 instalado no runner.
 11. Valida schema, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
 12. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
 
