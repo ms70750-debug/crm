@@ -34,6 +34,17 @@ Para USO PROPRIO, o Supabase deve operar em arquitetura `BACKEND-ONLY`.
 ## Readiness para dados reais
 O backend possui verificacao de prontidao para `APP_MODE=production`. Esse modo permanece bloqueado ate existirem `DATABASE_URL`, `BBB_DATA_ENCRYPTION_KEY`, `BBB_AUTH_SECRET` forte, migrations aplicadas, backup configurado, consentimento obrigatorio, logs mascarados, HTTPS esperado e testes criticos aprovados.
 
+## Preparacao para producao real USO_PROPRIO
+
+A arquitetura alvo para dados reais continua backend-only:
+- Frontend Vercel conversa apenas com a API FastAPI.
+- API FastAPI acessa PostgreSQL gerenciado via `DATABASE_URL`.
+- Supabase nao deve ser usado diretamente pelo frontend.
+- Migrations administrativas usam `DIRECT_URL`/`SUPABASE_DIRECT_URL` apenas em secret seguro.
+- Restore isolado usa `POSTGRES_RESTORE_URL` e nunca aponta para o banco principal.
+
+O health check `/healthz` deve validar a conexao do banco com `SELECT 1` e retornar somente status, versao, ambiente e nome do servico, sem URL, usuario, host ou senha.
+
 ## Protecao de dados
 Campos sensiveis devem usar envelope criptografado versionado com Fernet (`cryptography`) e hash deterministico separado para CPF. A chave `BBB_DATA_ENCRYPTION_KEY` deve existir somente em ambiente seguro e nunca no Git.
 
@@ -97,6 +108,12 @@ O backend deve aplicar headers basicos de seguranca e limites em login/rotas sen
 ## Sessao
 A sessao atual usa cookie HttpOnly. Em producao controlada o cookie deve ser `Secure` e `SameSite=None` para permitir frontend e backend em provedores diferentes. Em local, usa `SameSite=Lax`. O token Bearer ainda e aceito pelo backend para testes e compatibilidade, mas o frontend nao persiste token em localStorage.
 
+## Datas UTC em seguranca
+
+Comparacoes de expiracao em autenticacao, sessoes e tokens administrativos usam UTC timezone-aware como convencao canonica. O relogio atual deve ser obtido com `datetime.now(UTC)` por helper centralizado. Valores PostgreSQL `TIMESTAMPTZ` sao convertidos para UTC; valores naive internos vindos do legado SQLite/SQLAlchemy sao interpretados como UTC apenas nesse contrato interno. Valores ausentes ou invalidos rejeitam a operacao de forma neutra.
+
+A regra de expiracao e fechada: `expires_at <= agora` significa expirado, `expires_at > agora` significa valido. Revogacao, uso unico e finalidade do token continuam sendo verificados separadamente.
+
 ## Fail modes
 - Banco local ausente: API recria estrutura basica.
 - Migration incompleta: app pode falhar no startup.
@@ -109,3 +126,11 @@ A sessao atual usa cookie HttpOnly. Em producao controlada o cookie deve ser `Se
 
 ## Render e cold start
 O health check publicado respondeu apos nova tentativa durante a auditoria. Esse comportamento e compatavel com cold start/latencia de servico gerenciado. Nao houve alteracao de plano ou infraestrutura nesta recuperacao.
+
+## Persistencia e e-mail transacional
+
+Em `APP_ENV=production`, o backend deve usar PostgreSQL gerenciado por `DATABASE_URL`; SQLite fica restrito a desenvolvimento/testes locais. A conexao PostgreSQL e normalizada para o driver `psycopg`, exige SSL e usa pool pequeno com `pool_pre_ping` para reduzir falhas de conexao em provedores gerenciados.
+
+Migrations/admin continuam separados do runtime por `DIRECT_URL`. Seeds demo nao devem ser executados em producao PostgreSQL.
+
+O envio transacional fica isolado em Resend, com `AUTH_EMAIL_MODE=simulate` por padrao. Os usos autorizados sao somente ativacao administrativa e recuperacao de senha; comunicacao comercial, WhatsApp e SMS continuam fora do escopo.

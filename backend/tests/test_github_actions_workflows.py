@@ -10,6 +10,7 @@ PERMISSIONS_AUDIT_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-permissions-audit.ym
 POSTGRES_BACKEND_ONLY_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backend-only-validation.yml"
 ENCRYPTED_BACKUP_WORKFLOW_PATH = WORKFLOWS_DIR / "supabase-encrypted-backup.yml"
 BACKUP_RESTORE_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-backup-restore-test.yml"
+POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH = WORKFLOWS_DIR / "postgres-restore-validation.yml"
 CREATE_FIRST_ADMIN_WORKFLOW_PATH = WORKFLOWS_DIR / "create-first-admin.yml"
 
 
@@ -275,6 +276,83 @@ def test_backup_restore_workflow_uses_temporary_postgres_and_no_supabase() -> No
     assert "actions/upload-artifact" not in content
     assert "printenv" not in content
     assert "env |" not in content
+
+
+def test_postgres_restore_validation_workflow_uses_disposable_postgres_17() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "name: PostgreSQL Backup and Restore Validation" in content
+    assert "pull_request:" in content
+    assert "workflow_dispatch:" in content
+    assert "contents: read" in content
+    assert "timeout-minutes: 20" in content
+    assert "postgres:17" in content
+    assert "postgresql-client-17" in content
+    assert "PG17_BIN=$PG17_BIN" in content
+    assert 'echo "$PG17_BIN" >> "$GITHUB_PATH"' in content
+    assert "PostgreSQL 17 binary preflight" in content
+    assert "PostgreSQL client preflight" in content
+    assert '"${PG17_BIN}/pg_isready" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"' in content
+    assert '"${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"' in content
+    assert 'PG_DUMP_BIN="${PG17_BIN}/pg_dump"' in content
+    assert 'PG_RESTORE_BIN="${PG17_BIN}/pg_restore"' in content
+    assert "test \"$pg_dump_major\" = \"17\"" in content
+    assert "test \"$pg_restore_major\" = \"17\"" in content
+    assert "crm_source_ci" in content
+    assert "crm_restore_ci" in content
+    assert "crm_restore_target" not in content
+    assert "WITH TEMPLATE template0 OWNER restore_ci_owner ENCODING 'UTF8'" in content
+    assert "apply_postgres_migrations.py --apply" in content
+    assert "ci_postgres_restore_validation.py seed-source" in content
+    assert "create_encrypted_postgres_backup.py" in content
+    assert "verify_encrypted_backup_restore.py" in content
+    assert "ci_postgres_restore_validation.py validate-restore" in content
+
+
+def test_postgres_restore_validation_workflow_uses_no_real_secrets_or_external_database() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "SUPABASE_DIRECT_URL" not in content
+    assert "secrets." not in content
+    assert "postgresql://" not in content
+    assert "postgres://" not in content
+    assert "AUTH_EMAIL_ENABLED: \"false\"" in content
+    assert "AUTH_EMAIL_MODE: simulate" in content
+    assert "REAL_DATA_MODE: \"false\"" in content
+    assert "actions/upload-artifact" not in content
+    assert "printenv" not in content
+    assert "env |" not in content
+    assert "::add-mask::$SOURCE_URL" in content
+    assert "::add-mask::$RESTORE_URL" in content
+
+
+def test_postgres_restore_validation_workflow_does_not_use_client_shims() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "Create PostgreSQL 17 client shims" not in content
+    assert ".ci-bin/pg_dump" not in content
+    assert ".ci-bin/pg_restore" not in content
+    assert "--network host" not in content
+    assert "docker run" not in content
+    assert 'PGDATABASE="${PGDATABASE:-}"' not in content
+
+
+def test_postgres_restore_validation_workflow_pins_postgres_17_binaries() -> None:
+    content = POSTGRES_RESTORE_VALIDATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert 'PG17_BIN="$(dpkg -L postgresql-client-17' in content
+    assert 'test -x "$binary"' in content
+    assert 'real_path="$(readlink -f "$binary")"' in content
+    assert 'test "$major" = "17"' in content
+    assert '"${PG17_BIN}/psql" --version' in content
+    assert '"${PG17_BIN}/pg_dump" --version' in content
+    assert '"${PG17_BIN}/pg_restore" --version' in content
+    assert '"${PG17_BIN}/pg_isready" --version' in content
+    assert '\n          psql -h "$DB_HOST"' not in content
+    assert '\n          pg_dump --version' not in content
+    assert '\n          pg_restore --version' not in content
+    assert '\n          pg_isready -h "$DB_HOST"' not in content
+    assert "update-alternatives" not in content
 
 
 def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:

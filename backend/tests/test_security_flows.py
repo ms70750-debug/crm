@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import json
 from time import time_ns
 
@@ -11,8 +11,9 @@ from app.config.environment import validate_environment
 from app.database.init_db import init_db
 from app.database.session import SessionLocal
 from app.main import app
-from app.models import AuditLog, AuthSession, Client
+from app.models import AuditLog, AuthSession, Client, Consent, Simulation
 from app.services.privacy import is_valid_cpf
+from app.services.datetime_utc import utc_from_internal, utc_now
 
 
 client = TestClient(app)
@@ -50,7 +51,7 @@ def test_production_environment_rejects_missing_database_url(monkeypatch: pytest
         validate_environment()
 
 
-def test_production_sqlite_is_allowed_only_for_controlled_mvp(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_environment_rejects_sqlite_even_with_real_data_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
     monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
@@ -58,7 +59,8 @@ def test_production_sqlite_is_allowed_only_for_controlled_mvp(monkeypatch: pytes
     monkeypatch.setenv("EVOLUTION_API_MODE", "simulation")
     monkeypatch.setenv("REAL_DATA_MODE", "false")
 
-    validate_environment()
+    with pytest.raises(RuntimeError):
+        validate_environment()
 
 
 def test_real_data_mode_rejects_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -117,6 +119,26 @@ def test_login_rejects_invalid_password() -> None:
     init_db()
     response = client.post("/auth/login", json={"email": "admin@bbbconsig.demo", "password": "senha-errada"})
     assert response.status_code == 401
+
+
+def test_healthz_reports_safe_database_and_version_metadata() -> None:
+    init_db()
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["database"] == "ok"
+    assert body["version"]
+    assert body["auth_email"]["provider"] == "resend"
+    assert "secret_configured" in body["auth_email"]
+    assert "DATABASE_URL" not in response.text
+    assert "postgresql://" not in response.text
+
+
+def test_global_rate_limit_blocks_excessive_requests() -> None:
+    init_db()
+    responses = [client.get("/auth/me") for _ in range(301)]
+    assert responses[-1].status_code == 429
 
 
 def test_login_rate_limit_blocks_repeated_attempts() -> None:
@@ -190,7 +212,7 @@ def test_login_creates_server_side_session_and_does_not_store_full_token() -> No
         session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
         assert session is not None
         assert session.revoked_at is None
-        assert session.expires_at > datetime.utcnow()
+        assert utc_from_internal(session.expires_at) > utc_now()
         assert token not in str(session.__dict__)
         assert payload["sid"] not in str(session.__dict__)
 
@@ -222,7 +244,7 @@ def test_expired_or_missing_server_side_session_fails() -> None:
     with SessionLocal() as db:
         session = db.scalar(select(AuthSession).where(AuthSession.user_id == expired_login["user"]["id"]).order_by(AuthSession.id.desc()))
         assert session is not None
-        session.expires_at = datetime.utcnow() - timedelta(seconds=1)
+        session.expires_at = utc_now() - timedelta(seconds=1)
         db.commit()
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {expired_token}"}).status_code == 401
 
@@ -245,6 +267,37 @@ def test_revoked_session_does_not_affect_another_valid_session_for_same_user() -
     assert client.post("/auth/logout", headers=first_headers).status_code == 200
     assert client.get("/auth/me", headers=first_headers).status_code == 401
     assert client.get("/auth/me", headers=second_headers).status_code == 200
+
+
+def test_session_expiration_accepts_restored_aware_utc_datetime_without_type_error() -> None:
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        session.expires_at = utc_now() + timedelta(hours=1)
+        db.commit()
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+
+
+def test_session_expiration_boundary_equal_now_is_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    fixed_now = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        session.expires_at = fixed_now
+        db.commit()
+
+    monkeypatch.setattr("app.services.security.utc_now", lambda: fixed_now)
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
 
 
 def test_demo_mode_blocks_valid_cpf_and_allows_fictitious_cpf(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -388,6 +441,7 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     consent = client.post("/consents", headers=headers, json={"customer_id": body["id"], "channel": "whatsapp", "source": "pytest"})
     assert consent.status_code == 201
     assert consent.json()["granted"] is True
+    assert consent.json()["terms_version"] == "minuta-lgpd-v1"
 
     sent = client.post(
         "/whatsapp/simular-envio",
@@ -401,6 +455,7 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
     assert simulation.status_code == 200
     assert "snapshot" in simulation.json()
     assert "regra_aplicada" in simulation.json()
+    assert simulation.json()["snapshot"]["rule_version"] == "demo-v1"
 
     deleted = client.delete(f"/clientes/{body['id']}", headers=headers)
     assert deleted.status_code == 200
@@ -415,3 +470,10 @@ def test_client_consent_whatsapp_simulation_and_soft_delete_flow() -> None:
         audit = db.scalar(select(AuditLog).where(AuditLog.action == "whatsapp_simulation_created").order_by(AuditLog.id.desc()))
         assert audit is not None
         assert cpf not in (audit.metadata_json or "")
+        stored_consent = db.scalar(select(Consent).where(Consent.customer_id == body["id"]).order_by(Consent.id.desc()))
+        assert stored_consent is not None
+        assert stored_consent.terms_version == "minuta-lgpd-v1"
+        stored_simulation = db.scalar(select(Simulation).where(Simulation.cpf_masked == simulation.json()["cpf"]).order_by(Simulation.id.desc()))
+        assert stored_simulation is not None
+        assert stored_simulation.rule_version == "demo-v1"
+        assert stored_simulation.created_by_user_id is not None

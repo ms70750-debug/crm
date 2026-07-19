@@ -75,7 +75,6 @@ def ensure_primary_admin_from_env(db: Session) -> bool:
         user.nome = name
         user.role = "admin"
         user.ativo = True
-        user.password_hash = hash_password(password)
     else:
         db.add(
             User(

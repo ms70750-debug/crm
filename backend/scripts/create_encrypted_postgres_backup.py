@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Callable
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import create_engine, text
@@ -180,6 +181,49 @@ def sqlalchemy_database_url(database_url: str) -> str:
     return database_url
 
 
+def postgres_client_database_url(database_url: str) -> str:
+    if database_url.startswith("postgresql+psycopg://"):
+        return "postgresql://" + database_url.removeprefix("postgresql+psycopg://")
+    if database_url.startswith("postgresql+psycopg2://"):
+        return "postgresql://" + database_url.removeprefix("postgresql+psycopg2://")
+    if database_url.startswith("postgres://"):
+        return "postgresql://" + database_url.removeprefix("postgres://")
+    return database_url
+
+
+def postgres_client_environment(database_url: str, base_env: dict[str, str] | None = None) -> dict[str, str]:
+    native_url = postgres_client_database_url(database_url)
+    parsed = urlsplit(native_url)
+    if parsed.scheme not in {"postgresql", "postgres"} or not parsed.hostname:
+        raise SafePgDumpError(
+            "INVALID_ARGUMENT",
+            step="client-env",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("INVALID_ARGUMENT"),
+            binary_found=True,
+        )
+    database = unquote(parsed.path.lstrip("/"))
+    if not database:
+        raise SafePgDumpError(
+            "INVALID_ARGUMENT",
+            step="client-env",
+            pg_dump_version=pg_dump_version(),
+            recommendation=safe_recommendation("INVALID_ARGUMENT"),
+            binary_found=True,
+        )
+    env = (base_env or os.environ).copy()
+    env["PGHOST"] = parsed.hostname
+    env["PGPORT"] = str(parsed.port or 5432)
+    env["PGUSER"] = unquote(parsed.username or "")
+    if parsed.password is not None:
+        env["PGPASSWORD"] = unquote(parsed.password)
+    env["PGDATABASE"] = database
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if query.get("sslmode"):
+        env["PGSSLMODE"] = query["sslmode"]
+    return env
+
+
 def safe_completed_process(args: list[str], env: dict[str, str] | None = None, timeout: int = 15) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(args, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, timeout=timeout)
@@ -189,9 +233,13 @@ def safe_completed_process(args: list[str], env: dict[str, str] | None = None, t
         raise SafePgDumpError("TIMEOUT", step=args[0]) from exc
 
 
+def pg_dump_binary() -> str:
+    return os.environ.get("PG_DUMP_BIN", "pg_dump")
+
+
 def pg_dump_version() -> str:
     try:
-        result = safe_completed_process(["pg_dump", "--version"], timeout=10)
+        result = safe_completed_process([pg_dump_binary(), "--version"], timeout=10)
     except SafePgDumpError:
         return "not_found"
     output = (result.stdout or result.stderr or "").strip()
@@ -462,7 +510,7 @@ def collect_metadata(database_url: str) -> dict:
 def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEOUT_SECONDS) -> None:
     dump_path = prepare_dump_path(dump_path)
     command = [
-        "pg_dump",
+        pg_dump_binary(),
         "--format=custom",
         "--no-owner",
         "--no-privileges",
@@ -471,8 +519,8 @@ def run_pg_dump(database_url: str, dump_path: Path, timeout: int = PG_DUMP_TIMEO
         "--file",
         str(dump_path),
     ]
-    process_env = os.environ.copy()
-    process_env["PGDATABASE"] = database_url
+    process_env = postgres_client_environment(database_url)
+    command.extend(["--dbname", process_env["PGDATABASE"]])
     try:
         result = subprocess.run(
             command,

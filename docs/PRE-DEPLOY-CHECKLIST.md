@@ -2,6 +2,16 @@
 
 Use antes de qualquer publicacao online.
 
+## Corte para producao real
+- [ ] Confirmar classificacao `USO_PROPRIO`.
+- [ ] Confirmar PostgreSQL/Supabase correto.
+- [ ] Rodar migrations PostgreSQL em ambiente isolado.
+- [ ] Executar restore isolado aprovado.
+- [ ] Manter `REAL_DATA_MODE=false` ate autorizacao final.
+- [ ] Manter `EVOLUTION_API_MODE=simulation` ate autorizacao de comunicacao real.
+- [ ] Confirmar alertas e canal de incidente.
+- [ ] Confirmar revisao juridica das minutas LGPD.
+
 ## Codigo
 - [ ] `git status` sem arquivos pendentes.
 - [ ] `.env`, `app.db`, backups, logs, `dist`, `node_modules`, `test-results` e `referencias/` fora do Git.

@@ -83,7 +83,7 @@ export function Leads() {
       {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
       <CrudShell>
         <Panel>
-          <h3 className="mb-4 font-semibold">Novo lead</h3>
+          <h3 className="mb-4 section-title">Novo lead</h3>
           <form className="grid gap-3" onSubmit={form.handleSubmit(submit)}>
             <input className="input" placeholder="Nome" {...form.register("nome")} />
             <input className="input" placeholder="CPF" {...form.register("cpf")} />

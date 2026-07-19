@@ -2,6 +2,16 @@
 
 Status: ADR 012 APROVADO para USO PROPRIO. Backup real criptografado validado no GitHub Actions em artifact protegido; restauracao real continua proibida sem ambiente isolado e aprovacao explicita.
 
+## Tentativa de go-live - 2026-07-18
+
+O go-live real do PR #32 foi bloqueado antes das migrations porque nao havia caminho automatizavel seguro para criar backup pre-migration criptografado do Supabase principal e validar restore em PostgreSQL descartavel nesta sessao.
+
+Garantias preservadas:
+- nenhum restore foi executado no Supabase principal;
+- nenhuma migration real foi aplicada;
+- nenhum arquivo aberto de dump foi criado;
+- nenhum segredo ou URL completa de banco foi registrado.
+
 Ultima verificacao por metadados em 2026-07-18:
 
 - Workflow: `Supabase Encrypted Backup`.
@@ -12,6 +22,26 @@ Ultima verificacao por metadados em 2026-07-18:
 - Artifact: `supabase-encrypted-backup`.
 - Retencao efetiva: 7 dias, com expiracao indicada em `2026-07-25T07:40:49Z`.
 - Classificacao: valido por metadados; nao houve download, descriptografia ou restore real.
+
+## Politica minima para uso proprio real
+
+- Frequencia: diaria.
+- Criptografia: antes de qualquer upload.
+- Checksum: obrigatorio para pacote criptografado e manifesto.
+- Retencao: diaria minima de 7 dias, com recomendacao de copias semanais/mensais conforme capacidade.
+- Duplicidade: workflow com concurrency sem cancelamento para evitar sobreposicao.
+- Artifact: nunca incluir `.sql`, `.tar` ou dump aberto.
+- Logs: secrets mascarados e erros sanitizados.
+- Restore: somente em banco isolado ate autorizacao formal.
+
+## Recuperacao
+
+1. Confirmar incidente e congelar alteracoes quando necessario.
+2. Selecionar backup criptografado aprovado.
+3. Validar checksum.
+4. Restaurar primeiro em banco isolado.
+5. Validar tabelas, constraints, indices, login sintetico, cliente ficticio, audit log e soft delete.
+6. Solicitar autorizacao explicita antes de qualquer restauracao no banco principal.
 
 ## Escopo Atual
 
@@ -146,3 +176,72 @@ O provedor externo ainda nao foi escolhido nem configurado. Opcoes futuras devem
 - Nao testar restore com dados reais nesta etapa.
 - Nao armazenar dump aberto como artifact permanente.
 - Nao configurar armazenamento externo real sem nova aprovacao.
+
+## Restore isolado PostgreSQL
+
+Antes de dados reais, o restore deve ser validado em banco PostgreSQL descartavel e isolado, nunca no banco principal. O teste deve aplicar migrations, inserir somente dados sinteticos, gerar backup criptografado, validar checksum, restaurar em segundo banco isolado e confirmar login/autenticacao apos restore.
+
+### GitHub Actions descartavel
+
+O workflow `PostgreSQL Backup and Restore Validation` executa essa validacao sem depender de Docker, `psql`, `pg_dump` ou `pg_restore` no computador local. O ambiente de teste e o runner do GitHub Actions.
+
+Atualizacao de seguranca em 2026-07-18: as tres primeiras tentativas do PR #32 falharam no bloco `Create encrypted backup` porque o workflow usava shims Docker para `pg_dump`/`pg_restore`. O shim executava o cliente em outro processo/container e dependia de propagacao indireta da connection string via `PGDATABASE`, mascarando a falha como objeto/banco invalido e criando arquivo vazio. O modelo final aprovado para o PR #32 e o Modelo A: instalar `postgresql-client-17` no runner e executar `psql`, `pg_isready`, `pg_dump` e `pg_restore` diretamente contra `127.0.0.1:5432`.
+
+Atualizacao complementar em 2026-07-18: a tentativa seguinte comprovou que o pacote `postgresql-client-17` estava instalado, mas a resolucao generica do runner ainda escolhia `pg_dump` e `pg_restore` 16.14 enquanto `psql` era 17.10. O workflow passou a descobrir `PG17_BIN` por `dpkg -L postgresql-client-17`, validar os caminhos reais com `readlink -f` e executar operacoes criticas somente por caminho absoluto, como `${PG17_BIN}/pg_dump` e `${PG17_BIN}/pg_restore`.
+
+Atualizacao em 2026-07-19: o backup custom foi criado, validado por checksum, criptografado e teve o dump aberto removido, mas o restore descartavel falhou porque o dump inclui `SCHEMA - public` e um banco PostgreSQL recem-criado ja possui o schema `public` por padrao. A correcao prepara o destino realmente vazio antes do `pg_restore`: primeiro confirma o indice do dump com `${PG17_BIN}/pg_restore --list` sem imprimir o indice completo, depois valida que o destino e local, sintetico, diferente da origem e livre de referencias externas proibidas. Somente apos essas protecoes, o script executa `DROP SCHEMA IF EXISTS public CASCADE` no banco descartavel vazio. O schema nao e recriado manualmente; o proprio dump deve recriar `public`.
+
+Atualizacao complementar em 2026-07-19: a execucao seguinte aprovou backup, checksum, criptografia, preparo do destino, restore e recriacao do schema `public`, mas falhou na validacao funcional do backend restaurado por mistura de datetime naive e aware. A coluna `auth_sessions.expires_at` e `TIMESTAMPTZ` no PostgreSQL e voltou como datetime aware; o codigo comparava esse valor com `datetime.utcnow()`, que e naive. A correcao adotou UTC timezone-aware para comparacoes de seguranca e manteve compatibilidade com SQLite interpretando valores internos naive como UTC.
+
+Antes do backup, o workflow agora valida:
+- `psql --version`;
+- `pg_dump --version`;
+- `pg_restore --version`;
+- `pg_isready` no banco sintetico de origem;
+- `SHOW server_version_num`;
+- `SELECT current_database()`;
+- cliente e servidor na versao principal 17;
+- caminho real dos quatro clientes dentro de `PG17_BIN`;
+- diretorio de saida gravavel;
+- ausencia de dump residual.
+
+Fluxo seguro:
+1. Inicia PostgreSQL 17 descartavel como service container.
+2. Cria os bancos `crm_source_ci` e `crm_restore_ci` a partir de `template0`, com owner sintetico `restore_ci_owner`.
+3. Aplica as migrations oficiais em `backend/migrations/postgres`.
+4. Cria somente dados sinteticos com dominio `example.test`.
+5. Valida origem, login, consentimento, audit log, simulacao e soft delete.
+6. Gera dump custom com `${PG17_BIN}/pg_dump` 17 instalado no runner, usando variaveis libpq separadas e sem connection string em argumento.
+7. Calcula checksum SHA-256.
+8. Criptografa com chave Fernet efemera criada dentro do job.
+9. Remove o dump aberto antes de qualquer etapa seguinte.
+10. Inspeciona o indice do dump e confirma `SCHEMA - public`, tabelas, indices e constraints sem expor o indice completo.
+11. Bloqueia o restore se o destino nao for local, nao tiver sufixo `_restore_ci` ou `_restore_test`, for banco proibido, for igual a origem, contiver host externo proibido ou ja tiver tabelas da aplicacao.
+12. Remove o schema `public` somente no banco descartavel aprovado e valida que ele nao existe antes do restore.
+13. Restaura em segundo banco descartavel com `${PG17_BIN}/pg_restore` 17 instalado no runner.
+14. Valida schema recriado, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
+15. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
+
+O workflow nao usa `SUPABASE_DIRECT_URL`, `POSTGRES_RESTORE_URL` real, `BACKUP_ENCRYPTION_KEY` real, `secrets.*`, upload de artifact ou conexao externa de banco. A chave efemera nunca deve ser impressa e nao deve sair do job.
+
+As ferramentas cliente recebem credenciais somente por ambiente do processo no GitHub Actions e nao imprimem host completo, senha, usuario ou URL completa. O dump aberto e removido mesmo em falha.
+
+### Metricas
+
+O job publica no summary apenas metadados sanitizados:
+- duracao do backup;
+- duracao do restore;
+- duracao da validacao;
+- RPO esperado ate o ultimo dado sintetico criado antes do dump;
+- RTO observado como restore mais validacao no job;
+- tamanho do arquivo criptografado.
+
+Nao registrar conteudo do banco, dump aberto, URL completa ou credencial.
+
+### Repeticao
+
+Para repetir manualmente, abrir GitHub Actions, selecionar `PostgreSQL Backup and Restore Validation` e executar `workflow_dispatch` na branch do PR. O teste tambem roda em `pull_request` para `main`.
+
+### Falha
+
+Se o workflow falhar, nao aplicar migrations reais, nao conectar Render ao Supabase e nao ativar dados reais. Corrigir apenas a causa comprovada, sem mais de tres tentativas no mesmo ponto. Se houver dump aberto residual, secret exposto ou conexao externa inesperada, tratar como bloqueio de seguranca.

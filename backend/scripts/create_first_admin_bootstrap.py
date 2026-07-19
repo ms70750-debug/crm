@@ -23,6 +23,7 @@ from app.services.admin_bootstrap import (  # noqa: E402
     create_admin_bootstrap_link,
     normalize_email,
 )
+from app.services.auth_email import AuthEmailError, send_admin_activation_email  # noqa: E402
 
 
 def _safe_output_path(raw_path: str) -> Path:
@@ -49,6 +50,7 @@ def main() -> int:
     with SessionLocal() as db:
         try:
             result = create_admin_bootstrap_link(db, email, activation_base_url=args.activation_base_url, github_run_id=github_run_id)
+            email_result = send_admin_activation_email(db, to_email=email, activation_link=result.link, expires_minutes=ADMIN_BOOTSTRAP_TTL_MINUTES)
         except AdminBootstrapBlocked:
             print("link_created=false")
             print("duplicate_admin=true")
@@ -59,6 +61,11 @@ def main() -> int:
             print("duplicate_admin=false")
             print("token_displayed=false")
             return 1
+        except AuthEmailError:
+            print("link_created=true")
+            print("email_sent=false")
+            print("token_displayed=false")
+            return 3
 
     output_path.write_text(result.link + "\n", encoding="utf-8")
     try:
@@ -68,6 +75,8 @@ def main() -> int:
     print("link_created=true")
     print(f"expires_minutes={ADMIN_BOOTSTRAP_TTL_MINUTES}")
     print("artifact_created=true")
+    print(f"email_sent={'true' if email_result.sent else 'false'}")
+    print(f"email_provider={email_result.provider}")
     print("token_displayed=false")
     print(f"duplicate_admin={'true' if result.duplicate_admin else 'false'}")
     return 0

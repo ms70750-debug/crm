@@ -42,11 +42,11 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.propostas_por_status ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="status" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
-                <Bar dataKey="total" fill="#c7ff45" radius={[6, 6, 0, 0]} />
+                <CartesianGrid stroke="#dbe4f0" />
+                <XAxis dataKey="status" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe4f0", color: "#0f172a" }} />
+                <Bar dataKey="total" fill="#0b5ed7" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -56,11 +56,11 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.leads_por_status ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="status" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
-                <Bar dataKey="total" fill="#4ade80" radius={[6, 6, 0, 0]} />
+                <CartesianGrid stroke="#dbe4f0" />
+                <XAxis dataKey="status" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe4f0", color: "#0f172a" }} />
+                <Bar dataKey="total" fill="#f97316" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -70,11 +70,11 @@ export function Dashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data?.leads_por_origem ?? []}>
-                <CartesianGrid stroke="#263036" />
-                <XAxis dataKey="origem" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: "#101417", border: "1px solid #263036" }} />
-                <Bar dataKey="total" fill="#38bdf8" radius={[6, 6, 0, 0]} />
+                <CartesianGrid stroke="#dbe4f0" />
+                <XAxis dataKey="origem" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #dbe4f0", color: "#0f172a" }} />
+                <Bar dataKey="total" fill="#f7c948" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

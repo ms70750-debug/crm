@@ -3,6 +3,7 @@ DEMO_NOTICE = "Valores demonstrativos. Nao usar para proposta real sem validacao
 PRODUCT_RULES = {
     "INSS": {
         "rule_id": "BR-INSS-DEMO-001",
+        "rule_version": "demo-v1",
         "produto": "INSS",
         "convenio": "INSS",
         "margem_maxima_demonstrativa": 418.72,
@@ -14,6 +15,7 @@ PRODUCT_RULES = {
     },
     "FGTS": {
         "rule_id": "BR-FGTS-DEMO-001",
+        "rule_version": "demo-v1",
         "produto": "FGTS",
         "convenio": "FGTS",
         "margem_maxima_demonstrativa": 0,

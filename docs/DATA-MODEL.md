@@ -137,9 +137,12 @@ Essa validacao nao substitui criptografia em repouso. Ela tambem nao e regra def
 ## Audit log obrigatorio
 - Login
 - Criacao/edicao/soft delete de cliente
+- Mudanca de status de lead/proposta/tarefa
+- Proposta criada ou alterada
 - Registro de opt-in
 - WhatsApp simulado
 - Simulacao INSS/FGTS
+- Operacoes LGPD e restore administrativo
 
 ## Soft delete
 Tabelas com dados pessoais devem usar `deleted_at` antes de remocao definitiva.
@@ -149,18 +152,43 @@ Status proposto:
 - Restauracao administrativa deve registrar auditoria e nunca apagar historico.
 - Exclusao definitiva permanece politica futura documentada, nao implementada como rotina automatica nesta etapa.
 
+## Classificacao por tabela
+
+| Tabela | Classificacao | Observacoes |
+| --- | --- | --- |
+| `users` | configuracoes/seguranca | E-mail interno e hash de senha; senha aberta nunca deve ser armazenada. |
+| `auth_sessions` | seguranca | Hash do identificador de sessao, expiracao e revogacao. |
+| `admin_bootstrap_tokens` | seguranca | Somente hash de token de ativacao. |
+| `leads` | dados pessoais | CPF, telefone e e-mail devem migrar para hash/criptografia antes de uso real. |
+| `clientes` | dados pessoais e financeiros | CPF, telefone, e-mail, beneficio e dados bancarios exigem protecao. |
+| `propostas` | dados financeiros | Valores, prazo, banco e status precisam de auditoria. |
+| `tarefas` | operacional | Pode conter dados pessoais em descricao/observacoes. |
+| `whatsapp_messages` | comunicacao | Permanece simulado ate autorizacao; envio real exige consentimento. |
+| `consents` | LGPD/consentimento | Finalidade, canal, origem, IP, status, revogacao e versao do termo. |
+| `simulations` | simulacoes | Snapshot imutavel com regra, versao, usuario tecnico e hash. |
+| `audit_logs` | auditoria | Metadados sanitizados; nao guardar CPF, telefone ou e-mail completos. |
+| `backup_audit_logs` | auditoria/backup | Operacoes sem secrets e sem conteudo do banco. |
+| `schema_migrations` | configuracoes | Controle de migrations aplicadas. |
+
 ## ERD
 ```mermaid
 erDiagram
   leads ||--o{ tarefas : gera
+  leads ||--o{ propostas : origina_indiretamente
   clientes ||--o{ propostas : possui
+  clientes ||--o{ tarefas : gera
   clientes ||--o{ consents : autoriza
   clientes ||--o{ simulations : recebe
   users ||--o{ audit_logs : registra
+  users ||--o{ auth_sessions : possui
+  users ||--o{ admin_bootstrap_tokens : ativa
+  users ||--o{ simulations : executa
   leads {
     int id
     string nome
     string cpf
+    string cpf_hash
+    string cpf_encrypted
     string telefone
     string email
     string origem
@@ -169,27 +197,96 @@ erDiagram
     string prioridade
     string responsavel
     string proximo_contato
+    datetime deleted_at
+    datetime created_at
+    datetime updated_at
   }
   clientes {
     int id
     string nome
     string cpf
+    string cpf_hash
+    string cpf_encrypted
     string telefone
     string email
     string beneficio
+    string bank_data_encrypted
     string convenio
+    datetime deleted_at
+    datetime created_at
+    datetime updated_at
+  }
+  propostas {
+    int id
+    int cliente_id
+    string produto
+    string banco
+    float valor_liberado
+    float parcela
+    int prazo
+    string status
+    datetime deleted_at
+  }
+  tarefas {
+    int id
+    int lead_id
+    int cliente_id
+    string status
+    string prioridade
+    datetime deleted_at
+  }
+  whatsapp_messages {
+    int id
+    int destinatario_id
+    string destinatario_tipo
+    string status
     datetime deleted_at
   }
   consents {
     int id
     int customer_id
     string channel
+    string purpose
+    string terms_version
     bool granted
+    string status
     datetime created_at
     datetime revoked_at
   }
+  simulations {
+    int id
+    int customer_id
+    int created_by_user_id
+    string cpf_masked
+    string produto
+    string rule_id
+    string rule_version
+    string payload_hash
+  }
+  users {
+    int id
+    string email
+    string role
+    bool ativo
+  }
+  auth_sessions {
+    int id
+    int user_id
+    string session_id_hash
+    datetime expires_at
+    datetime revoked_at
+  }
+  admin_bootstrap_tokens {
+    int id
+    int user_id
+    string email
+    string token_hash
+    datetime expires_at
+    datetime used_at
+  }
   audit_logs {
     int id
+    int actor_user_id
     string actor
     string action
     string entity_type
@@ -197,4 +294,17 @@ erDiagram
     string metadata_json
     datetime created_at
   }
+  backup_audit_logs {
+    int id
+    string operation
+    string target
+    string status
+    string checksum
+  }
 ```
+
+## Persistencia por ambiente
+
+SQLite e usado somente em desenvolvimento/testes locais. Ambientes com `APP_ENV=production` devem usar PostgreSQL persistente; ausencia de `DATABASE_URL` PostgreSQL ou uso de SQLite deve bloquear a inicializacao.
+
+Tabelas de autenticacao (`users`, `auth_sessions`, `admin_bootstrap_tokens` e `audit_logs`) precisam existir no PostgreSQL antes de ativar administrador real. Tokens guardam apenas hash e proposito, nunca o valor aberto.

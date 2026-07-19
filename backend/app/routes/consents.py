@@ -30,9 +30,10 @@ def create_consent(payload: ConsentCreate, request: Request, db: Session = Depen
         granted=payload.granted,
         status="active" if payload.granted else "revoked",
         source=payload.source,
+        terms_version=payload.terms_version,
         ip_address=request.client.host if request.client else None,
         revoked_at=None if payload.granted else datetime.utcnow(),
-        metadata_json=json.dumps({"source": payload.source, "purpose": payload.purpose}),
+        metadata_json=json.dumps({"source": payload.source, "purpose": payload.purpose, "terms_version": payload.terms_version}),
     )
     db.add(consent)
     db.flush()

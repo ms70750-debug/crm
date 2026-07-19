@@ -1,8 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { MailCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Panel } from "../components/CrudShell";
-import { PageHeader } from "../components/PageHeader";
+import { AuthShell } from "../components/AuthShell";
 import { api } from "../lib/api";
 
 type PasswordRecoveryResponse = {
@@ -33,24 +32,21 @@ export function PasswordRecoveryRequest() {
   }
 
   return (
-    <div className="mx-auto max-w-xl p-5">
-      <PageHeader title="Recuperar senha" subtitle="Prepare um link seguro para redefinir o acesso ao CRM BBB Consig." />
-      <Panel>
-        <form className="grid gap-3" onSubmit={submit}>
-          <label className="text-sm text-slate-400">
+    <AuthShell title="Recuperar senha" subtitle="Prepare um link seguro para redefinir o acesso ao CRM BBB Consig.">
+        <form className="grid gap-4" onSubmit={submit}>
+          <label className="text-sm font-semibold text-slate-700">
             E-mail
-            <input className="input mt-1" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+            <input className="input mt-1.5" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </label>
-          {message && <div className="rounded-md border border-lime/40 bg-lime/10 p-3 text-sm text-lime">{message}</div>}
-          {error && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-          <button className="btn" type="submit" disabled={loading}>
+          {message && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{message}</div>}
+          {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</div>}
+          <button className="btn w-full" type="submit" disabled={loading}>
             <MailCheck size={16} /> {loading ? "Preparando..." : "Preparar recuperacao"}
           </button>
-          <button className="w-fit text-sm text-slate-400 hover:text-lime" type="button" onClick={() => navigate("/login")}>
+          <button className="w-fit text-sm font-bold text-slate-600 hover:text-[var(--bbb-blue)]" type="button" onClick={() => navigate("/login")}>
             Voltar ao login
           </button>
         </form>
-      </Panel>
-    </div>
+    </AuthShell>
   );
 }

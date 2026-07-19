@@ -13,7 +13,7 @@ export function Admin() {
       <PageHeader title="Administracao" subtitle="Usuarios ficticios, perfis e configuracoes gerais em modo seguro." />
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
-          <h3 className="mb-4 font-semibold">Usuarios ficticios</h3>
+          <h3 className="mb-4 section-title">Usuarios ficticios</h3>
           <div className="grid gap-3">
             {(users.data ?? []).map((user) => (
               <div className="rounded-md border border-line bg-white/5 p-3" key={user.id}>
@@ -29,7 +29,7 @@ export function Admin() {
           </div>
         </Panel>
         <Panel>
-          <h3 className="mb-4 font-semibold">Evolution API</h3>
+          <h3 className="mb-4 section-title">Evolution API</h3>
           <div className="grid gap-3">
             <label className="text-sm text-slate-400">Modo<input className="input mt-1" value="simulation" readOnly /></label>
             <label className="text-sm text-slate-400">URL<input className="input mt-1" value="Nao configurada nesta versao" readOnly /></label>
@@ -39,7 +39,7 @@ export function Admin() {
           </div>
         </Panel>
         <Panel className="lg:col-span-2">
-          <h3 className="mb-4 font-semibold">Configuracoes gerais</h3>
+          <h3 className="mb-4 section-title">Configuracoes gerais</h3>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-md border border-line bg-white/5 p-3"><span className="text-sm text-slate-400">Pipeline</span><strong className="block">Consignado padrao</strong></div>
             <div className="rounded-md border border-line bg-white/5 p-3"><span className="text-sm text-slate-400">Ambiente</span><strong className="block">Local</strong></div>

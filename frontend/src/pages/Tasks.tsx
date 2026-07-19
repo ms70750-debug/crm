@@ -54,7 +54,7 @@ export function Tasks() {
       {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
       <CrudShell>
         <Panel>
-          <h3 className="mb-4 font-semibold">Nova tarefa</h3>
+          <h3 className="mb-4 section-title">Nova tarefa</h3>
           <form className="grid gap-3" onSubmit={form.handleSubmit(submit)}>
             <input className="input" placeholder="Titulo" {...form.register("titulo")} />
             <textarea className="input min-h-24" placeholder="Descricao" {...form.register("descricao")} />

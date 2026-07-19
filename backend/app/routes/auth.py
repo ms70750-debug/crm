@@ -23,6 +23,7 @@ from app.schemas.security import (
 )
 from app.services.admin_bootstrap import (
     PASSWORD_RECOVERY_BASE_URL,
+    PASSWORD_RECOVERY_TTL_MINUTES,
     AdminBootstrapBlocked,
     AdminBootstrapError,
     activate_admin_bootstrap_token,
@@ -31,6 +32,7 @@ from app.services.admin_bootstrap import (
     validate_admin_bootstrap_token,
     validate_password_recovery_token,
 )
+from app.services.auth_email import AuthEmailError, send_password_recovery_email
 from app.services.security import (
     SESSION_COOKIE_NAME,
     check_rate_limit,
@@ -139,12 +141,18 @@ def request_password_recovery(payload: PasswordRecoveryRequest, request: Request
     client_ip = request.client.host if request.client else "local"
     email_key = (payload.email or "").strip().lower()[:140] or "blank"
     check_rate_limit(f"password-recovery-request:{client_ip}:{email_key}", limit=5, window_seconds=300)
-    create_password_recovery_link(
+    result = create_password_recovery_link(
         db,
         payload.email,
         reset_base_url=os.environ.get("PASSWORD_RECOVERY_BASE_URL", PASSWORD_RECOVERY_BASE_URL),
         created_by_source="api",
     )
+    if result.created and result.link:
+        try:
+            send_password_recovery_email(db, to_email=payload.email, recovery_link=result.link, expires_minutes=PASSWORD_RECOVERY_TTL_MINUTES)
+        except AuthEmailError:
+            log_audit(db, "password_recovery_email_failed", "auth_email", actor="system", metadata={"email": payload.email})
+            db.commit()
     return {
         "ok": True,
         "message": "Se o e-mail estiver cadastrado e ativo, um link de redefinicao sera preparado para envio seguro.",

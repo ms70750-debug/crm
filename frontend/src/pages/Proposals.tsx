@@ -56,7 +56,7 @@ export function Proposals() {
       {error && <Panel className="mb-4 text-red-300">{error}</Panel>}
       <CrudShell>
         {canUseClients && <Panel>
-          <h3 className="mb-4 font-semibold">Nova proposta</h3>
+          <h3 className="mb-4 section-title">Nova proposta</h3>
           <form className="grid gap-3" onSubmit={form.handleSubmit(submit)}>
             <select className="input" {...form.register("cliente_id")}>
               <option value="">Cliente</option>

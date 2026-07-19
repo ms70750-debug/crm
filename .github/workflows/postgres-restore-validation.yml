@@ -1,0 +1,263 @@
+name: PostgreSQL Backup and Restore Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: postgres-restore-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  restore-validation:
+    name: PostgreSQL 17 disposable restore validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_restore_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres_ci_restore_only
+      SOURCE_DB: crm_source_ci
+      RESTORE_DB: crm_restore_ci
+      REAL_DATA_MODE: "false"
+      AUTH_EMAIL_ENABLED: "false"
+      AUTH_EMAIL_MODE: simulate
+      APP_MODE: demo
+      APP_ENV: local
+      PUBLIC_DEMO_LOGIN_ENABLED: "false"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          set -euo pipefail
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client-17
+
+          echo "Diagnostico sanitizado de clientes PostgreSQL."
+          type -a psql || true
+          type -a pg_dump || true
+          type -a pg_restore || true
+          type -a pg_isready || true
+          command -v psql
+          command -v pg_dump
+          command -v pg_restore
+          readlink -f "$(command -v psql)"
+          readlink -f "$(command -v pg_dump)"
+          readlink -f "$(command -v pg_restore)"
+          dpkg -L postgresql-client-17
+
+          PG17_BIN="$(dpkg -L postgresql-client-17 | awk '/\/bin\/psql$/ { sub("/psql$", ""); print; exit }')"
+          test -n "$PG17_BIN"
+          echo "PG17_BIN=$PG17_BIN" >> "$GITHUB_ENV"
+          echo "$PG17_BIN" >> "$GITHUB_PATH"
+
+          for tool in psql pg_dump pg_restore pg_isready; do
+            binary="${PG17_BIN}/${tool}"
+            test -x "$binary"
+            real_path="$(readlink -f "$binary")"
+            case "$real_path" in
+              "$PG17_BIN"/*) ;;
+              *) echo "Binario fora do PG17_BIN: $tool"; exit 1 ;;
+            esac
+            version="$("$binary" --version)"
+            major="$(printf '%s' "$version" | awk '{print $3}' | cut -d. -f1)"
+            test "$major" = "17"
+            echo "$tool real: $real_path"
+            echo "$tool version: $version"
+          done
+
+      - name: PostgreSQL 17 binary preflight
+        run: |
+          set -Eeuo pipefail
+          export PATH="${PG17_BIN}:${PATH}"
+          for tool in psql pg_dump pg_restore pg_isready; do
+            binary="${PG17_BIN}/${tool}"
+            test -x "$binary"
+            real_path="$(readlink -f "$binary")"
+            case "$real_path" in
+              "$PG17_BIN"/*) ;;
+              *) echo "Binario fora do PG17_BIN: $tool"; exit 1 ;;
+            esac
+            version="$("$binary" --version)"
+            major="$(printf '%s' "$version" | awk '{print $3}' | cut -d. -f1)"
+            test "$major" = "17"
+            echo "$tool preflight real: $real_path"
+            echo "$tool preflight version: $version"
+          done
+
+      - name: Prepare disposable databases
+        run: |
+          set -euo pipefail
+          export PGPASSWORD="$DB_PASSWORD"
+          "${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -c 'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '"'"'restore_ci_owner'"'"') THEN CREATE ROLE restore_ci_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END $$;' \
+            -c "CREATE DATABASE ${SOURCE_DB} WITH TEMPLATE template0 OWNER restore_ci_owner ENCODING 'UTF8';" \
+            -c "CREATE DATABASE ${RESTORE_DB} WITH TEMPLATE template0 OWNER restore_ci_owner ENCODING 'UTF8';" \
+            -c 'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '"'"'anon'"'"') THEN CREATE ROLE anon NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END $$;' \
+            -c 'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '"'"'authenticated'"'"') THEN CREATE ROLE authenticated NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END $$;' \
+            -c 'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '"'"'service_role'"'"') THEN CREATE ROLE service_role NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END $$;' \
+            -c 'DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '"'"'backend_app'"'"') THEN CREATE ROLE backend_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; END IF; END $$;'
+
+      - name: Configure disposable URLs
+        run: |
+          set -euo pipefail
+          SOURCE_URL="postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${SOURCE_DB}?sslmode=disable"
+          RESTORE_URL="postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${RESTORE_DB}?sslmode=disable"
+          echo "::add-mask::$SOURCE_URL"
+          echo "::add-mask::$RESTORE_URL"
+          {
+            echo "SOURCE_DATABASE_URL=$SOURCE_URL"
+            echo "RESTORE_DATABASE_URL=$RESTORE_URL"
+          } >> "$GITHUB_ENV"
+
+      - name: Apply official PostgreSQL migrations on source
+        run: DIRECT_URL="$SOURCE_DATABASE_URL" python backend/scripts/apply_postgres_migrations.py --apply
+
+      - name: Seed and validate source database
+        run: |
+          set -euo pipefail
+          mkdir -p restore-metrics
+          DATABASE_URL="$SOURCE_DATABASE_URL" python backend/scripts/ci_postgres_restore_validation.py seed-source --metrics restore-metrics/source.json
+          DATABASE_URL="$SOURCE_DATABASE_URL" python backend/scripts/ci_postgres_restore_validation.py validate-source
+
+      - name: PostgreSQL client preflight
+        run: |
+          set -Eeuo pipefail
+          export PGPASSWORD="$DB_PASSWORD"
+          export PATH="${PG17_BIN}:${PATH}"
+          "${PG17_BIN}/psql" --version
+          "${PG17_BIN}/pg_dump" --version
+          "${PG17_BIN}/pg_restore" --version
+          "${PG17_BIN}/pg_isready" --version
+          "${PG17_BIN}/pg_isready" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB"
+          server_major="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SHOW server_version_num" | cut -c1-2)"
+          server_version="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT version()")"
+          current_db="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT current_database()")"
+          expected_table_count="$("${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SOURCE_DB" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")"
+          pg_dump_major="$("${PG17_BIN}/pg_dump" --version | awk '{print $3}' | cut -d. -f1)"
+          pg_restore_major="$("${PG17_BIN}/pg_restore" --version | awk '{print $3}' | cut -d. -f1)"
+          test "$server_major" = "17"
+          test "$pg_dump_major" = "17"
+          test "$pg_restore_major" = "17"
+          test "$current_db" = "$SOURCE_DB"
+          test "$expected_table_count" -ge 13
+          echo "Servidor PostgreSQL: $server_version"
+          echo "Banco sintetico: $current_db"
+          echo "Porta local mapeada: $DB_PORT"
+          echo "Tabelas publicas esperadas: $expected_table_count"
+          mkdir -p restore-artifact restore-work
+          test -w restore-work
+          test -z "$(find restore-artifact restore-work -name '*.dump' -o -name '*.dump.enc' 2>/dev/null | head -n 1)"
+
+      - name: Create encrypted backup
+        run: |
+          set -euo pipefail
+          mkdir -p restore-work
+          python - <<'PY' > restore-metrics/key.env
+          from cryptography.fernet import Fernet
+          print("BACKUP_ENCRYPTION_KEY=" + Fernet.generate_key().decode("utf-8"))
+          PY
+          source restore-metrics/key.env
+          echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
+          echo "backup_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> restore-metrics/timing.env
+          start=$(date +%s)
+          TMPDIR="$PWD/restore-work" DIRECT_URL="$SOURCE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" PG_DUMP_BIN="${PG17_BIN}/pg_dump" python backend/scripts/create_encrypted_postgres_backup.py --output-dir restore-artifact
+          end=$(date +%s)
+          echo "backup_duration_seconds=$((end-start))" >> restore-metrics/timing.env
+          test -z "$(find restore-artifact -name '*.dump' -print -quit)"
+          test -n "$(find restore-artifact -name '*.dump.enc' -print -quit)"
+          test -n "$(find restore-artifact -name '*.manifest.json' -print -quit)"
+
+      - name: Validate checksum and restore
+        run: |
+          set -euo pipefail
+          source restore-metrics/key.env
+          echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
+          BACKUP_FILE="$(find restore-artifact -name '*.dump.enc' -print -quit)"
+          MANIFEST_FILE="$(find restore-artifact -name '*.manifest.json' -print -quit)"
+          start=$(date +%s)
+          POSTGRES_RESTORE_URL="$RESTORE_DATABASE_URL" BACKUP_ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY" PG_RESTORE_BIN="${PG17_BIN}/pg_restore" python backend/scripts/verify_encrypted_backup_restore.py --backup "$BACKUP_FILE" --manifest "$MANIFEST_FILE"
+          end=$(date +%s)
+          echo "restore_duration_seconds=$((end-start))" >> restore-metrics/timing.env
+
+      - name: Validate backend against restored database
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          DATABASE_URL="$RESTORE_DATABASE_URL" python backend/scripts/ci_postgres_restore_validation.py validate-restore
+          end=$(date +%s)
+          echo "validation_duration_seconds=$((end-start))" >> restore-metrics/timing.env
+
+      - name: Safe summary
+        if: always()
+        run: |
+          set +e
+          source restore-metrics/timing.env 2>/dev/null
+          encrypted_file="$(find restore-artifact -name '*.dump.enc' -print -quit 2>/dev/null)"
+          encrypted_size="0"
+          if [ -n "$encrypted_file" ]; then
+            encrypted_size="$(stat -c%s "$encrypted_file")"
+          fi
+          echo "## PostgreSQL Backup and Restore Validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PostgreSQL: 17 descartavel" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Supabase principal alterado: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Secrets reais usados: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Conexoes externas de banco: nao" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backup duration seconds: ${backup_duration_seconds:-nao_medido}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Restore duration seconds: ${restore_duration_seconds:-nao_medido}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Validation duration seconds: ${validation_duration_seconds:-nao_medido}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- RPO esperado: ate o ultimo dado sintetico antes do pg_dump" >> "$GITHUB_STEP_SUMMARY"
+          echo "- RTO observado: restore + validacao no job" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tamanho criptografado bytes: $encrypted_size" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup disposable files and databases
+        if: always()
+        run: |
+          set +e
+          rm -rf restore-artifact restore-metrics restore-work
+          export PGPASSWORD="$DB_PASSWORD"
+          "${PG17_BIN}/psql" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres \
+            -c "DROP DATABASE IF EXISTS ${SOURCE_DB} WITH (FORCE);" \
+            -c "DROP DATABASE IF EXISTS ${RESTORE_DB} WITH (FORCE);"
+          residual="$(find . \( -name '*.dump' -o -name '*.dump.enc' -o -name 'key.env' \) -print -quit)"
+          if [ -n "$residual" ]; then
+            echo "Arquivo sensivel residual detectado."
+            exit 1
+          fi
+          echo "Limpeza descartavel concluida."

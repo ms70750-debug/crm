@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import os
 import re
 import sys
@@ -22,6 +23,8 @@ ORDERED_POSTGRES_MIGRATIONS = (
     "2026_07_12_auth_sessions.sql",
     "2026_07_12_real_data_readiness.sql",
     "2026_07_12_backend_only_permissions.sql",
+    "2026_07_15_first_admin_bootstrap.sql",
+    "2026_07_18_production_readiness_metadata.sql",
 )
 PLACEHOLDER_DIRECT_URL_MESSAGE = "DIRECT_URL ainda contem [YOUR-PASSWORD]. Substitua pela senha real no Secret do GitHub."
 INVALID_DIRECT_URL_MESSAGE = (
@@ -91,6 +94,26 @@ def split_sql_statements(content: str) -> list[str]:
     return [statement.strip() for statement in content.split(";") if statement.strip()]
 
 
+def file_checksum(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def ensure_control_table(conn) -> None:
+    conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+              version VARCHAR(120) PRIMARY KEY,
+              checksum VARCHAR(64) NOT NULL DEFAULT 'legacy',
+              applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    )
+    conn.execute(text("ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum VARCHAR(64) NOT NULL DEFAULT 'legacy'"))
+    conn.execute(text("ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"))
+
+
 def validate_migration_chain_for_empty_schema(migration_paths: list[Path]) -> None:
     migration_names = [path.name for path in migration_paths]
     if BOOTSTRAP_MIGRATION not in migration_names:
@@ -131,7 +154,7 @@ def apply_migrations(migration_paths: list[Path], direct_url: str) -> None:
     print(f"DIRECT_URL configurada: {mask_database_url(direct_url)}")
     engine = create_engine(direct_url)
     with engine.begin() as conn:
-        conn.execute(text("CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(120) PRIMARY KEY)"))
+        ensure_control_table(conn)
         applied = {row[0] for row in conn.execute(text("SELECT version FROM schema_migrations")).fetchall()}
         for path in migration_paths:
             if path.name in applied:
@@ -139,7 +162,10 @@ def apply_migrations(migration_paths: list[Path], direct_url: str) -> None:
                 continue
             for statement in split_sql_statements(path.read_text(encoding="utf-8")):
                 conn.exec_driver_sql(statement)
-            conn.execute(text("INSERT INTO schema_migrations (version) VALUES (:version)"), {"version": path.name})
+            conn.execute(
+                text("INSERT INTO schema_migrations (version, checksum) VALUES (:version, :checksum)"),
+                {"version": path.name, "checksum": file_checksum(path)},
+            )
             print(f"APLICADA: {path.name}")
 
 

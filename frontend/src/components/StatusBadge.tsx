@@ -1,12 +1,12 @@
 const tone: Record<string, string> = {
-  Aprovado: "border-emerald-400/40 text-emerald-300",
-  Pago: "border-emerald-400/40 text-emerald-300",
-  Concluida: "border-emerald-400/40 text-emerald-300",
-  Pendente: "border-amber-400/40 text-amber-300",
-  "Novo lead": "border-lime/40 text-lime",
-  Perdido: "border-red-400/40 text-red-300",
+  Aprovado: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Pago: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Concluida: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Pendente: "border-amber-200 bg-amber-50 text-amber-700",
+  "Novo lead": "border-blue-200 bg-blue-50 text-[var(--bbb-blue)]",
+  Perdido: "border-red-200 bg-red-50 text-red-700",
 };
 
 export function StatusBadge({ value }: { value: string }) {
-  return <span className={`badge ${tone[value] ?? "border-sky-400/40 text-sky-300"}`}>{value}</span>;
+  return <span className={`badge ${tone[value] ?? "border-sky-200 bg-sky-50 text-sky-700"}`}>{value}</span>;
 }

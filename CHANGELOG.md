@@ -1,5 +1,179 @@
 # Changelog
 
+## 2026-07-19 - Sincronizacao da main no PR 32
+
+### Alterado
+- Sincronizada a `main` atual (`e626e7e`) na branch `release/preparar-producao-real-2026-07-18` por merge comum, sem rebase e sem force push.
+- Incorporado o bootstrap de administrador principal por variaveis de ambiente da `main`, mantendo senha como valor externo (`sync: false`) e sem segredo no repositorio.
+- Mantido o bloqueio do PR 32 contra SQLite em producao, com `DATABASE_URL` externo no Render e `REAL_DATA_MODE=false`.
+- Preservado o visual BBB aprovado, a otimizacao de assets e o roteamento `/api` para login na preview de branch.
+
+### Validado
+- Conflitos resolvidos manualmente em `backend/tests/test_migration_strategy.py` e `render.yaml`.
+- Teste focado de migrations/admin aprovado antes de concluir o merge.
+
+### Mantido
+- Nenhum merge na `main`, nenhuma publicacao em producao, nenhuma migration real, nenhum Supabase, Render/Vercel de producao, Resend, DNS, secret, e-mail real, administrador real ou dado real foi alterado nesta sincronizacao.
+
+## 2026-07-19 - Login funcional na preview do PR 32
+
+### Corrigido
+- A preview de branch da Vercel passa a rotear chamadas de API por `/api` no mesmo dominio, evitando falha de fetch/CORS no navegador.
+- Adicionada rewrite de `/api/(.*)` para o backend Render ja existente, antes do fallback do SPA.
+
+### Mantido
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, secret, dado real, merge na main ou publicacao em producao foi alterado nesta correcao.
+
+## 2026-07-19 - Otimizacao invisivel do visual BBB aprovado
+
+### Alterado
+- Otimizados os ativos locais do visual BBB sem alterar enquadramento, cores, textos ou estrutura aprovada.
+- Adicionadas versoes WebP locais do banner em 1200px e 768px, mantendo o PNG original como fallback.
+- Adicionada versao WebP local do logo para uso na UI, mantendo o JPEG original como fallback e favicon.
+- Definidos `width` e `height` nos elementos de imagem de marca para reduzir risco de deslocamento de layout.
+- Divididos chunks de vendor no Vite para separar React, Recharts, formularios e icones do chunk principal.
+- Desabilitado inline de assets no build para manter imagens como arquivos estaticos rastreaveis.
+
+### Medido
+- Banner original: 540.81 kB.
+- Banner WebP desktop: 31.13 kB.
+- Banner WebP mobile: 16.95 kB.
+- Logo original: 56.52 kB.
+- Logo WebP UI: 1.61 kB.
+- JavaScript principal: 758.96 kB antes; 230.37 kB depois, com vendors separados.
+- CSS: 21.54 kB antes e depois.
+
+### Mantido
+- Visual aprovado pelo dono preservado.
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, secret, dado real, merge na main ou publicacao em producao foi alterado nesta otimizacao.
+
+## 2026-07-19 - Identidade visual BBB no CRM
+
+### Adicionado
+- Criado design system visual BBB para o frontend, com tokens centralizados de cor, raio, sombra, tipografia e estados.
+- Baixados localmente ativos oficiais servidos por `www.bbbemprestimos.com.br`: logo quadrada, banner institucional e favicon.
+- Criado documento `docs/UI-DESIGN-SYSTEM.md` com referencia visual, paleta, componentes, responsividade, acessibilidade e limites.
+
+### Alterado
+- Redesenhadas visualmente telas de login, recuperacao de senha, redefinicao e ativacao administrativa com identidade BBB.
+- Atualizados layout principal, menu lateral, navegacao movel, cabecalho, badges, botoes, inputs, paineis, tabelas e graficos para tema claro comercial.
+- Corrigida rolagem horizontal geral em telas com tabelas largas, mantendo rolagem local controlada.
+
+### Mantido
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, dado real, merge ou publicacao em producao foi alterado.
+
+## 2026-07-19 - Datas UTC em validacoes de seguranca PR 32
+
+### Corrigido
+- Criado helper UTC canonico para comparacoes de seguranca, usando `datetime.now(UTC)` como relogio atual e normalizando valores internos para datetime timezone-aware em UTC.
+- Corrigida a validacao de sessao em `backend/app/services/security.py`, evitando a comparacao entre `AuthSession.expires_at` aware vindo de PostgreSQL `TIMESTAMPTZ` e `datetime.utcnow()` naive.
+- Corrigidas validacoes equivalentes de tokens de ativacao administrativa e recuperacao de senha em `backend/app/services/admin_bootstrap.py`.
+- A regra de expiracao ficou explicita: `expires_at <= agora` expira; futuro permanece valido; data ausente ou invalida rejeita a operacao.
+- Testes cobrem UTC aware, offset diferente, datetime naive interno interpretado como UTC, limite exato expirado, sessao restaurada, ativacao e recuperacao.
+
+### Mantido
+- Nenhum endpoint, contrato de resposta, schema, migration, Supabase, Render, Vercel, Resend, DNS, merge, publicacao, dado real ou secret real foi alterado.
+
+## 2026-07-19 - Schema public preparado antes do restore PR 32
+
+### Corrigido
+- O restore criptografado agora inspeciona o indice do dump com `pg_restore --list` e confirma, sem imprimir o indice completo, que o dump inclui `SCHEMA - public`, tabelas, indices e constraints.
+- O banco descartavel de destino passa a ser validado antes de qualquer `DROP`: host local, nome sintetico com sufixo `_restore_ci` ou `_restore_test`, origem diferente do destino, bancos proibidos bloqueados e ausencia de referencias externas proibidas.
+- O script remove `DROP SCHEMA IF EXISTS public CASCADE` somente depois das protecoes passarem e somente no banco descartavel vazio, deixando o proprio dump recriar o schema `public`.
+- O workflow cria bancos descartaveis via `template0`, com owner sintetico `restore_ci_owner`, usando `crm_source_ci` e `crm_restore_ci`.
+- Testes de regressao cobrem bloqueio de host externo, nome de banco inseguro, origem igual ao destino, tabelas preexistentes antes do DROP e indice do dump com schema `public`.
+
+### Mantido
+- Nenhum Supabase principal, Render, Vercel, Resend, DNS, merge, publicacao, dado real ou secret real foi alterado.
+
+## 2026-07-18 - Fixacao dos binarios PostgreSQL 17 no restore PR 32
+
+### Corrigido
+- O workflow `PostgreSQL Backup and Restore Validation` agora descobre `PG17_BIN` pelo pacote `postgresql-client-17` e chama `psql`, `pg_isready`, `pg_dump` e `pg_restore` por caminho absoluto.
+- O preflight falha se qualquer binario critico nao existir, resolver fora de `PG17_BIN` ou retornar versao principal diferente de 17.
+- Os scripts de backup e restore aceitam `PG_DUMP_BIN` e `PG_RESTORE_BIN`, permitindo que o workflow use exclusivamente os clientes PostgreSQL 17 fixados.
+- Testes estaticos e unitarios passaram a barrar regressao para `pg_dump`/`pg_restore` genericos.
+
+### Mantido
+- Nenhum merge, publicacao, backup real, restore real, Supabase principal, Render, Vercel, Resend, DNS ou dado real foi alterado.
+
+## 2026-07-18 - Correcao do pg_dump no restore descartavel PR 32
+
+### Corrigido
+- Removidos os shims Docker de `pg_dump` e `pg_restore` do workflow `PostgreSQL Backup and Restore Validation`.
+- O workflow passa a instalar o cliente PostgreSQL 17 no runner e executar `psql`, `pg_isready`, `pg_dump` e `pg_restore` diretamente contra o service container local.
+- O backup/restore agora separa a URL SQLAlchemy em variaveis libpq (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`) antes de chamar ferramentas cliente, evitando passar connection string inteira como nome de banco.
+- Adicionado preflight do cliente PostgreSQL antes do backup, validando versoes 17, disponibilidade, banco atual e diretorios de saida.
+
+### Mantido
+- Nenhum Supabase principal foi alterado, nenhum secret real foi usado, nenhuma publicacao ou merge foi executado, e os dados seguem sinteticos.
+
+## 2026-07-18 - Restore descartavel PostgreSQL 17 no CI
+
+### Adicionado
+- Criado workflow `PostgreSQL Backup and Restore Validation` para PRs, usando PostgreSQL 17 descartavel no GitHub Actions.
+- Adicionado script `backend/scripts/ci_postgres_restore_validation.py` para criar dados sinteticos e validar origem/restauracao sem Supabase, secrets reais ou dados pessoais.
+- O workflow aplica as migrations oficiais, gera backup com `pg_dump` 17, calcula checksum, criptografa com chave efemera, remove o dump aberto, restaura com `pg_restore` 17 e valida o backend no banco restaurado.
+
+### Corrigido
+- O aplicador oficial PostgreSQL agora inclui as migrations recentes de primeiro admin e metadados de readiness, alem de registrar `checksum` e `applied_at` em `schema_migrations`.
+- Scripts de backup/restore convertem `postgresql+psycopg://` para URL nativa apenas ao chamar ferramentas cliente PostgreSQL, mantendo SQLAlchemy no driver `psycopg`.
+
+### Mantido
+- Nenhum Supabase principal foi alterado, nenhum merge foi feito, nenhuma publicacao foi executada, nenhum secret real foi usado e `AUTH_EMAIL_MODE=simulate`/`REAL_DATA_MODE=false` permanecem obrigatorios.
+
+## 2026-07-18 - Preparacao sem acesso a Locaweb
+
+### Validado
+- Criada e enviada a branch de seguranca `safety/pre-advance-without-dns-pr32-2026-07-18` apontando para o head atual do PR #32.
+- PR #32 reconfirmado aberto, nao draft, mergeavel e com GitHub Action `PostgreSQL Backend Only Validation` aprovada.
+- Supabase principal `crm-bbb-consig-prod` reconfirmado ativo, PostgreSQL 17.6, SSL ligado, schema `public` vazio e advisors sem lints.
+- Frontend publico atual e backend `/healthz` responderam 200, sem alterar producao.
+- Vercel autenticado confirmou preview do PR #32 em `READY` no commit atual.
+
+### Preparado
+- Checklist final atualizado para explicitar DNS na Locaweb, chave Resend restrita, backup pre-migration, restore descartavel, merge, Render com PostgreSQL, validacao Vercel, primeiro administrador e um unico e-mail de ativacao.
+- Resend permanece validado apenas em modo `simulate`, com `AUTH_EMAIL_ENABLED=false`.
+
+### Mantido
+- Nenhum merge, nenhuma publicacao, nenhuma migration real, nenhum backup real, nenhum restore real, nenhum administrador real, nenhum e-mail real e nenhum dado real foram executados.
+
+## 2026-07-18 - Tentativa segura de go-live do PR 32
+
+### Validado
+- Criados e enviados os checkpoints `safety/pre-go-live-pr32-2026-07-18`, `pre-go-live-pr32-2026-07-18` e `safety/pr32-before-final-go-live-2026-07-18`.
+- PR #32 confirmado aberto, nao draft, mergeavel e com head `fd705e841d1ecc57f07417e626502fa1ce60fc23`.
+- Backend completo aprovado com 194 testes, frontend aprovado com `npm ci`, `npm audit --audit-level=moderate` e build, E2E local aprovado com 2 testes e 1 skip controlado.
+- Supabase principal `crm-bbb-consig-prod` confirmado ativo, PostgreSQL 17.6, SSL ligado, schema `public` vazio e advisors sem lints.
+- Vercel autenticado confirmou preview do PR #32 pronto e producao ainda na `main` anterior.
+
+### Bloqueado
+- Go-live real nao foi executado porque backup pre-migration criptografado, restore descartavel, configuracao Render, validacao Resend e GitHub Actions secrets nao puderam ser concluidos com os acessos disponiveis nesta sessao.
+- Nenhuma migration real foi aplicada, nenhum backup real foi criado, nenhum restore real foi executado, nenhum e-mail real foi enviado, nenhum administrador real foi criado, nenhum deploy foi acionado e `REAL_DATA_MODE` nao foi habilitado.
+
+## 2026-07-18 - Integracao do PR 32 com autenticacao persistente
+
+### Alterado
+- Integrada a preparacao de producao real do PR 32 com a correcao de login/recuperacao do PR 33.
+- Ambiente `APP_ENV=production` passa a exigir `DATABASE_URL` PostgreSQL, bloqueando SQLite local como fallback de producao.
+- `render.yaml` deixa `DATABASE_URL` como secret externo e adiciona metadados de pool PostgreSQL e e-mail transacional.
+- Adicionado servico de e-mail transacional Resend com `AUTH_EMAIL_MODE=simulate` por padrao para ativacao administrativa e recuperacao de senha.
+
+### Mantido
+- Nenhum Supabase real foi criado nesta sessao, nenhuma migration real foi aplicada, nenhum restore real foi executado, nenhum e-mail real foi enviado e `REAL_DATA_MODE=false` permanece obrigatorio.
+
+## 2026-07-18 - Preparacao tecnica para producao real
+
+### Adicionado
+- Criado ADR `docs/adr/009-postgresql-producao-real.md` para formalizar PostgreSQL/Supabase como caminho de producao real em `USO_PROPRIO`.
+- Adicionados metadados de readiness: versao de termo em consentimentos e versao/usuario tecnico em snapshots de simulacao.
+- Adicionadas migrations aditivas `2026_07_18_production_readiness_metadata` para SQLite controlado e PostgreSQL, com rollback PostgreSQL.
+- Criados `docs/MONITORING.md`, `docs/PRODUCTION-REAL-CHECKLIST.md` e `docs/audit/RESTORE-TEST_2026-07-18.md`.
+- Atualizado `/healthz` para validar banco e expor somente metadados seguros.
+
+### Mantido
+- Dados reais, comunicacao real, publicacao, backup real, restore real e migrations em provedor continuam bloqueados ate aprovacao final.
+
 ## 2026-07-18 - Recuperacao segura de login e senha
 
 ### Corrigido

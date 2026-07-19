@@ -3,13 +3,17 @@ import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.config.environment import validate_environment
 from app.database.init_db import init_db
+from app.database.session import SessionLocal
 from app.routes import auth, clients, consents, dashboard, leads, proposals, simulations, tasks, whatsapp
+from app.services.auth_email import auth_email_health
 from app.services.security import check_rate_limit
 
-app = FastAPI(title="BBB Consig CRM API", version="0.1.0")
+APP_VERSION = os.environ.get("APP_VERSION", "0.1.0")
+app = FastAPI(title="BBB Consig CRM API", version=APP_VERSION)
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 CORS_ORIGINS = [
@@ -29,8 +33,13 @@ app.add_middleware(
 
 @app.middleware("http")
 async def security_headers_and_limits(request: Request, call_next):
+    client_ip = request.client.host if request.client else "local"
+    if request.url.path != "/healthz":
+        try:
+            check_rate_limit(f"global:{client_ip}", limit=300, window_seconds=60)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     if request.url.path.startswith(("/whatsapp", "/consultas")):
-        client_ip = request.client.host if request.client else "local"
         try:
             check_rate_limit(f"sensitive:{client_ip}:{request.url.path}", limit=60, window_seconds=60)
         except HTTPException as exc:
@@ -52,7 +61,20 @@ def on_startup() -> None:
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "service": "BBB Consig CRM API"}
+    db_status = "ok"
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+    return {
+        "status": "ok" if db_status == "ok" else "degraded",
+        "service": "BBB Consig CRM API",
+        "version": APP_VERSION,
+        "database": db_status,
+        "auth_email": auth_email_health(),
+        "environment": os.environ.get("APP_MODE", "demo"),
+    }
 
 
 app.include_router(dashboard.router)

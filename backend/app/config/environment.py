@@ -65,10 +65,8 @@ def validate_environment() -> None:
         errors.append("CORS_ORIGINS ausente ou com placeholder")
     if not database_url:
         errors.append("DATABASE_URL ausente")
-    elif real_data_mode and not is_postgresql_url(database_url):
-        errors.append("REAL_DATA_MODE exige DATABASE_URL PostgreSQL")
-    elif is_sqlite_url(database_url) and not real_data_mode:
-        logger.warning("SQLite permitido somente para MVP controlado com REAL_DATA_MODE=false.")
+    elif not is_postgresql_url(database_url):
+        errors.append("APP_ENV=production exige DATABASE_URL PostgreSQL persistente")
     if evolution_mode != "simulation":
         errors.append("EVOLUTION_API_MODE deve permanecer como simulation nesta fase")
     if real_data_mode:

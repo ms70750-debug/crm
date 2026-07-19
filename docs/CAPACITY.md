@@ -29,5 +29,8 @@ Migrar para PostgreSQL antes de:
 - Necessidade de restore testado e politicas formais de backup.
 - Rotina comercial diaria dependente do sistema online.
 
+## Capacidade alvo para uso proprio real
+Para piloto interno com dados reais, preparar PostgreSQL gerenciado, pool de conexoes, backup diario criptografado, restore testado e monitoramento basico. O alvo inicial continua equipe interna restrita; se houver expansao para terceiros, tratar como SaaS e bloquear ate ADR de multi-tenancy.
+
 ## Alertas SaaS
 Antes de SaaS, implementar autenticacao completa, isolamento por tenant, criptografia/mascaramento, logs seguros, backups, monitoramento e politicas LGPD.

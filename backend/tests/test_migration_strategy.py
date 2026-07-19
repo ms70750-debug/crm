@@ -60,6 +60,19 @@ def test_postgres_backend_only_permissions_runs_after_readiness() -> None:
     )
 
 
+def test_postgres_official_migration_chain_includes_admin_and_readiness_metadata() -> None:
+    from scripts.apply_postgres_migrations import load_postgres_migrations
+
+    names = [path.name for path in load_postgres_migrations()]
+
+    assert names.index("2026_07_12_backend_only_permissions.sql") < names.index(
+        "2026_07_15_first_admin_bootstrap.sql"
+    )
+    assert names.index("2026_07_15_first_admin_bootstrap.sql") < names.index(
+        "2026_07_18_production_readiness_metadata.sql"
+    )
+
+
 def test_postgres_bootstrap_creates_base_tables_used_by_later_migrations() -> None:
     bootstrap = MIGRATIONS_ROOT / "postgres" / "2026_07_01_000_postgres_bootstrap_schema.sql"
     content = bootstrap.read_text(encoding="utf-8").lower()
@@ -85,11 +98,17 @@ def test_production_postgres_does_not_auto_bootstrap_schema(monkeypatch) -> None
     assert init_db.should_auto_bootstrap_schema() is False
 
 
-def test_sqlite_still_auto_bootstraps_controlled_schema(monkeypatch) -> None:
-    monkeypatch.setenv("APP_ENV", "production")
+def test_sqlite_still_auto_bootstraps_local_controlled_schema(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "local")
     monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
 
     assert init_db.should_auto_bootstrap_schema() is True
+
+def test_sqlite_does_not_auto_bootstrap_in_production_environment(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
+
+    assert init_db.should_auto_bootstrap_schema() is False
 
 
 def test_primary_admin_bootstrap_is_env_driven_without_committed_password() -> None:
@@ -101,9 +120,9 @@ def test_primary_admin_bootstrap_is_env_driven_without_committed_password() -> N
     assert "PRIMARY_ADMIN_PASSWORD" in seed
     assert "sync: false" in render_config
     assert "PRIMARY_ADMIN_PASSWORD=" in env_example
-    assert "Byabru" not in seed
-    assert "Byabru" not in render_config
-    assert "Byabru" not in env_example
+    assert "SENHA_REAL_NAO_COMMITAR_2026" not in seed
+    assert "SENHA_REAL_NAO_COMMITAR_2026" not in render_config
+    assert "SENHA_REAL_NAO_COMMITAR_2026" not in env_example
 
 
 def test_primary_admin_bootstrap_creates_admin_from_env(monkeypatch) -> None:
@@ -124,6 +143,41 @@ def test_primary_admin_bootstrap_creates_admin_from_env(monkeypatch) -> None:
         assert user.role == "admin"
         assert user.ativo is True
         assert verify_password("SenhaAdmin!2026", user.password_hash)
+
+
+def test_primary_admin_bootstrap_preserves_existing_admin_password(monkeypatch) -> None:
+    from app.database.seed import ensure_primary_admin_from_env
+    from app.services.security import hash_password
+
+    monkeypatch.setenv("PRIMARY_ADMIN_EMAIL", "DAIENE@BBBEMPRESTIMOS.COM.BR")
+    monkeypatch.setenv("PRIMARY_ADMIN_PASSWORD", "NovaSenhaNaoDeveEntrar@2026")
+    monkeypatch.setenv("PRIMARY_ADMIN_NAME", "Daiene")
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        db.add(
+            User(
+                nome="Nome anterior",
+                email="daiene@bbbemprestimos.com.br",
+                password_hash=hash_password("SenhaExistente@2026"),
+                role="operador",
+                ativo=False,
+            )
+        )
+        db.commit()
+
+        assert ensure_primary_admin_from_env(db) is True
+
+        users = db.query(User).filter(User.email == "daiene@bbbemprestimos.com.br").all()
+        assert len(users) == 1
+        user = users[0]
+        assert user.nome == "Daiene"
+        assert user.role == "admin"
+        assert user.ativo is True
+        assert verify_password("SenhaExistente@2026", user.password_hash)
+        assert not verify_password("NovaSenhaNaoDeveEntrar@2026", user.password_hash)
 
 
 def test_postgres_database_url_uses_psycopg_and_requires_ssl() -> None:

@@ -4,11 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#090b0d",
-        panel: "#101417",
-        line: "#263036",
-        lime: "#c7ff45",
-        mint: "#4ade80"
+        ink: "#020617",
+        panel: "#ffffff",
+        line: "#dbe4f0",
+        lime: "#f97316",
+        mint: "#0b5ed7"
       }
     },
   },

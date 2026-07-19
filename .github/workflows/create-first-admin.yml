@@ -28,6 +28,11 @@ jobs:
       ADMIN_EMAIL: ${{ github.event.inputs.admin_email }}
       CONFIRMATION: ${{ github.event.inputs.confirmation }}
       ADMIN_BOOTSTRAP_OUTPUT_FILE: admin-activation-link.txt
+      AUTH_EMAIL_ENABLED: ${{ vars.AUTH_EMAIL_ENABLED || 'false' }}
+      AUTH_EMAIL_MODE: ${{ vars.AUTH_EMAIL_MODE || 'simulate' }}
+      AUTH_EMAIL_FROM: ${{ vars.AUTH_EMAIL_FROM }}
+      APP_PUBLIC_URL: ${{ vars.APP_PUBLIC_URL || 'https://crm-sepia-beta.vercel.app' }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
     steps:
       - name: Validate confirmation
         run: |
@@ -40,6 +45,9 @@ jobs:
             exit 1
           fi
           echo "::add-mask::$SUPABASE_DIRECT_URL"
+          if [ -n "$RESEND_API_KEY" ]; then
+            echo "::add-mask::$RESEND_API_KEY"
+          fi
           echo "Configuracao validada sem exibir secrets."
 
       - name: Checkout repository
@@ -86,5 +94,6 @@ jobs:
           echo "- Link criado: sim/nao conforme status do job" >> "$GITHUB_STEP_SUMMARY"
           echo "- Expiracao: 60 minutos" >> "$GITHUB_STEP_SUMMARY"
           echo "- Artifact criado: sim se upload-artifact concluiu" >> "$GITHUB_STEP_SUMMARY"
+          echo "- E-mail transacional: conforme metadado email_sent do job" >> "$GITHUB_STEP_SUMMARY"
           echo "- Token exibido: nao" >> "$GITHUB_STEP_SUMMARY"
           echo "- Administrador duplicado: nao exibido em detalhe" >> "$GITHUB_STEP_SUMMARY"
