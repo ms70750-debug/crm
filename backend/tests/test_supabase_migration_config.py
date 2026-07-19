@@ -23,6 +23,18 @@ def test_direct_url_is_not_required_for_runtime(monkeypatch: pytest.MonkeyPatch)
     validate_environment()
 
 
+def test_runtime_accepts_simulate_alias_for_evolution_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("BBB_AUTH_SECRET", "segredo-demo-forte-para-pytest")
+    monkeypatch.setenv("CORS_ORIGINS", "https://crm-sepia-beta.vercel.app")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://usuario:senha@aws-0-us-east-1.pooler.supabase.com:6543/postgres")
+    monkeypatch.setenv("EVOLUTION_API_MODE", "simulate")
+    monkeypatch.setenv("REAL_DATA_MODE", "false")
+
+    validate_environment()
+
+
 def test_direct_url_is_required_for_postgres_migration_script(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DIRECT_URL", raising=False)
     monkeypatch.setenv("REAL_DATA_MODE", "false")

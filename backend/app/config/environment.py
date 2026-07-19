@@ -10,6 +10,9 @@ PENDING_REAL_DATA_CONTROLS = "criptografia em repouso, autenticacao segura, back
 DEMO_MODE_VALUES = {"demo", "demonstracao", "demonstração"}
 
 
+SIMULATION_MODE_VALUES = {"simulation", "simulate", "simulacao", "simulação"}
+
+
 def is_production_environment() -> bool:
     return os.environ.get("APP_ENV", "local").strip().lower() in PRODUCTION_ENV_VALUES
 
@@ -67,8 +70,8 @@ def validate_environment() -> None:
         errors.append("DATABASE_URL ausente")
     elif not is_postgresql_url(database_url):
         errors.append("APP_ENV=production exige DATABASE_URL PostgreSQL persistente")
-    if evolution_mode != "simulation":
-        errors.append("EVOLUTION_API_MODE deve permanecer como simulation nesta fase")
+    if evolution_mode not in SIMULATION_MODE_VALUES:
+        errors.append("EVOLUTION_API_MODE deve permanecer como simulation/simulate nesta fase")
     if real_data_mode:
         errors.append(f"REAL_DATA_MODE permanece bloqueado ate concluir {PENDING_REAL_DATA_CONTROLS}")
 
