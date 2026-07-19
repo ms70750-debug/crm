@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-07-19 - Otimizacao invisivel do visual BBB aprovado
+
+### Alterado
+- Otimizados os ativos locais do visual BBB sem alterar enquadramento, cores, textos ou estrutura aprovada.
+- Adicionadas versoes WebP locais do banner em 1200px e 768px, mantendo o PNG original como fallback.
+- Adicionada versao WebP local do logo para uso na UI, mantendo o JPEG original como fallback e favicon.
+- Definidos `width` e `height` nos elementos de imagem de marca para reduzir risco de deslocamento de layout.
+- Divididos chunks de vendor no Vite para separar React, Recharts, formularios e icones do chunk principal.
+- Desabilitado inline de assets no build para manter imagens como arquivos estaticos rastreaveis.
+
+### Medido
+- Banner original: 540.81 kB.
+- Banner WebP desktop: 31.13 kB.
+- Banner WebP mobile: 16.95 kB.
+- Logo original: 56.52 kB.
+- Logo WebP UI: 1.61 kB.
+- JavaScript principal: 758.96 kB antes; 230.37 kB depois, com vendors separados.
+- CSS: 21.54 kB antes e depois.
+
+### Mantido
+- Visual aprovado pelo dono preservado.
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, secret, dado real, merge na main ou publicacao em producao foi alterado nesta otimizacao.
+
 ## 2026-07-19 - Identidade visual BBB no CRM
 
 ### Adicionado

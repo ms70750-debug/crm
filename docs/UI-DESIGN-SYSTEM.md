@@ -7,6 +7,7 @@
 - Codigo externo copiado: nao.
 - Ativos de terceiros copiados: nao.
 - Ativos oficiais locais: `frontend/src/assets/brand/bbb-consig-logo.jpeg`, `frontend/src/assets/brand/bbb-consig-banner.png` e `frontend/public/bbb-consig-logo.jpeg`.
+- Ativos otimizados locais: `frontend/src/assets/brand/bbb-consig-logo-96.webp`, `frontend/src/assets/brand/bbb-consig-banner-1200.webp` e `frontend/src/assets/brand/bbb-consig-banner-768.webp`.
 
 ## Leitura visual
 
@@ -80,13 +81,22 @@ O layout usa menu fixo no desktop e drawer no celular. Tabelas largas ficam dent
 
 ## Performance
 
-- Imagens adicionadas:
-  - logo: 56.52 kB.
-  - banner: 540.81 kB.
-- Build observado depois do redesign:
-  - CSS: 21.50 kB, gzip 4.90 kB.
-  - JS principal: 758.94 kB, gzip 217.14 kB.
-- O aviso Vite de chunk acima de 500 kB permanece conhecido e nao foi causado por nova biblioteca.
+- Imagens originais adicionadas:
+  - logo JPEG: 56.52 kB.
+  - banner PNG: 540.81 kB.
+- Imagens otimizadas para uso preferencial:
+  - logo WebP UI: 1.61 kB.
+  - banner WebP desktop: 31.13 kB.
+  - banner WebP mobile: 16.95 kB.
+- Fallbacks locais preservados:
+  - logo JPEG.
+  - banner PNG.
+- Build observado depois da otimizacao invisivel:
+  - CSS: 21.54 kB, gzip 4.92 kB.
+  - JS principal: 230.37 kB, gzip 67.63 kB.
+  - Recharts isolado em chunk `vendor-charts`.
+  - React/Router, formularios/validacao e icones isolados em chunks de vendor.
+- `assetsInlineLimit: 0` mantem imagens como arquivos estaticos em vez de embutir assets no JavaScript.
 - Nenhuma fonte remota, analytics ou rastreamento foi adicionado.
 
 ## Limites
