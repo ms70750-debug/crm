@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import AdminBootstrapToken, AuthSession, User
+from app.services.datetime_utc import is_expired, utc_now
 from app.services.privacy import mask_email
 from app.services.security import hash_password, log_audit, normalize_role
 
@@ -95,7 +96,7 @@ def create_admin_bootstrap_link(
         db.commit()
         raise AdminBootstrapBlocked("Ja existe administrador real")
 
-    now = datetime.utcnow()
+    now = utc_now()
     expires_at = now + timedelta(minutes=ADMIN_BOOTSTRAP_TTL_MINUTES)
     user = db.scalar(select(User).where(User.email == normalized_email))
     for pending in db.scalars(
@@ -141,8 +142,8 @@ def validate_admin_bootstrap_token(db: Session, token: str) -> AdminBootstrapTok
             AdminBootstrapToken.purpose == ADMIN_BOOTSTRAP_PURPOSE,
         )
     )
-    now = datetime.utcnow()
-    if not record or record.used_at is not None or record.expires_at <= now:
+    now = utc_now()
+    if not record or record.used_at is not None or is_expired(record.expires_at, now):
         raise AdminBootstrapError("Token invalido")
     return record
 
@@ -159,7 +160,7 @@ def create_password_recovery_link(
     except AdminBootstrapError:
         return PasswordRecoveryLink(link=None, expires_at=None, created=False)
 
-    now = datetime.utcnow()
+    now = utc_now()
     user = db.scalar(select(User).where(User.email == normalized_email, User.ativo.is_(True)))
     if not user:
         log_audit(
@@ -216,8 +217,8 @@ def validate_password_recovery_token(db: Session, token: str) -> AdminBootstrapT
             AdminBootstrapToken.purpose == PASSWORD_RECOVERY_PURPOSE,
         )
     )
-    now = datetime.utcnow()
-    if not record or record.used_at is not None or record.expires_at <= now:
+    now = utc_now()
+    if not record or record.used_at is not None or is_expired(record.expires_at, now):
         raise AdminBootstrapError("Token invalido")
     user = db.get(User, record.user_id) if record.user_id else db.scalar(select(User).where(User.email == record.email))
     if not user or not user.ativo:
@@ -235,7 +236,7 @@ def reset_password_with_recovery_token(db: Session, token: str, password: str, p
     if not user or not user.ativo:
         raise AdminBootstrapError("Token invalido")
 
-    now = datetime.utcnow()
+    now = utc_now()
     user.password_hash = hash_password(password)
     user.updated_at = now
     record.user_id = user.id
@@ -276,7 +277,7 @@ def activate_admin_bootstrap_token(db: Session, token: str, password: str, passw
         raise AdminBootstrapError("Senha invalida")
     record = validate_admin_bootstrap_token(db, token)
     normalized_email = normalize_email(record.email)
-    now = datetime.utcnow()
+    now = utc_now()
 
     admins = _real_admins(db)
     other_admins = [user for user in admins if user.email.lower() != normalized_email]

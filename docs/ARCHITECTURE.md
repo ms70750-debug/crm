@@ -108,6 +108,12 @@ O backend deve aplicar headers basicos de seguranca e limites em login/rotas sen
 ## Sessao
 A sessao atual usa cookie HttpOnly. Em producao controlada o cookie deve ser `Secure` e `SameSite=None` para permitir frontend e backend em provedores diferentes. Em local, usa `SameSite=Lax`. O token Bearer ainda e aceito pelo backend para testes e compatibilidade, mas o frontend nao persiste token em localStorage.
 
+## Datas UTC em seguranca
+
+Comparacoes de expiracao em autenticacao, sessoes e tokens administrativos usam UTC timezone-aware como convencao canonica. O relogio atual deve ser obtido com `datetime.now(UTC)` por helper centralizado. Valores PostgreSQL `TIMESTAMPTZ` sao convertidos para UTC; valores naive internos vindos do legado SQLite/SQLAlchemy sao interpretados como UTC apenas nesse contrato interno. Valores ausentes ou invalidos rejeitam a operacao de forma neutra.
+
+A regra de expiracao e fechada: `expires_at <= agora` significa expirado, `expires_at > agora` significa valido. Revogacao, uso unico e finalidade do token continuam sendo verificados separadamente.
+
 ## Fail modes
 - Banco local ausente: API recria estrutura basica.
 - Migration incompleta: app pode falhar no startup.

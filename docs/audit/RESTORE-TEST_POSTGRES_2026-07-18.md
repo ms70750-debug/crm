@@ -169,3 +169,40 @@ Nunca usar o Supabase principal como destino do restore.
 - Nenhum Render, Vercel, Resend ou DNS foi alterado.
 - Nenhum dado real, secret real, merge ou publicacao foi executado.
 - O resultado final depende de uma nova execucao unica no GitHub Actions.
+
+## Correcao datetime UTC PR #32 - 2026-07-19
+
+### Diagnostico
+
+- Run analisado: `29702441131`.
+- Etapa com falha: `Validate backend against restored database`.
+- Etapas aprovadas antes da falha: PostgreSQL 17, migrations, dados sinteticos, backup, checksum, criptografia, remocao do dump aberto, preparo do destino, restore e schema `public`.
+- Arquivo: `backend/app/services/security.py`.
+- Funcao: `_active_session_from_payload`.
+- Comparacao anterior: `session.expires_at < datetime.utcnow()`.
+- Valor aware: `session.expires_at`, carregado de `auth_sessions.expires_at` no PostgreSQL restaurado.
+- Valor naive: `datetime.utcnow()`.
+- Tipo SQL PostgreSQL: `TIMESTAMPTZ`.
+- Tipo SQLite local: `DATETIME`, podendo retornar datetime naive.
+- Causa classificada: H, mistura de B (`datetime.utcnow()` naive) e D (`TIMESTAMPTZ` retornando aware), com compatibilidade G para SQLite naive interno.
+
+### Regra UTC
+
+- Timezone canonico: UTC.
+- Relogio atual: helper centralizado com `datetime.now(UTC)`.
+- Valores aware: convertidos para UTC com `astimezone`.
+- Valores naive internos: interpretados como UTC somente no contrato interno do CRM/SQLAlchemy.
+- Valores ausentes ou invalidos: operacao rejeitada.
+- Expiracao: `expires_at <= agora` expira; somente futuro e valido.
+- Validacoes preservadas: sessao revogada, token usado, finalidade cruzada e usuario inativo continuam rejeitados.
+
+### Correcao
+
+- Criado helper `backend/app/services/datetime_utc.py`.
+- Corrigidas comparacoes em sessoes, ativacao administrativa e recuperacao de senha.
+- Nenhum endpoint, schema ou migration foi alterado.
+- Testes novos cobrem UTC aware, offset diferente, naive interno, futuro, passado, limite exato, ausente, invalido e ausencia do TypeError original.
+
+### Resultado esperado
+
+A proxima execucao unica deve chegar na validacao funcional do backend restaurado sem `TypeError` de datetime naive/aware, preservando login, logout, ativacao, recuperacao, invalidacao de sessao, consentimento, audit log, simulacoes e soft delete.

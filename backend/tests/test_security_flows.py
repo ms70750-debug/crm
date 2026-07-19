@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import json
 from time import time_ns
 
@@ -13,6 +13,7 @@ from app.database.session import SessionLocal
 from app.main import app
 from app.models import AuditLog, AuthSession, Client, Consent, Simulation
 from app.services.privacy import is_valid_cpf
+from app.services.datetime_utc import utc_from_internal, utc_now
 
 
 client = TestClient(app)
@@ -211,7 +212,7 @@ def test_login_creates_server_side_session_and_does_not_store_full_token() -> No
         session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
         assert session is not None
         assert session.revoked_at is None
-        assert session.expires_at > datetime.utcnow()
+        assert utc_from_internal(session.expires_at) > utc_now()
         assert token not in str(session.__dict__)
         assert payload["sid"] not in str(session.__dict__)
 
@@ -243,7 +244,7 @@ def test_expired_or_missing_server_side_session_fails() -> None:
     with SessionLocal() as db:
         session = db.scalar(select(AuthSession).where(AuthSession.user_id == expired_login["user"]["id"]).order_by(AuthSession.id.desc()))
         assert session is not None
-        session.expires_at = datetime.utcnow() - timedelta(seconds=1)
+        session.expires_at = utc_now() - timedelta(seconds=1)
         db.commit()
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {expired_token}"}).status_code == 401
 
@@ -266,6 +267,37 @@ def test_revoked_session_does_not_affect_another_valid_session_for_same_user() -
     assert client.post("/auth/logout", headers=first_headers).status_code == 200
     assert client.get("/auth/me", headers=first_headers).status_code == 401
     assert client.get("/auth/me", headers=second_headers).status_code == 200
+
+
+def test_session_expiration_accepts_restored_aware_utc_datetime_without_type_error() -> None:
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        session.expires_at = utc_now() + timedelta(hours=1)
+        db.commit()
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+
+
+def test_session_expiration_boundary_equal_now_is_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    fixed_now = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+    login = _login("admin@bbbconsig.demo", "BbbConsig@2026")
+    token = login["access_token"]
+    with SessionLocal() as db:
+        session = db.scalar(select(AuthSession).where(AuthSession.user_id == login["user"]["id"]).order_by(AuthSession.id.desc()))
+        assert session is not None
+        session.expires_at = fixed_now
+        db.commit()
+
+    monkeypatch.setattr("app.services.security.utc_now", lambda: fixed_now)
+
+    response = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
 
 
 def test_demo_mode_blocks_valid_cpf_and_allows_fictitious_cpf(monkeypatch: pytest.MonkeyPatch) -> None:

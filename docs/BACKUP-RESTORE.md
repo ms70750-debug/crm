@@ -191,6 +191,8 @@ Atualizacao complementar em 2026-07-18: a tentativa seguinte comprovou que o pac
 
 Atualizacao em 2026-07-19: o backup custom foi criado, validado por checksum, criptografado e teve o dump aberto removido, mas o restore descartavel falhou porque o dump inclui `SCHEMA - public` e um banco PostgreSQL recem-criado ja possui o schema `public` por padrao. A correcao prepara o destino realmente vazio antes do `pg_restore`: primeiro confirma o indice do dump com `${PG17_BIN}/pg_restore --list` sem imprimir o indice completo, depois valida que o destino e local, sintetico, diferente da origem e livre de referencias externas proibidas. Somente apos essas protecoes, o script executa `DROP SCHEMA IF EXISTS public CASCADE` no banco descartavel vazio. O schema nao e recriado manualmente; o proprio dump deve recriar `public`.
 
+Atualizacao complementar em 2026-07-19: a execucao seguinte aprovou backup, checksum, criptografia, preparo do destino, restore e recriacao do schema `public`, mas falhou na validacao funcional do backend restaurado por mistura de datetime naive e aware. A coluna `auth_sessions.expires_at` e `TIMESTAMPTZ` no PostgreSQL e voltou como datetime aware; o codigo comparava esse valor com `datetime.utcnow()`, que e naive. A correcao adotou UTC timezone-aware para comparacoes de seguranca e manteve compatibilidade com SQLite interpretando valores internos naive como UTC.
+
 Antes do backup, o workflow agora valida:
 - `psql --version`;
 - `pg_dump --version`;

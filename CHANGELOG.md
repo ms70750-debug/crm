@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-19 - Datas UTC em validacoes de seguranca PR 32
+
+### Corrigido
+- Criado helper UTC canonico para comparacoes de seguranca, usando `datetime.now(UTC)` como relogio atual e normalizando valores internos para datetime timezone-aware em UTC.
+- Corrigida a validacao de sessao em `backend/app/services/security.py`, evitando a comparacao entre `AuthSession.expires_at` aware vindo de PostgreSQL `TIMESTAMPTZ` e `datetime.utcnow()` naive.
+- Corrigidas validacoes equivalentes de tokens de ativacao administrativa e recuperacao de senha em `backend/app/services/admin_bootstrap.py`.
+- A regra de expiracao ficou explicita: `expires_at <= agora` expira; futuro permanece valido; data ausente ou invalida rejeita a operacao.
+- Testes cobrem UTC aware, offset diferente, datetime naive interno interpretado como UTC, limite exato expirado, sessao restaurada, ativacao e recuperacao.
+
+### Mantido
+- Nenhum endpoint, contrato de resposta, schema, migration, Supabase, Render, Vercel, Resend, DNS, merge, publicacao, dado real ou secret real foi alterado.
+
 ## 2026-07-19 - Schema public preparado antes do restore PR 32
 
 ### Corrigido

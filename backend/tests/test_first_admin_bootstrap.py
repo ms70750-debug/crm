@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from time import time_ns
 
 import pytest
@@ -21,6 +21,7 @@ from app.services.admin_bootstrap import (
     token_hash,
     validate_admin_bootstrap_token,
 )
+from app.services.datetime_utc import utc_from_internal, utc_now
 from app.services.security import create_session_token, hash_password, verify_password
 
 client = TestClient(app)
@@ -70,7 +71,7 @@ def test_create_and_activate_first_real_admin_without_storing_raw_token() -> Non
         assert record.token_hash == token_hash(raw_token)
         assert raw_token not in str(record.__dict__)
         assert record.used_at is None
-        assert (record.expires_at - datetime.utcnow()) <= timedelta(minutes=ADMIN_BOOTSTRAP_TTL_MINUTES)
+        assert (utc_from_internal(record.expires_at) - utc_now()) <= timedelta(minutes=ADMIN_BOOTSTRAP_TTL_MINUTES)
 
         user = activate_admin_bootstrap_token(db, raw_token, _strong_password(), _strong_password())
         assert user.email == email
@@ -127,7 +128,7 @@ def test_invalid_expired_and_used_tokens_are_rejected() -> None:
 
         record = db.scalar(select(AdminBootstrapToken).where(AdminBootstrapToken.email == email))
         assert record is not None
-        record.expires_at = datetime.utcnow() - timedelta(minutes=1)
+        record.expires_at = utc_now() - timedelta(minutes=1)
         db.commit()
         assert client.get("/auth/admin-bootstrap/validate", headers={"X-Admin-Bootstrap-Token": raw_token}).json()["valid"] is False
 
@@ -222,7 +223,7 @@ def test_password_recovery_rejects_expired_used_and_invalid_passwords() -> None:
         raw_token = _token_from_link(create_password_recovery_link(db, email).link or "")
         record = db.scalar(select(AdminBootstrapToken).where(AdminBootstrapToken.email == email))
         assert record is not None
-        record.expires_at = datetime.utcnow() - timedelta(minutes=1)
+        record.expires_at = utc_now() - timedelta(minutes=1)
         db.commit()
 
     assert client.get("/auth/password-recovery/validate", headers={"X-Password-Recovery-Token": raw_token}).json()["valid"] is False
@@ -230,6 +231,45 @@ def test_password_recovery_rejects_expired_used_and_invalid_passwords() -> None:
         "/auth/password-recovery/confirm",
         json={"token": raw_token, "password": _strong_password(), "password_confirmation": _strong_password()},
     ).status_code == 400
+
+
+def test_activation_token_accepts_restored_aware_utc_expiration() -> None:
+    email = _email("aware-activation")
+    with SessionLocal() as db:
+        result = create_admin_bootstrap_link(db, email)
+        raw_token = _token_from_link(result.link)
+        record = db.scalar(select(AdminBootstrapToken).where(AdminBootstrapToken.email == email))
+        assert record is not None
+        record.expires_at = utc_now() + timedelta(minutes=30)
+        db.commit()
+
+        validated = validate_admin_bootstrap_token(db, raw_token)
+
+        assert validated.id == record.id
+
+
+def test_password_recovery_token_accepts_restored_aware_utc_expiration() -> None:
+    email = _email("aware-recovery")
+    with SessionLocal() as db:
+        db.add(User(nome="Usuario comum", email=email, password_hash=hash_password("SenhaAntiga!2026"), role="operador", ativo=True))
+        db.commit()
+        result = create_password_recovery_link(db, email)
+        raw_token = _token_from_link(result.link or "")
+        record = db.scalar(select(AdminBootstrapToken).where(AdminBootstrapToken.email == email))
+        assert record is not None
+        record.expires_at = datetime(2026, 7, 19, 12, 30, tzinfo=UTC)
+        db.commit()
+
+        from app.services import admin_bootstrap
+
+        original_utc_now = admin_bootstrap.utc_now
+        admin_bootstrap.utc_now = lambda: datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+        try:
+            validated = admin_bootstrap.validate_password_recovery_token(db, raw_token)
+        finally:
+            admin_bootstrap.utc_now = original_utc_now
+
+        assert validated.id == record.id
 
     email_used = _email("used-reset")
     with SessionLocal() as db:

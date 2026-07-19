@@ -24,6 +24,12 @@ A solicitacao de recuperacao responde de forma neutra para conta existente ou in
 
 Ao redefinir senha, sessoes antigas sao revogadas. Token de recuperacao nao ativa administrador, e token de ativacao nao redefine senha.
 
+## Convencao de datas UTC
+
+Sessoes, tokens de ativacao e tokens de recuperacao sao validados com datetime timezone-aware em UTC. O PostgreSQL usa `TIMESTAMPTZ` para essas colunas; o SQLite local pode retornar datetime naive, tratado como UTC somente por ser valor interno do proprio CRM. Qualquer valor ausente ou invalido rejeita a operacao sem revelar detalhes ao usuario.
+
+Regra de expiracao: `expires_at <= agora` e expirado; somente `expires_at > agora` permanece valido. Tokens usados, revogados ou de finalidade diferente continuam rejeitados.
+
 ## E-mail transacional
 
 O provedor preparado e Resend. Variaveis por nome:

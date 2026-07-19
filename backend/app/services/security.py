@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models import AuditLog, AuthSession, User
 from app.config.environment import is_production_environment
+from app.services.datetime_utc import is_expired, utc_now
 from app.services.privacy import mask_cpf, mask_email, mask_phone
 
 SECRET = os.environ.get("BBB_AUTH_SECRET", "bbb-consig-crm-demo-secret")
@@ -51,7 +52,7 @@ def _session_id_hash(session_id: str) -> str:
 
 def create_session_token(db: Session, user: User) -> str:
     session_id = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(seconds=TOKEN_TTL_SECONDS)
+    expires_at = utc_now() + timedelta(seconds=TOKEN_TTL_SECONDS)
     payload = {
         "sub": user.id,
         "email": user.email,
@@ -89,7 +90,11 @@ def _active_session_from_payload(db: Session, payload: dict[str, Any]) -> AuthSe
         raise HTTPException(status_code=401, detail="Sessao invalida")
     if session.revoked_at is not None:
         raise HTTPException(status_code=401, detail="Sessao revogada")
-    if session.expires_at < datetime.utcnow():
+    try:
+        expired = is_expired(session.expires_at)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Sessao invalida") from exc
+    if expired:
         raise HTTPException(status_code=401, detail="Sessao expirada")
     if int(payload.get("sub", 0)) != session.user_id:
         raise HTTPException(status_code=401, detail="Sessao invalida")
@@ -102,7 +107,7 @@ def revoke_session_from_payload(db: Session, payload: dict[str, Any], reason: st
         return
     session = db.scalar(select(AuthSession).where(AuthSession.session_id_hash == _session_id_hash(session_id)))
     if session and session.revoked_at is None:
-        session.revoked_at = datetime.utcnow()
+        session.revoked_at = utc_now()
         session.revocation_reason = reason
 
 
@@ -182,7 +187,7 @@ def log_audit(db: Session, action: str, entity_type: str, entity_id: int | None 
             entity_type=entity_type,
             entity_id=entity_id,
             metadata_json=json.dumps(sanitized, ensure_ascii=False),
-            created_at=datetime.utcnow(),
+            created_at=utc_now(),
         )
     )
 
@@ -204,7 +209,7 @@ def sanitize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
 
 def demo_token_expiration() -> datetime:
-    return datetime.utcnow() + timedelta(seconds=TOKEN_TTL_SECONDS)
+    return utc_now() + timedelta(seconds=TOKEN_TTL_SECONDS)
 
 
 def session_cookie_options() -> dict[str, Any]:
