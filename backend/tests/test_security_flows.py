@@ -135,6 +135,34 @@ def test_healthz_reports_safe_database_and_version_metadata() -> None:
     assert "postgresql://" not in response.text
 
 
+def test_cors_allows_bbb_consig_vercel_preview_origin() -> None:
+    response = client.options(
+        "/auth/login",
+        headers={
+            "Origin": "https://crm-git-feature-layout-bbb-site-2026-07-19-bbb-consig.vercel.app",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://crm-git-feature-layout-bbb-site-2026-07-19-bbb-consig.vercel.app"
+
+
+def test_cors_rejects_unrelated_vercel_origin() -> None:
+    response = client.options(
+        "/auth/login",
+        headers={
+            "Origin": "https://crm-git-feature-layout-bbb-site-2026-07-19-outro-time.vercel.app",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_global_rate_limit_blocks_excessive_requests() -> None:
     init_db()
     responses = [client.get("/auth/me") for _ in range(301)]

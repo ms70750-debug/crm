@@ -1,5 +1,13 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_URL = previewUsesSameOriginApi() ? "/api" : import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 let authToken: string | null = null;
+
+function previewUsesSameOriginApi() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const host = window.location.hostname;
+  return host.startsWith("crm-git-") && host.endsWith("-bbb-consig.vercel.app");
+}
 
 export function getAuthToken() {
   return authToken;

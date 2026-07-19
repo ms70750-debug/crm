@@ -83,3 +83,14 @@ def test_frontend_auth_token_is_memory_only() -> None:
     assert content.index("...init") < content.index("headers: {")
     assert "localStorage.setItem" not in content
     assert "sessionStorage" not in content
+
+
+def test_vercel_preview_uses_same_origin_api_proxy() -> None:
+    api_lib = API_LIB.read_text(encoding="utf-8")
+    vercel_config = (ROOT / "frontend" / "vercel.json").read_text(encoding="utf-8")
+
+    assert "previewUsesSameOriginApi()" in api_lib
+    assert 'host.startsWith("crm-git-")' in api_lib
+    assert 'host.endsWith("-bbb-consig.vercel.app")' in api_lib
+    assert '"source": "/api/(.*)"' in vercel_config
+    assert '"destination": "https://crm-2340.onrender.com/$1"' in vercel_config

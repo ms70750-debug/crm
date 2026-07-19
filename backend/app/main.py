@@ -21,10 +21,12 @@ CORS_ORIGINS = [
     for origin in os.environ.get("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
     if origin.strip()
 ]
+VERCEL_PREVIEW_ORIGIN_REGEX = r"https://crm-git-[a-z0-9-]+-bbb-consig\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=VERCEL_PREVIEW_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
