@@ -1,7 +1,10 @@
+import os
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Client, Lead, Proposal, Task, User
+from app.services.admin_bootstrap import normalize_email
 from app.services.security import hash_password
 
 # Dados exclusivamente ficticios para demonstracao. Nao usar CPF, beneficio,
@@ -57,3 +60,31 @@ def seed_database(db: Session) -> None:
         ]
     )
     db.commit()
+
+
+def ensure_primary_admin_from_env(db: Session) -> bool:
+    email = os.environ.get("PRIMARY_ADMIN_EMAIL", "").strip()
+    password = os.environ.get("PRIMARY_ADMIN_PASSWORD", "")
+    name = os.environ.get("PRIMARY_ADMIN_NAME", "").strip() or "Administrador Principal"
+    if not email or not password:
+        return False
+
+    normalized_email = normalize_email(email)
+    user = db.scalar(select(User).where(User.email == normalized_email))
+    if user:
+        user.nome = name
+        user.role = "admin"
+        user.ativo = True
+        user.password_hash = hash_password(password)
+    else:
+        db.add(
+            User(
+                nome=name,
+                email=normalized_email,
+                password_hash=hash_password(password),
+                role="admin",
+                ativo=True,
+            )
+        )
+    db.commit()
+    return True

@@ -1,6 +1,12 @@
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from app.database import init_db
+from app.database.session import Base, normalize_database_url
+from app.models import User
+from app.services.security import verify_password
 
 
 MIGRATIONS_ROOT = Path(__file__).resolve().parents[1] / "migrations"
@@ -84,3 +90,44 @@ def test_sqlite_still_auto_bootstraps_controlled_schema(monkeypatch) -> None:
     monkeypatch.setattr(init_db, "DATABASE_URL", "sqlite:///./app.db")
 
     assert init_db.should_auto_bootstrap_schema() is True
+
+
+def test_primary_admin_bootstrap_is_env_driven_without_committed_password() -> None:
+    seed = (Path(__file__).resolve().parents[1] / "app" / "database" / "seed.py").read_text(encoding="utf-8")
+    render_config = (Path(__file__).resolve().parents[2] / "render.yaml").read_text(encoding="utf-8")
+    env_example = (Path(__file__).resolve().parents[2] / ".env.example").read_text(encoding="utf-8")
+
+    assert "PRIMARY_ADMIN_EMAIL" in seed
+    assert "PRIMARY_ADMIN_PASSWORD" in seed
+    assert "sync: false" in render_config
+    assert "PRIMARY_ADMIN_PASSWORD=" in env_example
+    assert "Byabru" not in seed
+    assert "Byabru" not in render_config
+    assert "Byabru" not in env_example
+
+
+def test_primary_admin_bootstrap_creates_admin_from_env(monkeypatch) -> None:
+    from app.database.seed import ensure_primary_admin_from_env
+
+    monkeypatch.setenv("PRIMARY_ADMIN_EMAIL", "daiene@bbbemprestimos.com.br")
+    monkeypatch.setenv("PRIMARY_ADMIN_PASSWORD", "SenhaAdmin!2026")
+    monkeypatch.setenv("PRIMARY_ADMIN_NAME", "Daiene")
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        assert ensure_primary_admin_from_env(db) is True
+
+        user = db.query(User).filter(User.email == "daiene@bbbemprestimos.com.br").one()
+        assert user.nome == "Daiene"
+        assert user.role == "admin"
+        assert user.ativo is True
+        assert verify_password("SenhaAdmin!2026", user.password_hash)
+
+
+def test_postgres_database_url_uses_psycopg_and_requires_ssl() -> None:
+    normalized = normalize_database_url("postgres://user:password@db.example.test:5432/app")
+
+    assert normalized.startswith("postgresql+psycopg://")
+    assert "sslmode=require" in normalized
