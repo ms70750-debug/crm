@@ -120,3 +120,52 @@ O teste deve usar somente banco PostgreSQL descartavel e isolado, com dados sint
 4. Manter bloqueados merge, Render, Supabase real e dados reais ate as demais pendencias externas.
 
 Nunca usar o Supabase principal como destino do restore.
+
+## Correcao schema public PR #32 - 2026-07-19
+
+### Diagnostico
+
+- Run analisado: `29668607431`.
+- Etapa com falha: `Validate checksum and restore`.
+- Falha ocorreu depois de `pg_dump`, checksum, criptografia e remocao do dump aberto passarem.
+- Clientes PostgreSQL: `psql`, `pg_dump`, `pg_restore` e `pg_isready` 17.10.
+- Banco de origem anterior: `crm_restore_source`.
+- Banco de destino anterior: `crm_restore_target`.
+- Causa raiz confirmada: o dump custom inclui o comando de criacao do schema `public`, enquanto o banco de destino recem-criado ja continha `public`, comportamento padrao do PostgreSQL.
+- Evidencia sanitizada: falha no `CREATE SCHEMA public` com schema preexistente.
+
+### Correcao
+
+- O workflow agora usa bancos sinteticos `crm_source_ci` e `crm_restore_ci`, criados a partir de `template0` com owner `restore_ci_owner`.
+- Antes do restore, o script inspeciona o dump com `pg_restore --list` e registra apenas resumo seguro:
+  - schema `public` incluido: sim/nao;
+  - total de entradas;
+  - presenca de tabelas;
+  - presenca de indices;
+  - presenca de constraints.
+- O restore e bloqueado antes de qualquer `DROP` se:
+  - o host nao for `127.0.0.1` ou `localhost`;
+  - o banco de destino nao terminar em `_restore_ci` ou `_restore_test`;
+  - o destino for `postgres`, `template0`, `template1`, `crm`, `crm_prod` ou `crm-bbb-consig-prod`;
+  - origem e destino forem iguais;
+  - houver referencia externa proibida a Supabase, Render, Vercel ou dominio real;
+  - `SELECT current_database()` nao confirmar o destino esperado;
+  - ja existirem tabelas da aplicacao no destino.
+- Somente depois dessas protecoes, o script executa `DROP SCHEMA IF EXISTS public CASCADE` no banco descartavel aprovado.
+- O schema `public` nao e recriado manualmente antes do restore; o dump deve recria-lo.
+
+### Testes de regressao
+
+- Host externo bloqueado antes do DROP.
+- Nome de banco nao sintetico bloqueado.
+- Origem igual ao destino bloqueada.
+- Tabela da aplicacao preexistente bloqueia o DROP.
+- Indice do dump confirma `SCHEMA - public`, tabelas, indices e constraints sem imprimir o indice completo.
+- Workflow estatico confirma `template0`, `restore_ci_owner`, `crm_source_ci` e `crm_restore_ci`.
+
+### Limites preservados
+
+- Nenhum Supabase principal foi alterado.
+- Nenhum Render, Vercel, Resend ou DNS foi alterado.
+- Nenhum dado real, secret real, merge ou publicacao foi executado.
+- O resultado final depende de uma nova execucao unica no GitHub Actions.

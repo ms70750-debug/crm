@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-19 - Schema public preparado antes do restore PR 32
+
+### Corrigido
+- O restore criptografado agora inspeciona o indice do dump com `pg_restore --list` e confirma, sem imprimir o indice completo, que o dump inclui `SCHEMA - public`, tabelas, indices e constraints.
+- O banco descartavel de destino passa a ser validado antes de qualquer `DROP`: host local, nome sintetico com sufixo `_restore_ci` ou `_restore_test`, origem diferente do destino, bancos proibidos bloqueados e ausencia de referencias externas proibidas.
+- O script remove `DROP SCHEMA IF EXISTS public CASCADE` somente depois das protecoes passarem e somente no banco descartavel vazio, deixando o proprio dump recriar o schema `public`.
+- O workflow cria bancos descartaveis via `template0`, com owner sintetico `restore_ci_owner`, usando `crm_source_ci` e `crm_restore_ci`.
+- Testes de regressao cobrem bloqueio de host externo, nome de banco inseguro, origem igual ao destino, tabelas preexistentes antes do DROP e indice do dump com schema `public`.
+
+### Mantido
+- Nenhum Supabase principal, Render, Vercel, Resend, DNS, merge, publicacao, dado real ou secret real foi alterado.
+
 ## 2026-07-18 - Fixacao dos binarios PostgreSQL 17 no restore PR 32
 
 ### Corrigido

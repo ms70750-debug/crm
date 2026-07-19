@@ -156,6 +156,8 @@ def test_restore_validates_checksums_and_removes_plaintext(tmp_path: Path, monke
         database_url="postgresql://postgres:test@localhost:5432/temp",
         restore_runner=restore_runner,
         role_preparer=role_preparer,
+        target_preparer=lambda _: None,
+        index_inspector=lambda _: restore.DumpIndexSummary(True, 4, True, True, True),
     )
 
     assert verification.restored is True

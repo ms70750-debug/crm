@@ -189,6 +189,8 @@ Atualizacao de seguranca em 2026-07-18: as tres primeiras tentativas do PR #32 f
 
 Atualizacao complementar em 2026-07-18: a tentativa seguinte comprovou que o pacote `postgresql-client-17` estava instalado, mas a resolucao generica do runner ainda escolhia `pg_dump` e `pg_restore` 16.14 enquanto `psql` era 17.10. O workflow passou a descobrir `PG17_BIN` por `dpkg -L postgresql-client-17`, validar os caminhos reais com `readlink -f` e executar operacoes criticas somente por caminho absoluto, como `${PG17_BIN}/pg_dump` e `${PG17_BIN}/pg_restore`.
 
+Atualizacao em 2026-07-19: o backup custom foi criado, validado por checksum, criptografado e teve o dump aberto removido, mas o restore descartavel falhou porque o dump inclui `SCHEMA - public` e um banco PostgreSQL recem-criado ja possui o schema `public` por padrao. A correcao prepara o destino realmente vazio antes do `pg_restore`: primeiro confirma o indice do dump com `${PG17_BIN}/pg_restore --list` sem imprimir o indice completo, depois valida que o destino e local, sintetico, diferente da origem e livre de referencias externas proibidas. Somente apos essas protecoes, o script executa `DROP SCHEMA IF EXISTS public CASCADE` no banco descartavel vazio. O schema nao e recriado manualmente; o proprio dump deve recriar `public`.
+
 Antes do backup, o workflow agora valida:
 - `psql --version`;
 - `pg_dump --version`;
@@ -203,7 +205,7 @@ Antes do backup, o workflow agora valida:
 
 Fluxo seguro:
 1. Inicia PostgreSQL 17 descartavel como service container.
-2. Cria os bancos `crm_restore_source` e `crm_restore_target`.
+2. Cria os bancos `crm_source_ci` e `crm_restore_ci` a partir de `template0`, com owner sintetico `restore_ci_owner`.
 3. Aplica as migrations oficiais em `backend/migrations/postgres`.
 4. Cria somente dados sinteticos com dominio `example.test`.
 5. Valida origem, login, consentimento, audit log, simulacao e soft delete.
@@ -211,9 +213,12 @@ Fluxo seguro:
 7. Calcula checksum SHA-256.
 8. Criptografa com chave Fernet efemera criada dentro do job.
 9. Remove o dump aberto antes de qualquer etapa seguinte.
-10. Restaura em segundo banco descartavel com `${PG17_BIN}/pg_restore` 17 instalado no runner.
-11. Valida schema, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
-12. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
+10. Inspeciona o indice do dump e confirma `SCHEMA - public`, tabelas, indices e constraints sem expor o indice completo.
+11. Bloqueia o restore se o destino nao for local, nao tiver sufixo `_restore_ci` ou `_restore_test`, for banco proibido, for igual a origem, contiver host externo proibido ou ja tiver tabelas da aplicacao.
+12. Remove o schema `public` somente no banco descartavel aprovado e valida que ele nao existe antes do restore.
+13. Restaura em segundo banco descartavel com `${PG17_BIN}/pg_restore` 17 instalado no runner.
+14. Valida schema recriado, indices, constraints, tokens, sessoes, login, recuperacao, consentimento, audit log, simulacoes e soft delete.
+15. Remove artefatos locais, chave efemera e bancos descartaveis no encerramento.
 
 O workflow nao usa `SUPABASE_DIRECT_URL`, `POSTGRES_RESTORE_URL` real, `BACKUP_ENCRYPTION_KEY` real, `secrets.*`, upload de artifact ou conexao externa de banco. A chave efemera nunca deve ser impressa e nao deve sair do job.
 

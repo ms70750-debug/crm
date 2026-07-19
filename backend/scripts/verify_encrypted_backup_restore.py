@@ -12,9 +12,9 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import create_engine, text
 
 try:
-    from create_encrypted_postgres_backup import postgres_client_environment, sha256_file
+    from create_encrypted_postgres_backup import postgres_client_environment, sha256_file, sqlalchemy_database_url
 except ModuleNotFoundError:
-    from scripts.create_encrypted_postgres_backup import postgres_client_environment, sha256_file
+    from scripts.create_encrypted_postgres_backup import postgres_client_environment, sha256_file, sqlalchemy_database_url
 
 EXPECTED_TABLES = (
     "admin_bootstrap_tokens",
@@ -33,6 +33,10 @@ EXPECTED_TABLES = (
 )
 DIRECT_ROLES = ("anon", "authenticated")
 VALIDATED_PRIVILEGES = ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER")
+LOCAL_RESTORE_HOSTS = {"127.0.0.1", "localhost"}
+SAFE_RESTORE_SUFFIXES = ("_restore_ci", "_restore_test")
+FORBIDDEN_RESTORE_DATABASES = {"postgres", "template0", "template1", "crm", "crm_prod", "crm-bbb-consig-prod"}
+FORBIDDEN_EXTERNAL_MARKERS = ("supabase.co", "render.com", "vercel.app", "bbbemprestimos.com.br")
 
 
 def pg_restore_binary() -> str:
@@ -48,6 +52,15 @@ class RestoreVerification:
     index_count: int
     constraint_count: int
     row_counts: dict[str, int]
+
+
+@dataclass(frozen=True)
+class DumpIndexSummary:
+    public_schema_included: bool
+    total_entries: int
+    has_tables: bool
+    has_indexes: bool
+    has_constraints: bool
 
 
 def load_manifest(path: Path) -> dict:
@@ -82,7 +95,7 @@ def decrypt_backup(encrypted_path: Path, target_path: Path, key: bytes) -> None:
 
 
 def ensure_validation_roles(database_url: str) -> None:
-    engine = create_engine(database_url)
+    engine = create_engine(sqlalchemy_database_url(database_url))
     with engine.begin() as conn:
         for role in ("anon", "authenticated", "service_role", "backend_app"):
             conn.exec_driver_sql(
@@ -96,6 +109,127 @@ def ensure_validation_roles(database_url: str) -> None:
                 $$;
                 """
             )
+
+
+def _env_name(database_url: str, key: str) -> str:
+    return postgres_client_environment(database_url)[key]
+
+
+def _database_name_from_url(database_url: str) -> str:
+    return _env_name(database_url, "PGDATABASE")
+
+
+def _contains_forbidden_external_marker(value: str) -> bool:
+    normalized = value.lower()
+    return any(marker in normalized for marker in FORBIDDEN_EXTERNAL_MARKERS)
+
+
+def _source_database_name() -> str | None:
+    source_url = os.environ.get("SOURCE_DATABASE_URL", "").strip()
+    if source_url:
+        return _database_name_from_url(source_url)
+    source_db = os.environ.get("SOURCE_DB", "").strip()
+    return source_db or None
+
+
+def assert_safe_disposable_restore_target(database_url: str) -> dict[str, str]:
+    process_env = postgres_client_environment(database_url)
+    host = process_env["PGHOST"]
+    target_db = process_env["PGDATABASE"]
+    source_db = _source_database_name()
+    checked_values = [
+        database_url,
+        host,
+        target_db,
+        os.environ.get("DB_HOST", ""),
+        os.environ.get("RESTORE_DB", ""),
+        os.environ.get("SOURCE_DB", ""),
+        os.environ.get("SOURCE_DATABASE_URL", ""),
+    ]
+
+    if host not in LOCAL_RESTORE_HOSTS:
+        raise RuntimeError("Restore bloqueado: host do destino nao e local descartavel.")
+    if not target_db.endswith(SAFE_RESTORE_SUFFIXES):
+        raise RuntimeError("Restore bloqueado: banco de destino nao possui nome sintetico permitido.")
+    if target_db in FORBIDDEN_RESTORE_DATABASES:
+        raise RuntimeError("Restore bloqueado: banco de destino esta na lista proibida.")
+    if source_db and source_db == target_db:
+        raise RuntimeError("Restore bloqueado: banco de origem e destino sao iguais.")
+    if any(_contains_forbidden_external_marker(value) for value in checked_values):
+        raise RuntimeError("Restore bloqueado: referencia externa proibida detectada.")
+
+    return {"host": host, "target_db": target_db, "source_db": source_db or ""}
+
+
+def application_table_count(conn) -> int:
+    tables = {
+        str(row)
+        for row in conn.execute(
+            text(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_type = 'BASE TABLE'
+                """
+            )
+        ).scalars()
+    }
+    return len(tables & set(EXPECTED_TABLES))
+
+
+def schema_exists(conn, schema_name: str) -> bool:
+    return bool(
+        conn.execute(
+            text("SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = :schema_name)"),
+            {"schema_name": schema_name},
+        ).scalar()
+    )
+
+
+def prepare_disposable_restore_target(database_url: str) -> None:
+    safe_target = assert_safe_disposable_restore_target(database_url)
+    engine = create_engine(sqlalchemy_database_url(database_url))
+    with engine.begin() as conn:
+        current_database = str(conn.execute(text("SELECT current_database()")).scalar_one())
+        if current_database != safe_target["target_db"]:
+            raise RuntimeError("Restore bloqueado: conexao nao esta no banco descartavel esperado.")
+        if application_table_count(conn) != 0:
+            raise RuntimeError("Restore bloqueado: banco descartavel ja possui tabelas da aplicacao.")
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        if schema_exists(conn, "public"):
+            raise RuntimeError("Restore bloqueado: schema public ainda existe apos preparacao.")
+        if application_table_count(conn) != 0:
+            raise RuntimeError("Restore bloqueado: tabelas da aplicacao permaneceram antes do restore.")
+
+
+def inspect_dump_index(dump_path: Path) -> DumpIndexSummary:
+    command = [pg_restore_binary(), "--list", str(dump_path)]
+    try:
+        result = subprocess.run(command, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("pg_restore nao encontrado para inspecionar o indice do dump.") from exc
+    if result.returncode != 0:
+        raise RuntimeError("pg_restore --list falhou. Detalhes sensiveis foram ocultados.")
+
+    entries = [line for line in result.stdout.splitlines() if line.strip() and not line.lstrip().startswith(";")]
+    summary = DumpIndexSummary(
+        public_schema_included=any(" SCHEMA - public" in line or line.strip().endswith("SCHEMA - public") for line in entries),
+        total_entries=len(entries),
+        has_tables=any(" TABLE " in line for line in entries),
+        has_indexes=any(" INDEX " in line for line in entries),
+        has_constraints=any(" CONSTRAINT " in line or " FK CONSTRAINT " in line for line in entries),
+    )
+    if not summary.public_schema_included:
+        raise RuntimeError("Dump nao inclui o schema public; causa raiz deve ser reinvestigada.")
+    if not summary.has_tables or not summary.has_indexes or not summary.has_constraints:
+        raise RuntimeError("Dump incompleto: indice sem tabelas, indices ou constraints.")
+    print(f"Schema public incluido no dump: {'sim' if summary.public_schema_included else 'nao'}")
+    print(f"Entradas totais do dump: {summary.total_entries}")
+    print(f"Dump contem tabelas: {'sim' if summary.has_tables else 'nao'}")
+    print(f"Dump contem indices: {'sim' if summary.has_indexes else 'nao'}")
+    print(f"Dump contem constraints: {'sim' if summary.has_constraints else 'nao'}")
+    return summary
 
 
 def run_pg_restore(database_url: str, dump_path: Path) -> None:
@@ -141,7 +275,7 @@ def public_schema_has_access(conn) -> bool:
 
 
 def validate_restore(database_url: str) -> RestoreVerification:
-    engine = create_engine(database_url)
+    engine = create_engine(sqlalchemy_database_url(database_url))
     with engine.connect() as conn:
         tables = {
             str(row)
@@ -231,6 +365,8 @@ def verify_encrypted_backup_restore(
     database_url: str | None = None,
     restore_runner: Callable[[str, Path], None] = run_pg_restore,
     role_preparer: Callable[[str], None] = ensure_validation_roles,
+    target_preparer: Callable[[str], None] = prepare_disposable_restore_target,
+    index_inspector: Callable[[Path], DumpIndexSummary] = inspect_dump_index,
 ) -> RestoreVerification:
     manifest = load_manifest(manifest_path)
     expected_checksum = manifest.get("encrypted_sha256")
@@ -247,7 +383,9 @@ def verify_encrypted_backup_restore(
             decrypt_backup(encrypted_backup, plaintext_dump, key)
             if sha256_file(plaintext_dump) != manifest.get("plaintext_sha256"):
                 raise RuntimeError("Checksum do dump descriptografado diverge do manifesto.")
+            index_inspector(plaintext_dump)
             role_preparer(restore_url)
+            target_preparer(restore_url)
             restore_runner(restore_url, plaintext_dump)
             result = validate_restore(restore_url)
         finally:

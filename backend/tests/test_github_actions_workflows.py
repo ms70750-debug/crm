@@ -298,8 +298,10 @@ def test_postgres_restore_validation_workflow_uses_disposable_postgres_17() -> N
     assert 'PG_RESTORE_BIN="${PG17_BIN}/pg_restore"' in content
     assert "test \"$pg_dump_major\" = \"17\"" in content
     assert "test \"$pg_restore_major\" = \"17\"" in content
-    assert "crm_restore_source" in content
-    assert "crm_restore_target" in content
+    assert "crm_source_ci" in content
+    assert "crm_restore_ci" in content
+    assert "crm_restore_target" not in content
+    assert "WITH TEMPLATE template0 OWNER restore_ci_owner ENCODING 'UTF8'" in content
     assert "apply_postgres_migrations.py --apply" in content
     assert "ci_postgres_restore_validation.py seed-source" in content
     assert "create_encrypted_postgres_backup.py" in content
