@@ -1,8 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Panel } from "../components/CrudShell";
-import { PageHeader } from "../components/PageHeader";
+import { AuthShell } from "../components/AuthShell";
 import { api } from "../lib/api";
 
 type ValidationResponse = {
@@ -60,28 +59,25 @@ export function PasswordRecoveryReset() {
   }
 
   return (
-    <div className="mx-auto max-w-xl p-5">
-      <PageHeader title="Redefinir senha" subtitle="Defina uma nova senha para recuperar o acesso ao CRM BBB Consig." />
-      <Panel>
-        {valid === null && <div className="text-sm text-slate-400">Validando link...</div>}
-        {valid === false && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">Link invalido ou expirado.</div>}
+    <AuthShell title="Redefinir senha" subtitle="Defina uma nova senha para recuperar o acesso ao CRM BBB Consig.">
+        {valid === null && <div className="text-sm font-semibold text-slate-600">Validando link...</div>}
+        {valid === false && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">Link invalido ou expirado.</div>}
         {valid && (
-          <form className="grid gap-3" onSubmit={submit}>
-            <label className="text-sm text-slate-400">
+          <form className="grid gap-4" onSubmit={submit}>
+            <label className="text-sm font-semibold text-slate-700">
               Nova senha
-              <input className="input mt-1" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <input className="input mt-1.5" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </label>
-            <label className="text-sm text-slate-400">
+            <label className="text-sm font-semibold text-slate-700">
               Confirmar senha
-              <input className="input mt-1" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} />
+              <input className="input mt-1.5" type="password" autoComplete="new-password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} />
             </label>
-            {message && <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{message}</div>}
-            <button className="btn" type="submit" disabled={loading}>
+            {message && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{message}</div>}
+            <button className="btn w-full" type="submit" disabled={loading}>
               <LockKeyhole size={16} /> {loading ? "Redefinindo..." : "Redefinir senha"}
             </button>
           </form>
         )}
-      </Panel>
-    </div>
+    </AuthShell>
   );
 }

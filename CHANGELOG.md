@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-19 - Identidade visual BBB no CRM
+
+### Adicionado
+- Criado design system visual BBB para o frontend, com tokens centralizados de cor, raio, sombra, tipografia e estados.
+- Baixados localmente ativos oficiais servidos por `www.bbbemprestimos.com.br`: logo quadrada, banner institucional e favicon.
+- Criado documento `docs/UI-DESIGN-SYSTEM.md` com referencia visual, paleta, componentes, responsividade, acessibilidade e limites.
+
+### Alterado
+- Redesenhadas visualmente telas de login, recuperacao de senha, redefinicao e ativacao administrativa com identidade BBB.
+- Atualizados layout principal, menu lateral, navegacao movel, cabecalho, badges, botoes, inputs, paineis, tabelas e graficos para tema claro comercial.
+- Corrigida rolagem horizontal geral em telas com tabelas largas, mantendo rolagem local controlada.
+
+### Mantido
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, dado real, merge ou publicacao em producao foi alterado.
+
 ## 2026-07-19 - Datas UTC em validacoes de seguranca PR 32
 
 ### Corrigido
