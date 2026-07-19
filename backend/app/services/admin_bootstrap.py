@@ -295,9 +295,11 @@ def activate_admin_bootstrap_token(db: Session, token: str, password: str, passw
 
     user = db.scalar(select(User).where(User.email == normalized_email))
     if user:
+        preserve_existing_password = user.role == "admin" and user.ativo is True
         user.role = "admin"
         user.ativo = True
-        user.password_hash = hash_password(password)
+        if not preserve_existing_password:
+            user.password_hash = hash_password(password)
         user.updated_at = now
     else:
         user = User(nome=normalized_email.split("@", 1)[0], email=normalized_email, password_hash=hash_password(password), role="admin", ativo=True)

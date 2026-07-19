@@ -24,7 +24,7 @@ from app.services.admin_bootstrap import (  # noqa: E402
     token_hash,
     validate_password_recovery_token,
 )
-from app.services.security import hash_password  # noqa: E402
+from app.services.security import hash_password, verify_password  # noqa: E402
 
 EXPECTED_TABLES = (
     "admin_bootstrap_tokens",
@@ -301,6 +301,11 @@ def validate_restore() -> None:
         activated = activate_admin_bootstrap_token(db, activation_token, RESTORE_ADMIN_PASSWORD, RESTORE_ADMIN_PASSWORD)
         if activated.email != SOURCE_ADMIN_EMAIL:
             raise RuntimeError("Ativacao sintetica retornou usuario inesperado.")
+        if not verify_password(SOURCE_ADMIN_PASSWORD, activated.password_hash) or verify_password(
+            RESTORE_ADMIN_PASSWORD,
+            activated.password_hash,
+        ):
+            raise RuntimeError("Bootstrap idempotente alterou senha de administrador existente.")
 
         recovery = create_password_recovery_link(
             db,

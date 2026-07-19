@@ -107,6 +107,8 @@ def test_same_email_admin_can_receive_recovery_token_without_duplicate() -> None
         user = activate_admin_bootstrap_token(db, raw_token, _strong_password(), _strong_password())
         assert user.role == "admin"
         assert len(db.scalars(select(User).where(User.email == email)).all()) == 1
+        assert verify_password("SenhaAntiga!2026", user.password_hash)
+        assert not verify_password(_strong_password(), user.password_hash)
 
 
 def test_other_real_admin_blocks_first_admin_creation() -> None:
