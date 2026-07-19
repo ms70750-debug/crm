@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-19 - Login funcional na preview do PR 32
+
+### Corrigido
+- A preview de branch da Vercel passa a rotear chamadas de API por `/api` no mesmo dominio, evitando falha de fetch/CORS no navegador.
+- Adicionada rewrite de `/api/(.*)` para o backend Render ja existente, antes do fallback do SPA.
+
+### Mantido
+- Nenhum backend, banco, migration, endpoint, autenticacao, permissao, Supabase, Render, Resend, DNS, secret, dado real, merge na main ou publicacao em producao foi alterado nesta correcao.
+
 ## 2026-07-19 - Otimizacao invisivel do visual BBB aprovado
 
 ### Alterado
