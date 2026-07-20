@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-07-20 - Cutover Supabase oficial em producao controlada
+
+### Executado
+- Redefinida a senha tecnica do PostgreSQL oficial no Supabase e validada conexao via pooler sem expor segredos.
+- Atualizados os secrets do GitHub Actions para apontar ao destino oficial com fingerprint protegida.
+- Salvas no Render as variaveis de ambiente de producao controlada sem deploy automatico.
+- Criado backup criptografado pre-migration, seguido de dry-run, apply de migrations, apply idempotente e auditorias readonly/permissoes.
+- Criado exatamente um administrador principal no banco oficial.
+
+### Validado
+- Banco oficial terminou com 7 migrations registradas, 1 usuario admin ativo, 0 leads e 0 clientes.
+- `REAL_DATA_MODE=false`, Resend real desabilitado e Evolution API em simulacao.
+
+### Mantido
+- Nenhum dado demo, cliente real, envio real de e-mail/WhatsApp/SMS, restore destrutivo ou copia de schema antigo foi executado.
+
 ## 2026-07-19 - Trava de destino Supabase oficial
 
 ### Adicionado
