@@ -74,8 +74,11 @@ backend\.venv\Scripts\python.exe -m pytest backend\tests -q
 cd frontend
 npm audit --audit-level=moderate
 npm run build
-npm run e2e
+npm run e2e:disposable
+npm run smoke:production
 ```
+
+Os testes backend criam um banco descartavel automaticamente em `APP_ENV=test` e bloqueiam destinos persistentes. O E2E pode criar dados somente contra backend local descartavel. O smoke de producao e separado, somente leitura, sem credenciais administrativas e sem metodos de escrita.
 
 ## Deploy controlado
 Esta versao esta preparada para deploy controlado/teste, sem dados reais e sem integracoes reais com WhatsApp, INSS, FGTS ou bancos.

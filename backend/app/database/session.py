@@ -5,6 +5,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
+from app.services.test_database_guard import guard_test_database_url
+
 DATABASE_PATH = Path(__file__).resolve().parents[2] / "app.db"
 
 
@@ -22,6 +24,7 @@ def normalize_database_url(url: str) -> str:
 
 
 DATABASE_URL = normalize_database_url(os.environ.get("DATABASE_URL", f"sqlite:///{DATABASE_PATH.as_posix()}"))
+guard_test_database_url(DATABASE_URL, os.environ)
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

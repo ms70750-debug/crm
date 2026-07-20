@@ -11,7 +11,8 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   await page.getByRole("button", { name: /entrar/i }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  await page.goto("/clientes");
+  await page.getByRole("link", { name: /clientes/i }).click();
+  await expect(page).toHaveURL(/\/clientes$/);
   await page.getByPlaceholder("Nome").fill(name);
   await page.getByPlaceholder("CPF").fill(`37${suffix}`);
   await page.getByPlaceholder("Telefone").fill(`1197${suffix}`);
@@ -26,7 +27,8 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   await page.locator("tr", { hasText: name }).getByRole("button", { name: "Opt-in WhatsApp" }).click();
   await expect(page.getByText(`Opt-in de WhatsApp registrado para ${name}.`)).toBeVisible();
 
-  await page.goto("/whatsapp");
+  await page.getByRole("link", { name: /whatsapp/i }).click();
+  await expect(page).toHaveURL(/\/whatsapp$/);
   await page.locator("select").first().selectOption("cliente");
   const recipient = page.locator("select").nth(1);
   await expect(recipient.locator("option", { hasText: name })).toHaveCount(1);
@@ -38,11 +40,13 @@ test("login, cliente, opt-in e WhatsApp simulado", async ({ page }) => {
   await expect(page.getByText("Simulacao registrada. Nenhuma mensagem real foi enviada.")).toBeVisible();
   await expect(page.getByText("Registrada em simulacao").first()).toBeVisible();
 
-  await page.goto("/consulta-inss");
+  await page.getByRole("link", { name: /consulta inss/i }).click();
+  await expect(page).toHaveURL(/\/consulta-inss$/);
   await page.getByPlaceholder("CPF").fill(`37${suffix}`);
   await page.getByRole("button", { name: "Consultar INSS" }).click();
   await expect(page.getByText("Resultado simulado")).toBeVisible();
 
-  await page.goto("/admin");
+  await page.getByRole("link", { name: /administracao/i }).click();
+  await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByText("Nenhuma mensagem real e enviada nesta fase.")).toBeVisible();
 });

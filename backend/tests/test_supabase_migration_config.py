@@ -87,7 +87,10 @@ def test_cli_invalid_direct_url_does_not_print_traceback_or_secret() -> None:
     direct_url = "postgresql://postgres:senha[com-colchete]@host.supabase.co:5432/postgres"
     env = os.environ.copy()
     env["DIRECT_URL"] = direct_url
+    env["APP_ENV"] = "local"
     env["REAL_DATA_MODE"] = "false"
+    env.pop("BBB_TEST_RUN_ID", None)
+    env.pop("DATABASE_URL", None)
 
     result = subprocess.run([sys.executable, str(SCRIPT_PATH)], capture_output=True, text=True, env=env, check=False)
     output = f"{result.stdout}\n{result.stderr}"

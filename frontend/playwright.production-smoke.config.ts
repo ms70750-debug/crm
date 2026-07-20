@@ -1,13 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./e2e",
-  timeout: 30_000,
-  expect: { timeout: 8_000 },
-  workers: 1,
+  testDir: "./smoke",
+  timeout: 90_000,
+  expect: { timeout: 12_000 },
   use: {
     ...devices["Desktop Chrome"],
-    baseURL: "http://localhost:5173",
+    baseURL: process.env.PRODUCTION_FRONTEND_URL ?? "https://crm-sepia-beta.vercel.app",
     channel: "chrome",
     trace: "retain-on-failure",
   },
