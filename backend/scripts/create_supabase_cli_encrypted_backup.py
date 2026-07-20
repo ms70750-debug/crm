@@ -13,6 +13,12 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.services.database_target_guard import guard_if_required  # noqa: E402
+
 BACKUP_FORMAT_VERSION = "supabase-cli-logical-fernet-v1"
 DEFAULT_OUTPUT_DIR = Path("backup-artifact")
 INCLUDED_SCHEMAS = ("public",)
@@ -93,6 +99,7 @@ def get_database_url(env: dict[str, str] | None = None) -> str:
         raise RuntimeError("SUPABASE_DIRECT_URL ausente.")
     if "[YOUR-PASSWORD]" in database_url:
         raise RuntimeError("SUPABASE_DIRECT_URL ainda contem placeholder.")
+    guard_if_required(database_url, source)
     return database_url
 
 

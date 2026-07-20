@@ -14,6 +14,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.config.environment import is_postgresql_url, real_data_mode_enabled  # noqa: E402
 from app.database.session import normalize_database_url  # noqa: E402
+from app.services.database_target_guard import guard_if_required  # noqa: E402
 
 MIGRATIONS_DIR = BACKEND_ROOT / "migrations" / "postgres"
 BOOTSTRAP_MIGRATION = "2026_07_01_000_postgres_bootstrap_schema.sql"
@@ -82,7 +83,9 @@ def get_direct_url() -> str:
     if not is_postgresql_url(direct_url):
         raise RuntimeError(INVALID_DIRECT_URL_MESSAGE)
     parse_direct_url_safely(direct_url)
-    return normalize_database_url(direct_url)
+    normalized = normalize_database_url(direct_url)
+    guard_if_required(normalized, os.environ)
+    return normalized
 
 
 def validate_migration_safety() -> None:

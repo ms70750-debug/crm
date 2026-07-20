@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-19 - Trava de destino Supabase oficial
+
+### Adicionado
+- Criada ADR do banco PostgreSQL oficial, definindo `crm-bbb-consig-prod` como destino canonico.
+- Adicionada trava de fingerprint nao reversivel para bloquear backup, migrations, auditorias e bootstrap quando o destino divergir.
+- Conectados os workflows Supabase e bootstrap administrativo ao secret `EXPECTED_DATABASE_TARGET_FINGERPRINT`.
+- Criado relatorio de reconciliacao de destino sem identificadores, hosts ou conexoes.
+
+### Mantido
+- Render permanece em SQLite demo e `REAL_DATA_MODE=false`.
+- Nenhum cliente foi criado, nenhum secret foi exibido e nenhuma migration foi aplicada no Supabase oficial nesta alteracao.
+
 ## 2026-07-19 - Sincronizacao da main no PR 32
 
 ### Alterado

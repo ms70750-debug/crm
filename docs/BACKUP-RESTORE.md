@@ -80,6 +80,8 @@ Rollback automatico so ocorre dentro da transacao da migration em caso de erro d
 
 Status: ADR 014 APROVADA para USO PROPRIO e ADR 009 aceita para o metodo operacional com Supabase CLI.
 
+Atualizacao em 2026-07-19: backups reais de Supabase passam a exigir validacao previa de destino oficial por fingerprint protegida. O artifact criado para destino anterior nao verificado permanece preservado, mas nao substitui backup do projeto oficial `crm-bbb-consig-prod`.
+
 O fluxo ativo usa o Supabase CLI oficial para gerar tres arquivos logicos temporarios: `roles.sql`, `schema.sql` e `data.sql`. O arquivo de dados usa `--data-only` e `--use-copy`. O script empacota esses arquivos com manifesto e checksums internos, criptografa o pacote com Fernet e publica somente artifact criptografado, manifesto externo sanitizado e checksum externo.
 
 ### Escopo do dump Supabase CLI
@@ -104,6 +106,7 @@ Nao devem ser enviados como artifact:
 Variaveis futuras:
 
 - `SUPABASE_DIRECT_URL`: apenas como GitHub Actions secret.
+- `EXPECTED_DATABASE_TARGET_FINGERPRINT`: apenas como GitHub Actions secret; impede backup no banco errado.
 - `BACKUP_ENCRYPTION_KEY`: apenas como GitHub Actions secret.
 - `BACKUP_STORAGE_PROVIDER`: placeholder; armazenamento externo real ainda nao configurado.
 - `BACKUP_STORAGE_BUCKET`: placeholder; bucket real ainda nao configurado.

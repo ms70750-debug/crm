@@ -2,6 +2,11 @@ import os
 
 from app.config.environment import DEMO_AUTH_SECRET, PLACEHOLDER_AUTH_SECRET, is_postgresql_url
 from app.services.data_protection import ensure_protection_key_ready
+from app.services.database_target_guard import (
+    EXPECTED_FINGERPRINT_ENV,
+    DatabaseTargetGuardError,
+    validate_database_target,
+)
 
 PRODUCTION_MODE_VALUES = {"production", "producao", "real-data"}
 
@@ -21,6 +26,19 @@ def check_production_readiness() -> list[str]:
 
     if not database_url or not is_postgresql_url(database_url):
         missing.append("DATABASE_URL")
+    elif production_mode_enabled():
+        expected_fingerprint = os.environ.get(EXPECTED_FINGERPRINT_ENV, "").strip()
+        if not expected_fingerprint:
+            missing.append(EXPECTED_FINGERPRINT_ENV)
+        else:
+            try:
+                validate_database_target(
+                    database_url,
+                    expected_fingerprint,
+                    environment=os.environ.get("APP_ENV", "production"),
+                )
+            except DatabaseTargetGuardError:
+                missing.append("DATABASE_TARGET")
     try:
         ensure_protection_key_ready()
     except Exception:
