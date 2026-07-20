@@ -5,6 +5,8 @@ Este calendario vale para o MVP controlado e deve ser revisado antes de producao
 ## Toda segunda-feira - check-up semanal
 - Confirmar `/healthz` do backend.
 - Rodar testes essenciais e build.
+- Rodar `npm run smoke:production` apenas em modo somente leitura.
+- Nunca usar `npm run e2e:disposable` contra URLs publicas ou producao.
 - Revisar logs tecnicos sem expor CPF, telefone ou email completos.
 - Verificar se `.env`, bancos locais, backups, `dist`, `node_modules`, `test-results` e `referencias/` continuam fora do Git.
 - Confirmar que WhatsApp, INSS, FGTS e bancos seguem em modo simulacao.

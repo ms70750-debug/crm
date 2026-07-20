@@ -1,0 +1,147 @@
+name: Test Isolation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: test-isolation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend isolated tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: crm_test_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_test_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_ENV: test
+      APP_MODE: demo
+      REAL_DATA_MODE: "false"
+      AUTH_EMAIL_ENABLED: "false"
+      AUTH_EMAIL_MODE: simulate
+      PUBLIC_DEMO_LOGIN_ENABLED: "false"
+      BBB_TEST_RUN_ID: backend-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_test_only@127.0.0.1:5432/crm_test_ci?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Prove production secrets are absent
+        run: |
+          test -z "${SUPABASE_DIRECT_URL:-}"
+          test -z "${RESEND_API_KEY:-}"
+          test -z "${EVOLUTION_API_TOKEN:-}"
+
+      - name: Run backend suite first pass
+        run: python -m pytest backend/tests
+
+      - name: Run backend suite second pass
+        run: python -m pytest backend/tests
+
+  e2e-disposable:
+    name: Disposable E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: crm_e2e_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_e2e_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d crm_e2e_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_ENV: test
+      APP_MODE: demo
+      REAL_DATA_MODE: "false"
+      AUTH_EMAIL_ENABLED: "false"
+      AUTH_EMAIL_MODE: simulate
+      PUBLIC_DEMO_LOGIN_ENABLED: "false"
+      BBB_TEST_RUN_ID: e2e-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_e2e_only@127.0.0.1:5432/crm_e2e_ci?sslmode=disable
+      VITE_API_URL: http://127.0.0.1:8000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Start disposable backend
+        run: |
+          python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 > backend-e2e.log 2>&1 &
+          for i in {1..60}; do
+            curl --fail --silent http://127.0.0.1:8000/healthz && exit 0
+            sleep 1
+          done
+          cat backend-e2e.log
+          exit 1
+
+      - name: Run disposable E2E
+        run: npm --prefix frontend run e2e:disposable
+
+      - name: Cleanup disposable database
+        if: always()
+        run: echo "PostgreSQL service container descartado pelo runner."
+
+  production-smoke:
+    name: Production read-only smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Run production read-only smoke
+        env:
+          PRODUCTION_FRONTEND_URL: https://crm-sepia-beta.vercel.app
+          PRODUCTION_BACKEND_URL: https://crm-2340.onrender.com
+        run: npm --prefix frontend run smoke:production

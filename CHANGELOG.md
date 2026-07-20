@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-07-20 - Isolamento de testes e E2E descartavel
+
+### Corrigido
+- Os testes backend deixam de herdar `backend/app.db` quando `DATABASE_URL` nao esta definido.
+- Adicionada guarda fail-closed para `APP_ENV=test`, bloqueando Supabase, Render, URLs publicas, secrets de producao e SQLite persistente do workspace.
+- O `conftest.py` agora instala banco temporario exclusivo por execucao antes dos imports da aplicacao e limpa tabelas entre testes.
+- Corrigido o CLI de fingerprint do destino oficial para usar `production` como ambiente padrao, sem herdar `APP_ENV=test` de subprocessos.
+
+### Adicionado
+- Testes de regressao para a guarda de banco descartavel.
+- Workflow `Test Isolation` com PostgreSQL 17 descartavel para backend e E2E.
+- Script `npm run e2e:disposable` para E2E com escrita apenas em ambiente isolado.
+- Script `npm run smoke:production` para smoke publico somente leitura, bloqueando `POST`, `PUT`, `PATCH` e `DELETE`.
+- Documentacao `docs/TESTING.md` e auditoria `docs/audit/TEST_ISOLATION_2026-07-20.md`.
+
+### Mantido
+- Nenhum Supabase de producao, Render, Vercel, secret real, deploy, merge ou dado de cliente real foi alterado nesta correcao.
+
 ## 2026-07-20 - Cutover Supabase oficial em producao controlada
 
 ### Executado

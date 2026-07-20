@@ -32,11 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     validate_parser = subparsers.add_parser("validate")
     validate_parser.add_argument("--url-env", default="DIRECT_URL")
     validate_parser.add_argument("--fingerprint-env", default=EXPECTED_FINGERPRINT_ENV)
-    validate_parser.add_argument("--environment", default=os.environ.get("APP_ENV", "production"))
+    validate_parser.add_argument("--environment", default="production")
 
     fingerprint_parser = subparsers.add_parser("fingerprint")
     fingerprint_parser.add_argument("--url-env", default="DIRECT_URL")
-    fingerprint_parser.add_argument("--environment", default=os.environ.get("APP_ENV", "production"))
+    fingerprint_parser.add_argument("--environment", default="production")
 
     args = parser.parse_args(argv)
     try:
