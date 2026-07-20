@@ -48,6 +48,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
+      - name: Prepare disposable Supabase-compatible roles
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          database_url = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://", 1)
+          with psycopg.connect(database_url, autocommit=True) as conn:
+              for role in ("anon", "authenticated", "service_role"):
+                  conn.execute(f"DO $$ BEGIN CREATE ROLE {role}; EXCEPTION WHEN duplicate_object THEN NULL; END $$;")
+          PY
+
       - name: Prove production secrets are absent
         run: |
           test -z "${SUPABASE_DIRECT_URL:-}"
@@ -107,6 +119,18 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
+
+      - name: Prepare disposable Supabase-compatible roles
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          database_url = os.environ["DATABASE_URL"].replace("postgresql+psycopg://", "postgresql://", 1)
+          with psycopg.connect(database_url, autocommit=True) as conn:
+              for role in ("anon", "authenticated", "service_role"):
+                  conn.execute(f"DO $$ BEGIN CREATE ROLE {role}; EXCEPTION WHEN duplicate_object THEN NULL; END $$;")
+          PY
 
       - name: Start disposable backend
         run: |

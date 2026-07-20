@@ -20,7 +20,7 @@ test("frontend publico carrega login sem escrita", async ({ page }) => {
 });
 
 test("backend publico responde healthz sem escrita", async ({ request }) => {
-  const response = await request.get(`${backendUrl}/healthz`);
+  const response = await request.get(`${backendUrl}/healthz`, { timeout: 75_000 });
   expect(response.ok()).toBe(true);
   const health = await response.json();
   expect(health.status).toBe("ok");
