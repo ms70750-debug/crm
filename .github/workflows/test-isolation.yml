@@ -142,6 +142,16 @@ jobs:
           cat backend-e2e.log
           exit 1
 
+      - name: Start disposable frontend
+        run: |
+          npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 > frontend-e2e.log 2>&1 &
+          for i in {1..60}; do
+            curl --fail --silent http://127.0.0.1:5173/login && exit 0
+            sleep 1
+          done
+          cat frontend-e2e.log
+          exit 1
+
       - name: Run disposable E2E
         run: npm --prefix frontend run e2e:disposable
 

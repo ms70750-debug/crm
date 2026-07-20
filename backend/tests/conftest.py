@@ -45,6 +45,7 @@ atexit.register(_cleanup_test_dir)
 
 
 import pytest  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -64,14 +65,21 @@ def isolated_application_database(prepare_application_database):
     from app.database.session import Base, SessionLocal, engine
     from app.services.security import _rate_buckets
 
-    with engine.begin() as conn:
-        for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(table.delete())
+    _clear_database(Base, engine)
     with SessionLocal() as db:
         seed_database(db)
     _rate_buckets.clear()
     yield
     _rate_buckets.clear()
+    _clear_database(Base, engine)
+
+
+def _clear_database(Base, engine) -> None:
     with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            tables = ", ".join(f'"{table.name}"' for table in reversed(Base.metadata.sorted_tables))
+            if tables:
+                conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+            return
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
