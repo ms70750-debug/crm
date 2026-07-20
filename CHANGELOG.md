@@ -8,6 +8,9 @@
 - Conectados os workflows Supabase e bootstrap administrativo ao secret `EXPECTED_DATABASE_TARGET_FINGERPRINT`.
 - Criado relatorio de reconciliacao de destino sem identificadores, hosts ou conexoes.
 
+### Reforcado
+- Padronizado mascaramento explicito da conexao e da fingerprint nos workflows de dry-run e apply de migrations Supabase.
+
 ### Mantido
 - Render permanece em SQLite demo e `REAL_DATA_MODE=false`.
 - Nenhum cliente foi criado, nenhum secret foi exibido e nenhuma migration foi aplicada no Supabase oficial nesta alteracao.

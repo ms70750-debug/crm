@@ -27,6 +27,7 @@ Foi criado um verificador de destino que:
 - calcula fingerprint SHA-256 nao reversivel;
 - compara contra `EXPECTED_DATABASE_TARGET_FINGERPRINT`;
 - falha antes de backup, migration, auditoria ou bootstrap quando `DATABASE_TARGET_GUARD_REQUIRED=true`;
+- mascara explicitamente conexao e fingerprint nos workflows controlados de migrations;
 - retorna apenas `destino aprovado` ou `destino divergente`.
 
 ## Acao manual segura
