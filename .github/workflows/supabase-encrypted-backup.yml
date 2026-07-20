@@ -25,6 +25,8 @@ jobs:
     env:
       DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
       BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}
+      DATABASE_TARGET_GUARD_REQUIRED: "true"
       REAL_DATA_MODE: "true"
       SUPABASE_TELEMETRY_DISABLED: "1"
     steps:
@@ -42,6 +44,10 @@ jobs:
             echo "BACKUP_ENCRYPTION_KEY ausente. Valor nao exibido."
             exit 1
           fi
+          if [ -z "$EXPECTED_DATABASE_TARGET_FINGERPRINT" ]; then
+            echo "EXPECTED_DATABASE_TARGET_FINGERPRINT ausente. Destino nao aprovado."
+            exit 1
+          fi
           echo "::add-mask::$DIRECT_URL"
           echo "::add-mask::$BACKUP_ENCRYPTION_KEY"
           echo "Secrets presentes. Valores ocultos."
@@ -53,6 +59,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Validate official database target
+        run: python backend/scripts/database_target_guard.py validate --url-env DIRECT_URL
 
       - name: Setup Node
         uses: actions/setup-node@v4

@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 10
     env:
       DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}
+      EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}
+      DATABASE_TARGET_GUARD_REQUIRED: "true"
       REAL_DATA_MODE: "false"
     steps:
       - name: Checkout repository
@@ -30,7 +32,16 @@ jobs:
             echo "SUPABASE_DIRECT_URL ausente. Configure o Repository secret antes de rodar o dry-run."
             exit 1
           fi
+          if [ -z "${EXPECTED_DATABASE_TARGET_FINGERPRINT}" ]; then
+            echo "EXPECTED_DATABASE_TARGET_FINGERPRINT ausente. Destino nao aprovado."
+            exit 1
+          fi
+          echo "::add-mask::${DIRECT_URL}"
+          echo "::add-mask::${EXPECTED_DATABASE_TARGET_FINGERPRINT}"
           echo "SUPABASE_DIRECT_URL presente. Valor oculto."
+
+      - name: Validate official database target
+        run: python backend/scripts/database_target_guard.py validate --url-env DIRECT_URL
 
       - name: Install backend dependencies
         run: python -m pip install -r backend/requirements.txt

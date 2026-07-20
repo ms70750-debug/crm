@@ -252,6 +252,8 @@ Para habilitar envio real, validar conta, dominio/remetente e chave no provedor.
 
 O projeto possui o workflow manual `Supabase Migrations Dry Run` para validar quais migrations PostgreSQL seriam aplicadas usando um Repository Secret. Esse fluxo nao aplica migrations e nao libera dados reais.
 
+Antes de qualquer workflow real acessar Supabase, a conexao deve ser aprovada pela trava de destino. Configure tambem `EXPECTED_DATABASE_TARGET_FINGERPRINT` como Repository Secret calculado a partir do projeto oficial. Se a trava retornar `destino divergente`, nao rode backup, migration, auditoria, bootstrap ou cutover.
+
 Para configurar:
 1. Abrir o repositorio no GitHub.
 2. Ir em `Settings`.
@@ -259,11 +261,14 @@ Para configurar:
 4. Criar um Repository secret:
    - Name: `SUPABASE_DIRECT_URL`
    - Value: `DIRECT_URL` do Supabase com a senha real.
-5. Nunca colar essa URL no chat.
-6. Ir em `Actions`.
-7. Selecionar `Supabase Migrations Dry Run`.
-8. Clicar em `Run workflow`.
-9. Conferir nos logs se o workflow listou as migrations e se nenhuma migration foi aplicada.
+5. Criar ou atualizar o Repository secret:
+   - Name: `EXPECTED_DATABASE_TARGET_FINGERPRINT`
+   - Value: fingerprint nao reversivel do mesmo destino oficial.
+6. Nunca colar a URL, host, usuario, senha ou fingerprint no chat.
+7. Ir em `Actions`.
+8. Selecionar `Supabase Migrations Dry Run`.
+9. Clicar em `Run workflow`.
+10. Conferir nos logs se o workflow listou as migrations e se nenhuma migration foi aplicada.
 
 Esse workflow:
 - usa `SUPABASE_DIRECT_URL` apenas como secret do GitHub Actions;

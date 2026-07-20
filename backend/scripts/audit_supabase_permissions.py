@@ -17,6 +17,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.config.environment import is_postgresql_url  # noqa: E402
 from app.database.session import normalize_database_url  # noqa: E402
+from app.services.database_target_guard import guard_if_required  # noqa: E402
 from scripts.apply_postgres_migrations import INVALID_DIRECT_URL_MESSAGE, mask_database_url  # noqa: E402
 from scripts.audit_supabase_readonly import sanitize_text, validate_readonly_sql  # noqa: E402
 
@@ -77,7 +78,9 @@ def get_direct_url() -> str:
         raise RuntimeError("DIRECT_URL ausente. Configure somente como secret seguro no GitHub Actions.")
     if not is_postgresql_url(direct_url):
         raise RuntimeError(INVALID_DIRECT_URL_MESSAGE)
-    return normalize_database_url(direct_url)
+    normalized = normalize_database_url(direct_url)
+    guard_if_required(normalized, os.environ)
+    return normalized
 
 
 def grants_by_role(grants: list[dict[str, Any]], table_name: str, role: str) -> set[str]:

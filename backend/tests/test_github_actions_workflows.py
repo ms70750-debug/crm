@@ -61,6 +61,9 @@ def test_supabase_apply_workflow_uses_secret_and_apply_flag() -> None:
 
     assert "SUPABASE_DIRECT_URL" in content
     assert "DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert 'DATABASE_TARGET_GUARD_REQUIRED: "true"' in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert 'REAL_DATA_MODE: "false"' in content
     assert "python backend/scripts/apply_postgres_migrations.py --apply" in content
 
@@ -117,6 +120,8 @@ def test_supabase_single_apply_workflow_uses_secret_without_printing_it() -> Non
 
     assert "SUPABASE_DIRECT_URL" in content
     assert "DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert "::add-mask::${DIRECT_URL}" in content
     assert "printenv" not in content
     assert "env |" not in content
@@ -147,6 +152,8 @@ def test_supabase_readonly_audit_workflow_is_manual_readonly_and_safe() -> None:
     assert "timeout-minutes: 10" in content
     assert "concurrency:" in content
     assert "SUPABASE_DIRECT_URL" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert "::add-mask::${DIRECT_URL}" in content
     assert "upload-artifact" in content
     assert "supabase-readonly-audit" in content
@@ -175,6 +182,8 @@ def test_supabase_permissions_audit_workflow_is_manual_readonly_and_safe() -> No
     assert "timeout-minutes: 10" in content
     assert "concurrency:" in content
     assert "SUPABASE_DIRECT_URL" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert "::add-mask::${DIRECT_URL}" in content
     assert "upload-artifact" in content
     assert "supabase-permissions-audit" in content
@@ -232,6 +241,9 @@ def test_supabase_encrypted_backup_workflow_is_manual_scheduled_and_safe() -> No
     assert '${{ github.event_name }}" = "workflow_dispatch"' in content
     assert "DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
     assert "BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert 'DATABASE_TARGET_GUARD_REQUIRED: "true"' in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert 'REAL_DATA_MODE: "true"' in content
     assert "::add-mask::$DIRECT_URL" in content
     assert "::add-mask::$BACKUP_ENCRYPTION_KEY" in content
@@ -369,6 +381,8 @@ def test_create_first_admin_workflow_is_manual_private_and_safe() -> None:
     assert "contents: read" in content
     assert "concurrency:" in content
     assert "SUPABASE_DIRECT_URL: ${{ secrets.SUPABASE_DIRECT_URL }}" in content
+    assert "EXPECTED_DATABASE_TARGET_FINGERPRINT: ${{ secrets.EXPECTED_DATABASE_TARGET_FINGERPRINT }}" in content
+    assert "database_target_guard.py validate --url-env DIRECT_URL" in content
     assert "::add-mask::$SUPABASE_DIRECT_URL" in content
     assert "Ensure admin bootstrap migration" in content
     assert "apply_single_postgres_migration.py" in content
