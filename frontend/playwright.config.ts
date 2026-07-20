@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   expect: { timeout: 8_000 },
+  workers: 1,
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://localhost:5173",
