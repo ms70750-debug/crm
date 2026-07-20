@@ -25,4 +25,4 @@ O destino anteriormente auditado pelo GitHub Actions fica preservado somente lei
 - Auditorias readonly e de permissoes executadas com sucesso apos migrations.
 - Banco oficial validado sem leads, clientes ou dados demo.
 - Administrador principal criado diretamente no banco oficial, totalizando exatamente 1 usuario e 1 admin ativo.
-- Render mantido sem deploy automatico nesta etapa; deploy deve ocorrer somente depois das validacoes finais e merge controlado.
+- Blueprint do Render atualizado para preservar `APP_MODE=production`, `REAL_DATA_MODE=true` e flags de prontidao no deploy final.

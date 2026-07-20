@@ -12,15 +12,21 @@ services:
       - key: APP_ENV
         value: "production"
       - key: APP_MODE
-        value: "demo"
+        value: "production"
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: BBB_AUTH_SECRET
+        sync: false
+      - key: BBB_DATA_ENCRYPTION_KEY
         sync: false
       - key: CORS_ORIGINS
         value: "http://localhost:5173,https://crm-sepia-beta.vercel.app"
       - key: DATABASE_URL
         sync: false
+      - key: EXPECTED_DATABASE_TARGET_FINGERPRINT
+        sync: false
+      - key: DATABASE_TARGET_GUARD_REQUIRED
+        value: "true"
       - key: DB_POOL_SIZE
         value: "5"
       - key: DB_MAX_OVERFLOW
@@ -30,7 +36,19 @@ services:
       - key: DB_POOL_TIMEOUT_SECONDS
         value: "10"
       - key: REAL_DATA_MODE
-        value: "false"
+        value: "true"
+      - key: MIGRATIONS_APPLIED
+        value: "true"
+      - key: BACKUP_CONFIGURED
+        value: "true"
+      - key: CONSENT_REQUIRED
+        value: "true"
+      - key: LOGS_MASKED
+        value: "true"
+      - key: HTTPS_EXPECTED
+        value: "true"
+      - key: CRITICAL_TESTS_APPROVED
+        value: "true"
       - key: AUTH_EMAIL_ENABLED
         value: "false"
       - key: AUTH_EMAIL_MODE

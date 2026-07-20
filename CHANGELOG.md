@@ -6,6 +6,7 @@
 - Redefinida a senha tecnica do PostgreSQL oficial no Supabase e validada conexao via pooler sem expor segredos.
 - Atualizados os secrets do GitHub Actions para apontar ao destino oficial com fingerprint protegida.
 - Salvas no Render as variaveis de ambiente de producao controlada sem deploy automatico.
+- Atualizado o Blueprint do Render para nao reverter `APP_MODE` e `REAL_DATA_MODE` para demo durante deploy.
 - Criado backup criptografado pre-migration, seguido de dry-run, apply de migrations, apply idempotente e auditorias readonly/permissoes.
 - Criado exatamente um administrador principal no banco oficial.
 
